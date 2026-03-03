@@ -6,5 +6,8 @@ namespace Votify.BuisnessLogic
 {
     internal class Votante : Usuario
     {
+        public Votante()
+        {
+        }
     }
 }
