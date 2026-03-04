@@ -5,11 +5,11 @@ using Votify.BusinessLogic;
 
 namespace Votify.BusinessLogic
 {
-    internal interface Publico : Votante
+    internal class Publico : Votante
     {
-        public string RolVotante()
-        {
-            return "PUBLIC"; // Debe retornar un string
-        }
+        public Publico(double rawScore) : base(rawScore) { }
+
+        public override string RolVotante() => "PUBLIC";
+        public override double NormalizedScore() => rawScore * 0.85;
     }
 }

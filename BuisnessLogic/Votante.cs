@@ -4,13 +4,20 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Votify.BuisnessLogic;
 
-namespace Votify.BusinessLogic // Corregido el error tipográfico
+namespace Votify.BusinessLogic
 {
-    internal interface Votante : Usuario
+    internal abstract class Votante : Usuario
     {
-        public string RolVotante()
+        protected double rawScore;  // campo compartido
+
+        public Votante(double rawScore)
         {
-            return "Votante"; // Debe retornar un string
+            this.rawScore = rawScore;
         }
+
+        protected double RawScore() { return this.rawScore; }
+
+        public abstract string RolVotante();
+        public abstract double NormalizedScore();
     }
 }
