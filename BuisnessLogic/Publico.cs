@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Votify.BusinessLogic;
 
-namespace Votify.BuisnessLogic
+namespace Votify.BusinessLogic
 {
     internal interface Publico : Votante
     {
