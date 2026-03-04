@@ -4,13 +4,7 @@ using System.Text;
 
 namespace Votify.BuisnessLogic
 {
-    internal class Usuario
+    internal interface Usuario
     {
-        private int id;
-
-        public Usuario(int id)
-        {
-            this.id = id;
-        }
     }
 }

@@ -4,8 +4,8 @@ using System.Text;
 
 namespace Votify.BuisnessLogic
 {
-    internal class Jurado : Votante
+    internal interface Jurado : Votante
     {
-        public string RolJurado() { return "Jurado"; }
+        public string RolJurado() { return "EXPERT"; }
     }
 }

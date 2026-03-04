@@ -6,12 +6,8 @@ using Votify.BuisnessLogic;
 
 namespace Votify.BusinessLogic // Corregido el error tipográfico
 {
-    internal class Votante : Usuario
+    internal interface Votante : Usuario
     {
-        public Votante(int id) : base(id) // Asumiendo que Usuario requiere id
-        {
-        }
-
         public string RolVotante()
         {
             return "Votante"; // Debe retornar un string

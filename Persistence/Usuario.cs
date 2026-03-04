@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Votify.BuisnessLogic
 {
-    internal class Usuario
+    internal class IUsuario
     {
     }
 }
