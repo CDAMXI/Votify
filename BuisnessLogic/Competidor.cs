@@ -16,6 +16,6 @@ namespace Votify.BuisnessLogic
             throw new NotImplementedException();
         }
 
-        public override string RolVotante() => "COMPETIDOR";
+        public override string RolVotante() => "COMPETITOR";
     }
 }
