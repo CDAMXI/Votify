@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Votify.BuisnessLogic;
 
 namespace Votify.BusinessLogic
 {
-    internal class Jurado : Usuario
+    internal class Jurado : Participante
     {
         public Jurado(double rawScore) : base(rawScore) { }
 

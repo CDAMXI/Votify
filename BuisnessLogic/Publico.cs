@@ -5,7 +5,7 @@ using Votify.BusinessLogic;
 
 namespace Votify.BuisnessLogic
 {
-    internal class Publico : Usuario
+    internal class Publico : Participante
     {
         public Publico(double rawScore) : base(rawScore)
         {

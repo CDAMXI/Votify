@@ -5,9 +5,9 @@ using Votify.BusinessLogic;
 
 namespace Votify.BuisnessLogic
 {
-    internal class Competidor : Participante
+    internal class Participante : Usuario
     {
-        public Competidor(double rawScore) : base(rawScore)
+        public Participante(double rawScore) : base(rawScore)
         {
         }
 
@@ -16,6 +16,9 @@ namespace Votify.BuisnessLogic
             throw new NotImplementedException();
         }
 
-        public override string RolVotante() => "COMPETIDOR";
+        public override string RolVotante()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
