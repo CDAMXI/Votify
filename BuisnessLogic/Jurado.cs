@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Votify.BusinessLogic
 {
-    internal class Jurado : Votante
+    internal class Jurado : Usuario
     {
         public Jurado(double rawScore) : base(rawScore) { }
 
