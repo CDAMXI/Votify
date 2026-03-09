@@ -80,8 +80,6 @@ Votify orquesta eventos con **competidores, premios, proyectos, roles, reglas y 
 
 ## Tecnologías
 
-> ⚠️ Esta sección debe completarse por el equipo de desarrollo al inicio del Sprint 1.
-
 ```
 Frontend:   EntityFramework
 Backend:    C#
