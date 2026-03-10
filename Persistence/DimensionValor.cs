@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BuisnessLogic
+namespace Votify.Persistence
 {
     internal class DimensionValor
     {
