@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Votify.BusinessLogic;
+using Votify.BusinessLogic.Entities;
 
 namespace Votify.BuisnessLogic
 {

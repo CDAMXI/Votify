@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.Persistence
+namespace Votify.BuisnessLogic
 {
-    internal class Votante : Usuario
+    internal class Evento
     {
-        public Votante()
+        public Evento()
         {
         }
     }

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.Persistence
+namespace Votify.BusinessLogic.Entities
 {
-    internal class Permisos
+    internal class Publico : Rol
     {
     }
 }

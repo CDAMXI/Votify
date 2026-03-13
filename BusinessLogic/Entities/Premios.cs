@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BuisnessLogic
+namespace Votify.BusinessLogic.Entities
 {
-    internal class Evento
+    internal class Premios
     {
     }
 }
