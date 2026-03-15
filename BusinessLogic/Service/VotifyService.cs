@@ -1,16 +1,35 @@
-﻿using System;
+﻿using Votify.Persistence;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Votify.BusinessLogic;
+using Votify.Entities;
+using System.CodeDom;
+using System.Data.Entity.Core.EntityClient;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Reflection.Emit;
+//using System.Runtime.Remoting.Contexts;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using ManteHos.Persistence;
+
 
 namespace Votify.BuisnessLogic.Service
 {
-    internal class VoifyService : IVotifyService
+    internal class VotifyService : IVotifyService
     {
         public Usuario usuario;
+        private readonly IDAL dal;
+        public VotifyService(IDAL dal)
+        {
+            this.dal = dal;
+        }
+        
         public void LogIn(String user, String password)
         {
-            Usuario User;
+            Usuario User = null;
             //Restricción: El usuario no debe contener '@' para no confundir con mail
             if (user.Contains('@'))
             {
@@ -57,5 +76,10 @@ namespace Votify.BuisnessLogic.Service
          *      throw new ServiceException("No se ha encontrado al usuario");
          * }
          */
+
+        public void Commit()
+        {
+            
+        }
     }
 }

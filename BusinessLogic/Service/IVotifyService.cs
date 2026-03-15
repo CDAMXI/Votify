@@ -8,5 +8,6 @@ namespace Votify.BuisnessLogic.Service
     {
         void LogIn(String user, String password);
         void LogOut();
+        void Commit();
     }
 }
