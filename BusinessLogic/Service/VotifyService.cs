@@ -79,7 +79,7 @@ namespace Votify.BuisnessLogic.Service
 
         public void Commit()
         {
-            
+            dal.Commit();
         }
     }
 }
