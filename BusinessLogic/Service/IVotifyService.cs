@@ -6,5 +6,7 @@ namespace Votify.BuisnessLogic.Service
 {
     internal interface IVotifyService
     {
+        void LogIn(String user, String password);
+        void LogOut();
     }
 }
