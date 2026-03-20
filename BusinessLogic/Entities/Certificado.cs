@@ -2,9 +2,15 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Certificado
+    public partial class Certificado
     {
+        public Certificado() { }
+        public Certificado (int idCertificado, string tipo, DateTime fechaEmision){
+            IdCertificado = idCertificado;
+            Tipo = tipo;
+            FechaEmision = fechaEmision;
+        }
     }
 }

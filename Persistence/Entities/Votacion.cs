@@ -4,13 +4,13 @@ using System.Text;
 
 namespace Votify.Entities
 {
-    public partial class Categoria
+    public partial class Votacion
     {
         //Atributos
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Email { get; set; }
         public int Id { get; set; }
+        public DateTime FechaIni { get; set; }
+        public DateTime FechaFin { get; set; }
+        public bool Estado { get; set; }
 
         //Relaciones
     }
