@@ -2,9 +2,18 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Publico : Rol
+    public abstract partial class Publico : Rol
     {
+        public Publico() : base()
+        {
+        }
+        public Publico(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore)
+        {
+        }
+
+        public override string RolVotante() => "PUBLIC";
+        public override double NormalizedScore() => rawScore * 0.8;
     }
 }

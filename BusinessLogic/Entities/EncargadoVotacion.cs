@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class EncargadoVotacion : Rol
+    public abstract partial class EncargadoVotacion : Rol
     {
+        public EncargadoVotacion() : base() { }
+        public EncargadoVotacion(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore) { }
     }
 }

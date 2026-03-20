@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Organizador : Rol
+    public abstract partial class Organizador : Rol
     {
+        public Organizador() : base() { }
+        public Organizador(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore) { }
     }
 }
