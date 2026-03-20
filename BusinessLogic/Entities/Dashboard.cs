@@ -2,9 +2,16 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Dashboard
+    public partial class Dashboard
     {
+        public Dashboard() { }
+
+        public Dashboard(int puntuacionGlobal, int puntuacionPorDimencion)
+        {
+            PuntuacionGlobal = puntuacionGlobal;
+            PuntuacionPorDimencion = puntuacionPorDimencion;
+        }
     }
 }

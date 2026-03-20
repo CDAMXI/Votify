@@ -2,9 +2,17 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Votacion
+    public partial class Votacion
     {
+        public Votacion() { }
+        public Votacion(int id, DateTime fechaIni, DateTime fechaFin, bool estado)
+        {
+            Id = id;
+            FechaIni = fechaIni;
+            FechaFin = fechaFin;
+            Estado = estado;
+        }
     }
 }

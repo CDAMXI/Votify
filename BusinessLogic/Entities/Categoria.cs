@@ -8,7 +8,6 @@ namespace Votify.Entities
     {
         public Categoria()
         {
-            //Poner relaciones aquí        
         }
 
         public Categoria(string username, string email, string password, int id) : this()

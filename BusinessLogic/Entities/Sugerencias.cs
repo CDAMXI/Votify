@@ -2,9 +2,15 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Sugerencias
+    public partial class Sugerencias
     {
+        public Sugerencias() { }
+        public Sugerencias(string contenido, DateTime fecha)
+        {
+            Contenido = contenido;
+            Fecha = fecha;
+        }
     }
 }

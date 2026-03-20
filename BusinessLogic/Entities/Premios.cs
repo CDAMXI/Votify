@@ -2,9 +2,16 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Premios
+    public partial class Premios
     {
+        public Premios() { }
+        public Premios(int id, string nombre, string descripcion)
+        {
+            Id = id;
+            Nombre = nombre;
+            Descripcion = descripcion;
+        }
     }
 }

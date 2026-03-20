@@ -2,9 +2,16 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Reglas
+    public partial class Reglas
     {
+        public Reglas() { }
+        public Reglas(string descripcion, int configPuntos, int maxVotosPersona)
+        {
+            Descripcion = descripcion;
+            ConfigPuntos = configPuntos;
+            MaxVotosPersona = maxVotosPersona;
+        }
     }
 }

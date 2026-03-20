@@ -2,9 +2,16 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class HojaRuta
+    public partial class HojaRuta
     {
+        public HojaRuta() { }
+
+        public HojaRuta(string contenido, DateTime fechaGeneracion)
+        {
+            Contenido = contenido;
+            FechaGeneracion = fechaGeneracion;
+        }
     }
 }

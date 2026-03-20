@@ -7,7 +7,7 @@ namespace Votify.Entities
     public partial class Proyecto
     {
         //Atributos
-        public int IdProyecto { get; set; }
+        public int Id{ get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
         public ICollection<string> Materiales { get; set; }

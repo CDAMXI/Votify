@@ -2,9 +2,15 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BusinessLogic.Entities
+namespace Votify.Entities
 {
-    internal class Rol
+    public partial class Rol
     {
+        public Rol() { }
+
+        public Rol(DateTime fechaAsignacion)
+        {
+            FechaAsignacion = fechaAsignacion;
+        }
     }
 }
