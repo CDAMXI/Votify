@@ -9,5 +9,6 @@ internal interface IVotifyService
     void LogOut();
     void Registrar(string username, string email, string password);
     Usuario GetUsuarioActual();
+    void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion);
     void Commit();
 }

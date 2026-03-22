@@ -73,6 +73,11 @@ namespace Votify.BuisnessLogic.Service
             return usuario;
         }
 
+        public void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Commit()
         {
             dal.Commit();
