@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Votify.Entities;
 
-namespace Votify.BuisnessLogic.Service
+internal interface IVotifyService
 {
-    internal interface IVotifyService
-    {
-        void LogIn(String user, String password);
-        void LogOut();
-        void Commit();
-    }
+    void LogIn(string user, string password);
+    void LogOut();
+    void Registrar(string username, string email, string password);
+    Usuario GetUsuarioActual();
+    void Commit();
 }

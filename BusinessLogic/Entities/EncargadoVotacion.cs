@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Votify.Entities
+﻿namespace Votify.Entities
 {
-    public abstract partial class EncargadoVotacion : Rol
+    public partial class EncargadoVotacion : Rol
     {
         public EncargadoVotacion() : base() { }
-        public EncargadoVotacion(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore) { }
+        public EncargadoVotacion(DateTime fechaAsignacion, double rawScore)
+            : base(fechaAsignacion, rawScore) { }
+
+        public override string RolVotante() => "VOTING_MANAGER";
+        public override double NormalizedScore() => rawScore;
     }
 }

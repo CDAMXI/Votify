@@ -1,19 +1,5 @@
 ﻿using Votify.Persistence;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Votify.BusinessLogic;
 using Votify.Entities;
-using System.CodeDom;
-using System.Data.Entity.Core.EntityClient;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection.Emit;
-//using System.Runtime.Remoting.Contexts;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
-using ManteHos.Persistence;
 
 
 namespace Votify.BuisnessLogic.Service
@@ -76,6 +62,16 @@ namespace Votify.BuisnessLogic.Service
          *      throw new ServiceException("No se ha encontrado al usuario");
          * }
          */
+
+        public void Registrar(string username, string email, string password)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Usuario GetUsuarioActual()
+        {
+            return usuario;
+        }
 
         public void Commit()
         {

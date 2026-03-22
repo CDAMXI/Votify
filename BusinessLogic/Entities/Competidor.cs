@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Votify.Entities
 {
-    public abstract partial class Competidor : Rol
+    public partial class Competidor : Rol
     {
         public Competidor() : base() { }
         public Competidor(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore)

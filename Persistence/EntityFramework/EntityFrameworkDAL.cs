@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using Votify.Entities;
 using Votify.Persistence;
 
-namespace ManteHos.Persistence
+namespace Votify.Persistence
 {
     public class EntityFrameworkDAL : IDAL
     {
