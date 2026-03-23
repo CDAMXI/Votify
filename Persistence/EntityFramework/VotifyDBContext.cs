@@ -29,6 +29,8 @@ namespace Votify.Persistence
 
         // DbSets for persistent classes in your case study
         // TO BE DONE IMPLEMENTED
+        DbSet<Usuario> Usuario { get; set; }
+        DbSet<Votacion> Votacion { get; set; }
 
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)

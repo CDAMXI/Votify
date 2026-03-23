@@ -11,4 +11,6 @@ internal interface IVotifyService
     Usuario GetUsuarioActual();
     void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion);
     void Commit();
+    void crearVotoación(DateTime end, bool status);
+    void borrarVotacion(int idVotacion);
 }

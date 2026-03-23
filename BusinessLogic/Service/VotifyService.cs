@@ -15,18 +15,8 @@ namespace Votify.BuisnessLogic.Service
         
         public void LogIn(String user, String password)
         {
-            Usuario User = null;
-            //Restricción: El usuario no debe contener '@' para no confundir con mail
-            if (user.Contains('@'))
-            {
-                //User = dal.getWhere<Uusario>(x => x.email == user)
-            }
-            else
-            {
-               //User = dal.GetById<Usuario>(user);
-            }
-            //if(User != null && password == User.password)
-            if (User != null)
+            Usuario User = dal.GetById<Usuario>(user);
+            if(User != null && password == User.Password)
             {
                 usuario = User;
             }
@@ -81,6 +71,21 @@ namespace Votify.BuisnessLogic.Service
         public void Commit()
         {
             dal.Commit();
+        }
+
+        public void crearVotoación(DateTime end, bool status)
+        {
+           Votacion votacion = new Votacion(DateTime.Now, end, status);
+           dal.Insert<Votacion>(votacion);
+        }
+        public void borrarVotacion(int idVotacion)
+        {
+            Votacion vot = dal.GetById<Votacion>(idVotacion);
+            if (usuario is EncargadoVotacion)
+            {
+                dal.Delete<Votacion>(vot);
+            }
+            else throw new ServiceException("No es Encargado de la votacion");
         }
     }
 }
