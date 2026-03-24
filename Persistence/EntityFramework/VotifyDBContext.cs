@@ -1,67 +1,46 @@
-using Votify.Entities;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.Entity;
-using System.Data.SqlClient;
-using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Reflection;
-
+using Votify.Entities;
 
 namespace Votify.Persistence
 {
-    public class VotifyDBContext : DBContextVotify
+    // Asegúrate de que DBContextVotify herede de DbContext o cámbialo a DbContext directamente
+    public class VotifyDBContext : DbContext
     {
-        public VotifyDBContext() : base("Name=VotifyDbConnection") //this is the connection string name
+        // El nombre "VotifyDbConnection" debe coincidir con el del App.config o Web.config
+        public VotifyDBContext() : base("name=VotifyDbConnection")
         {
-            /*
-            See DbContext.Configuration documentation
-            */
             Configuration.ProxyCreationEnabled = true;
             Configuration.LazyLoadingEnabled = true;
         }
 
         static VotifyDBContext()
         {
-            Database.SetInitializer<VotifyDBContext>(new DropCreateDatabaseIfModelChanges<VotifyDBContext>());
+            // Nota: DropCreateDatabaseIfModelChanges puede fallar en Supabase si no tienes 
+            // permisos de superusuario para borrar la DB. Es mejor usar null o Migrations.
+            Database.SetInitializer<VotifyDBContext>(null);
         }
 
-        // DbSets for persistent classes in your case study
-        // TO BE DONE IMPLEMENTED
-        DbSet<Usuario> Usuario { get; set; }
-        DbSet<Votacion> Votacion { get; set; }
-
+        // Los DbSets deben ser PUBLIC para que el motor los encuentre correctamente
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Votacion> Votaciones { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
-            /*                        modelBuilder.Entity<Part>()
-                                                .HasMany(p => p.UsedParts)
-                                                .WithRequired(uP => uP.Part)
-                                                .WillCascadeOnDelete(true);
+            // PostgreSQL usa el esquema 'public' por defecto
+            modelBuilder.HasDefaultSchema("public");
 
-                                    modelBuilder.Entity<UsedPart>()
-                                        .HasRequired(p => p.Part)
-                                        .WithMany(uP => uP.UsedParts)
-                                        .WillCascadeOnDelete(false);
-            */
-
+            base.OnModelCreating(modelBuilder);
         }
 
-        // Generic method to clear all the data (except some relations if needed)
-        public override void RemoveAllData()
+        public void RemoveAllData()
         {
-            clearSomeRelationships();
-
-            base.RemoveAllData();
+            // En EF6 para Postgres, borrar todo suele requerir ejecutar SQL crudo
+            this.Database.ExecuteSqlCommand("TRUNCATE TABLE \"Usuarios\" CASCADE;");
+            this.Database.ExecuteSqlCommand("TRUNCATE TABLE \"Votaciones\" CASCADE;");
         }
-
-        // Sometimes it is needed to clear some relationships explicitly 
-        private void clearSomeRelationships()
-        {
-            //            SaveChanges();
-        }
-
     }
 }
 
