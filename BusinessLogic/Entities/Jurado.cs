@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Votify.Entities
 {
-    public abstract partial class Jurado : Rol
+    public partial class Jurado : Rol
     {
         public Jurado() : base() { }
         public Jurado(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore) { }

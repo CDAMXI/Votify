@@ -6,7 +6,7 @@ using Votify.Entities;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ManteHos.Persistence
+namespace Votify.Persistence
 {
     public interface IDAL
     {

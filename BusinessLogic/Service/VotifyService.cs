@@ -1,19 +1,5 @@
 ﻿using Votify.Persistence;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Votify.BusinessLogic;
 using Votify.Entities;
-using System.CodeDom;
-using System.Data.Entity.Core.EntityClient;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection.Emit;
-//using System.Runtime.Remoting.Contexts;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
-using ManteHos.Persistence;
 
 
 namespace Votify.BuisnessLogic.Service
@@ -29,18 +15,8 @@ namespace Votify.BuisnessLogic.Service
         
         public void LogIn(String user, String password)
         {
-            Usuario User = null;
-            //Restricción: El usuario no debe contener '@' para no confundir con mail
-            if (user.Contains('@'))
-            {
-                //User = dal.getWhere<Uusario>(x => x.email == user)
-            }
-            else
-            {
-               //User = dal.GetById<Usuario>(user);
-            }
-            //if(User != null && password == User.password)
-            if (User != null)
+            Usuario User = dal.GetById<Usuario>(user);
+            if(User != null && password == User.Password)
             {
                 usuario = User;
             }
@@ -77,9 +53,39 @@ namespace Votify.BuisnessLogic.Service
          * }
          */
 
+        public void Registrar(string username, string email, string password)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Usuario GetUsuarioActual()
+        {
+            return usuario;
+        }
+
+        public void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Commit()
         {
             dal.Commit();
+        }
+
+        public void crearVotoación(DateTime end, bool status)
+        {
+           Votacion votacion = new Votacion(DateTime.Now, end, status);
+           dal.Insert<Votacion>(votacion);
+        }
+        public void borrarVotacion(int idVotacion)
+        {
+            Votacion vot = dal.GetById<Votacion>(idVotacion);
+            if (usuario is EncargadoVotacion)
+            {
+                dal.Delete<Votacion>(vot);
+            }
+            else throw new ServiceException("No es Encargado de la votacion");
         }
     }
 }

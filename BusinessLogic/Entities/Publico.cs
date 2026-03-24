@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Votify.Entities
 {
-    public abstract partial class Publico : Rol
+    public partial class Publico : Rol
     {
         public Publico() : base()
         {

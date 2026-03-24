@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Votify.Entities
+﻿namespace Votify.Entities
 {
     public partial class Competidor : Rol
     {
-        //Atributos de Rol
-
-        //Relaciones
+        // Solo propiedades aquí
+        // (las que mapea Entity Framework)
     }
 }
