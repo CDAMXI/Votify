@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Votify.Persistence;
 
-namespace Votify
+namespace Votify.Tests
 {
     internal class DBTest
     {
