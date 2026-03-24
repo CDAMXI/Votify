@@ -1,0 +1,141 @@
+﻿@page "/dashboard"
+@using Votify.shared
+@inject NavigationManager NavigationManager
+
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="images/votify-logo.png" alt="Votify" class="h-10 object-contain" />
+                    <h1 class="text-2xl font-bold text-[#1A281B]">Votify</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-[#4C6B4F]">Panel de Eventos</span>
+                    <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
+                        Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+            <h2 class="text-3xl font-bold text-[#1A281B] mb-4">Bienvenido a Votify</h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                Votify surge como una plataforma inteligente que redefinirá la interacción entre organizadores,
+                expertos, participantes y público en general. Se pasará de un simple conteo de votos a una
+                experiencia inmersiva de evaluación analítica.
+            </p>
+        </div>
+
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-[#1A281B] mb-4">Eventos Disponibles</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @foreach (var ev in mockEvents)
+            {
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-[#B5D6AC]/30">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold @GetStatusColor(ev.Status)">
+                                @GetStatusText(ev.Status)
+                            </span>
+                            @if (ev.Status == "active")
+                            {
+                                <div class="flex items-center gap-1 text-[#70D939]">
+                                    <span class="text-xs font-medium">● Votación abierta</span>
+                                </div>
+                            }
+                        </div>
+
+                        <h3 class="text-xl font-bold text-[#1A281B] mb-2">@ev.Name</h3>
+                        <p class="text-[#6C8A6C] text-sm mb-4">@ev.Description</p>
+
+                        <div class="space-y-2 mb-6 text-sm text-[#4C6B4F]">
+                            <div class="flex items-center gap-2">
+                                <span>📅 @ev.Date</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span>👥 @ev.Participants participantes</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span>🏆 @ev.Projects proyectos</span>
+                            </div>
+                        </div>
+
+                        @if (ev.Status == "active")
+                        {
+                            <button @onclick="() => NavigateToEvent(ev.Id)"
+                                    class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                Votar Ahora
+                            </button>
+                        }
+                        else if (ev.Status == "upcoming")
+                        {
+                            <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed">
+                                Próximamente
+                            </button>
+                        }
+                        else if (ev.Status == "finished")
+                        {
+                            <button @onclick="() => NavigateToResults(ev.Id)" class="w-full bg-[#90A896] hover:bg-[#6C8A6C] text-white py-3 rounded-xl font-bold transition-all">
+                                Ver Resultados
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private void NavigateToEvent(string id)
+    {
+        NavigationManager.NavigateTo($"/event-voting/{id}");
+    }
+
+    private void NavigateToResults(string id)
+    {
+        // Reemplaza "/event-results/" con la ruta real de tu página de resultados
+        NavigationManager.NavigateTo($"/event-results/{id}");
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "active" => "bg-[#70D939] text-white",
+        "upcoming" => "bg-[#B5D6AC] text-[#1A281B]",
+        "finished" => "bg-[#A6AAA9] text-white",
+        _ => "bg-gray-300"
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "active" => "En curso",
+        "upcoming" => "Próximamente",
+        "finished" => "Finalizado",
+        _ => status
+    };
+
+    // Mock Data
+    private List<EventModel> mockEvents = new()
+    {
+        new EventModel { Id = "1", Name = "HackUPC 2026", Description = "Hackathon universitario de innovación tecnológica", Date = "15-17 Marzo 2026", Participants = 250, Status = "active", Projects = 45 },
+        new EventModel { Id = "2", Name = "StartupWeekend BCN", Description = "Competición de emprendimiento y startups", Date = "22-24 Marzo 2026", Participants = 180, Status = "upcoming", Projects = 0 },
+        new EventModel { Id = "3", Name = "DevFest 2026", Description = "Festival de desarrolladores y nuevas tecnologías", Date = "1-3 Marzo 2026", Participants = 320, Status = "finished", Projects = 62 }
+    };
+
+    public class EventModel
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Date { get; set; } = "";
+        public int Participants { get; set; }
+        public string Status { get; set; } = ""; // active, upcoming, finished
+        public int Projects { get; set; }
+    }
+}

@@ -1,0 +1,79 @@
+﻿@page "/"
+@page "/login"
+@using Votify.shared
+@inject NavigationManager NavigationManager
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
+    <div class="w-full max-w-md px-6">
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+
+            <div class="flex justify-center mb-8">
+                <img src="images/votify-logo.png" alt="Votify" class="h-16 object-contain" />
+            </div>
+
+            <div class="text-center mb-8">
+                <h1 class="text-3xl text-[#1A281B] mb-2">Bienvenido a Votify</h1>
+                <p class="text-[#6C8A6C]">Inicia sesión para votar en hackathones</p>
+            </div>
+
+            <EditForm Model="@loginDto" OnValidSubmit="HandleSubmit" class="space-y-6">
+
+                <div class="space-y-2">
+                    <label for="username" class="text-[#4C6B4F]">Usuario</label>
+                    <InputText id="username"
+                               @bind-Value="loginDto.Username"
+                               placeholder="Ingresa tu usuario"
+                               required
+                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                </div>
+
+                <div class="space-y-2">
+                    <label for="password" class="text-[#4C6B4F]">Contraseña</label>
+                    <InputText type="password"
+                               id="password"
+                               @bind-Value="loginDto.Password"
+                               placeholder="Ingresa tu contraseña"
+                               required
+                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
+                    Iniciar Sesión
+                </button>
+            </EditForm>
+
+            <div class="mt-6 text-center">
+                <p class="text-[#4C6B4F]">
+                    ¿No tienes cuenta?
+                    <a href="/register" class="text-[#6C8A6C] hover:text-[#70D939] font-medium transition-colors">
+                        Regístrate aquí
+                    </a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+@code {
+    // 1. Instanciamos el DTO para capturar los datos
+    private UserLoginDTO loginDto = new UserLoginDTO();
+
+    // 2. Método que se ejecuta al enviar el formulario
+    private void HandleSubmit()
+    {
+        // Aquí conectaremos con la API y Supabase más adelante
+        Console.WriteLine($"Intentando loguear a: {loginDto.Username}");
+
+        // Redirigir al dashboard simulando la navegación
+        NavigationManager.NavigateTo("/dashboard");
+    }
+
+    // Nota: Lo ideal es que esta clase viva en Votify.Shared,
+    // pero la pongo aquí para que el código te funcione de inmediato.
+    public class UserLoginDTO
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+}
+}

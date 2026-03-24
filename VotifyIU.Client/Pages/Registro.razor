@@ -1,0 +1,113 @@
+﻿@page "/register"
+@using Votify.shared
+@inject NavigationManager NavigationManager
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#90A896] via-[#6C8A6C] to-[#4C6B4F] py-12 px-4">
+    <div class="w-full max-w-md">
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+
+            <div class="flex justify-center mb-6">
+                <img src="images/votify-logo.png" alt="Votify" class="h-14 object-contain" />
+            </div>
+
+            <div class="text-center mb-8">
+                <h1 class="text-3xl text-[#1A281B] mb-2">Crear Cuenta</h1>
+                <p class="text-[#6C8A6C]">Únete a la comunidad Votify</p>
+            </div>
+
+            <EditForm Model="@registerDto" OnValidSubmit="HandleSubmit" class="space-y-5">
+
+                <div class="space-y-2">
+                    <label class="text-[#4C6B4F] font-medium">Foto de Perfil (opcional)</label>
+                    <div class="flex items-center gap-4">
+                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] flex items-center justify-center overflow-hidden border-2 border-[#90A896]">
+                            @if (!string.IsNullOrEmpty(profileImagePreview))
+                            {
+                                <img src="@profileImagePreview" alt="Profile" class="w-full h-full object-cover" />
+                            }
+                            else
+                            {
+                                <svg class="w-8 h-8 text-[#6C8A6C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            }
+                        </div>
+                        <label for="profile-image" class="flex-1">
+                            <div class="cursor-pointer bg-[#E9EFE1] hover:bg-[#B5D6AC] border border-[#B5D6AC] rounded-lg px-4 py-3 text-center text-[#4C6B4F] transition-colors">
+                                Seleccionar imagen
+                            </div>
+                            <InputFile id="profile-image" OnChange="HandleImageChange" accept="image/*" class="hidden" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="username" class="text-[#4C6B4F]">Nombre de Usuario</label>
+                    <InputText id="username" @bind-Value="registerDto.Username" placeholder="Ingresa tu usuario" required
+                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                </div>
+
+                <div class="space-y-2">
+                    <label for="email" class="text-[#4C6B4F]">Correo Electrónico</label>
+                    <InputText id="email" type="email" @bind-Value="registerDto.Email" placeholder="tu@email.com" required
+                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                </div>
+
+                <div class="space-y-2">
+                    <label for="password" class="text-[#4C6B4F]">Contraseña</label>
+                    <InputText id="password" type="password" @bind-Value="registerDto.Password" placeholder="Crea una contraseña segura" required
+                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                </div>
+
+                <button type="submit" class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl mt-6 font-bold">
+                    Crear Cuenta
+                </button>
+            </EditForm>
+
+            <div class="mt-6 text-center">
+                <p class="text-[#4C6B4F]">
+                    ¿Ya tienes cuenta?
+                    <a href="/login" class="text-[#6C8A6C] hover:text-[#70D939] font-medium transition-colors">
+                        Inicia sesión
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequestDTO registerDto = new RegisterRequestDTO();
+    private string? profileImagePreview;
+
+    private async Task HandleImageChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            // Redimensionamos para que no pese mucho (opcional)
+            var resizedFile = await file.RequestImageFileAsync("image/png", 200, 200);
+            var buffer = new byte[resizedFile.Size];
+            await resizedFile.OpenReadStream().ReadAsync(buffer);
+
+            // Convertimos a Base64 para mostrar la vista previa
+            profileImagePreview = $"data:image/png;base64,{Convert.ToBase64String(buffer)}";
+            registerDto.ProfileImageBase64 = profileImagePreview;
+        }
+    }
+
+    private void HandleSubmit()
+    {
+        Console.WriteLine($"Registro: {registerDto.Username}, {registerDto.Email}");
+        NavigationManager.NavigateTo("/dashboard");
+    }
+
+    // Este DTO debería ir en tu proyecto Shared
+    public class RegisterRequestDTO
+    {
+        public string Username { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string? ProfileImageBase64 { get; set; }
+    }
+}

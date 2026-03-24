@@ -1,0 +1,182 @@
+﻿@page "/event-results/{EventId}"
+@using Votify.shared
+@inject NavigationManager NavigationManager
+
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/dashboard" class="flex items-center text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-md transition-colors text-sm">
+                        <span class="mr-2">←</span> Volver al Dashboard
+                    </a>
+                    <img src="images/votify-logo.png" alt="Votify" class="h-8 object-contain" />
+                    <h1 class="text-xl font-bold text-[#1A281B]">Resultados - HackUPC 2026</h1>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🏆</div>
+                <div>
+                    <p class="text-sm text-[#6C8A6C]">Proyectos Evaluados</p>
+                    <p class="text-2xl font-bold text-[#1A281B]">45</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">👥</div>
+                <div>
+                    <p class="text-sm text-[#6C8A6C]">Evaluadores</p>
+                    <p class="text-2xl font-bold text-[#1A281B]">18</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">📈</div>
+                <div>
+                    <p class="text-sm text-[#6C8A6C]">Promedio General</p>
+                    <p class="text-2xl font-bold text-[#1A281B]">8.1</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-[#1A281B] mb-6 flex items-center gap-2">
+                🥇 Proyectos Ganadores
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                @foreach (var (project, index) in mockResults.Take(3).Select((p, i) => (p, i)))
+                {
+                    <div class="relative @(index == 0 ? "md:order-2" : index == 1 ? "md:order-1" : "md:order-3")">
+                        <div class="rounded-xl p-6 bg-gradient-to-br @GetRankColor(project.Rank) text-white shadow-lg">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm text-xl">
+                                    @(project.Rank == 1 ? "🥇" : project.Rank == 2 ? "🥈" : "🥉")
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm opacity-90 font-medium">Posición</div>
+                                    <div class="text-4xl font-black">#@project.Rank</div>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-bold mb-1">@project.Name</h3>
+                            <p class="text-sm opacity-90 mb-4">@project.Team</p>
+                            <div class="flex items-center justify-between pt-4 border-t border-white/20 font-bold">
+                                <span class="text-sm">Puntuación</span>
+                                <span class="text-2xl">@project.TotalScore</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] mb-4">Ranking Completo</h2>
+            @foreach (var project in mockResults)
+            {
+                <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30">
+                    <div class="flex flex-col md:flex-row items-start gap-6">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white flex-shrink-0 font-bold text-2xl shadow-md">
+                            #@project.Rank
+                        </div>
+
+                        <div class="flex-1 w-full">
+                            <div class="flex flex-col md:flex-row justify-between mb-4">
+                                <div>
+                                    <h3 class="text-xl font-bold text-[#1A281B]">@project.Name</h3>
+                                    <p class="text-[#6C8A6C]">@project.Team</p>
+                                    <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-xs font-bold mt-2">
+                                        @project.Category
+                                    </span>
+                                </div>
+                                <div class="text-right mt-2 md:mt-0">
+                                    <div class="text-4xl font-black text-[#6C8A6C]">@project.TotalScore</div>
+                                    <div class="text-sm text-[#A6AAA9]">@project.Votes votos</div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 bg-[#F8FAF7] p-4 rounded-lg">
+                                <div class="text-center">
+                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Innovación</div>
+                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Innovation</div>
+                                </div>
+                                <div class="text-center border-l border-[#B5D6AC]/30">
+                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Técnica</div>
+                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Technical</div>
+                                </div>
+                                <div class="text-center border-l border-[#B5D6AC]/30">
+                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Impacto</div>
+                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Impact</div>
+                                </div>
+                                <div class="text-center border-l border-[#B5D6AC]/30">
+                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Presentación</div>
+                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Presentation</div>
+                                </div>
+                                <div class="text-center border-l border-[#B5D6AC]/30">
+                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Diseño</div>
+                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Design</div>
+                                </div>
+                            </div>
+
+                            @if (project.Comments.Any())
+                            {
+                                <div class="bg-[#EFEFEE] rounded-lg p-4">
+                                    <p class="text-xs font-bold text-[#4C6B4F] mb-2 uppercase tracking-wider">Feedback Destacado:</p>
+                                    <ul class="space-y-1">
+                                        @foreach (var comment in project.Comments)
+                                        {
+                                            <li class="text-sm text-[#6C8A6C]">" @comment "</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter] public string? EventId { get; set; }
+
+    private string GetRankColor(int rank) => rank switch
+    {
+        1 => "from-yellow-400 to-yellow-600",
+        2 => "from-slate-300 to-slate-500",
+        3 => "from-orange-400 to-orange-600",
+        _ => "from-[#6C8A6C] to-[#4C6B4F]"
+    };
+
+    // Datos simulados
+    private List<ProjectResult> mockResults = new()
+    {
+        new ProjectResult { Id="1", Name="HealthAI", Team="MedTech", Category="Salud", TotalScore=8.7, Votes=45, Rank=1, Comments=new(){"Excelente IA", "Impacto real"}, CriteriaScores=new(){Innovation=9.2, Technical=8.5, Impact=9.0, Presentation=8.3, Design=8.2}},
+        new ProjectResult { Id="2", Name="EcoTrack", Team="Green Coders", Category="Sostenibilidad", TotalScore=8.3, Votes=45, Rank=2, Comments=new(){"Interfaz intuitiva"}, CriteriaScores=new(){Innovation=8.0, Technical=8.2, Impact=9.1, Presentation=8.0, Design=8.5}},
+        new ProjectResult { Id="3", Name="EduConnect", Team="Learning Lab", Category="Educación", TotalScore=7.9, Votes=45, Rank=3, Comments=new(){"Gran propuesta"}, CriteriaScores=new(){Innovation=7.5, Technical=8.0, Impact=8.2, Presentation=7.8, Design=8.0}}
+    };
+
+    public class ProjectResult
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Team { get; set; } = "";
+        public string Category { get; set; } = "";
+        public double TotalScore { get; set; }
+        public int Votes { get; set; }
+        public int Rank { get; set; }
+        public List<string> Comments { get; set; } = new();
+        public Scores CriteriaScores { get; set; } = new();
+    }
+    public class Scores
+    {
+        public double Innovation { get; set; }
+        public double Technical { get; set; }
+        public double Impact { get; set; }
+        public double Presentation { get; set; }
+        public double Design { get; set; }
+    }
+}
