@@ -11,5 +11,8 @@ namespace Votify.Entities
         public DateTime FechaGeneracion { get; set; }
 
         //Relaciones
+        public Dashboard dashboard;
+        public Categoria categoria; //Definir multiplicidad
+        public Votacion votacion; //Definir multiplicidad
     }
 }

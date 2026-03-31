@@ -14,5 +14,10 @@ namespace Votify.Entities
         public string Descripcion { get; set; }
 
         //Relaciones
+        public ICollection<Sugerencias> sugerencias;
+        public Rol rol;
+        public ICollection<Proyecto> proyectos;
+        public ICollection<Categoria> categorias;
+        public Reglas reglas;
     }
 }

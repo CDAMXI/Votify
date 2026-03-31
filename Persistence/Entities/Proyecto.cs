@@ -13,5 +13,7 @@ namespace Votify.Entities
         public ICollection<string> Materiales { get; set; }
 
         //Relaciones
+        public Competidor competidor;
+        public Evento evento;
     }
 }

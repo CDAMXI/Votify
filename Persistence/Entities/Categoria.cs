@@ -13,5 +13,8 @@ namespace Votify.Entities
         public int Id { get; set; }
 
         //Relaciones
+        public Evento evento;
+        public ICollection<Premios> premios;
+        public HojaRuta hojaRuta; //Definir multiplicidad
     }
 }

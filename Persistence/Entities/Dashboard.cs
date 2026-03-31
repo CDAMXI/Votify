@@ -11,5 +11,7 @@ namespace Votify.Entities
         public int PuntuacionPorDimencion { get; set; }
 
         //Relaciones
+        public HojaRuta hojaRuta;
+        public Competidor competidor;
     }
 }

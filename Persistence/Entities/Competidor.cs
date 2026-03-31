@@ -2,7 +2,9 @@
 {
     public partial class Competidor : Rol
     {
-        // Solo propiedades aquí
-        // (las que mapea Entity Framework)
+        // Atributos de Rol
+
+        //Relaciones
+        public Certificado certificado;
     }
 }

@@ -13,5 +13,7 @@ namespace Votify.Entities
         public int Id { get; set; }
 
         //Relaciones
+        public ICollection<Rol> roles;
+        public ICollection<Evento> eventos;
     }
 }

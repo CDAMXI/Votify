@@ -13,5 +13,8 @@ namespace Votify.Entities
         public bool Estado { get; set; }
 
         //Relaciones
+        public ICollection<Competidor> competidores;
+        public ICollection<Jurado> jurados;
+        public ICollection<Publico> publicos;
     }
 }
