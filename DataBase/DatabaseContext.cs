@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Npgsql;
 
-class DatabaseContext
+internal static class DatabaseContext
 {
     private class AppSettings
     {
@@ -16,7 +16,7 @@ class DatabaseContext
         public string? Supabase { get; set; }
     }
 
-    static async Task<int> Main(string[] args)
+    public static async Task<int> RunAsync()
     {
         const string configFile = "appsettings.Development.json";
 

@@ -1,42 +1,110 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Votify.Persistence;
+using System;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
+using Npgsql;
 
 namespace Votify.Tests
 {
-    internal class DBTest
+    internal static class DBTest
     {
-        static void Main(string[] args)
+        public static (bool Success, string Message) Run()
         {
-            Console.WriteLine("Intentando conectar con Supabase...");
-
             try
             {
-                // 1. Instanciar el contexto
-                using (var db = new VotifyDBContext())
-                {
-                    // 2. Forzar la apertura de la conexión y realizar una consulta simple
-                    // Esto verificará si el ConnectionString y el Provider están bien configurados
-                    int conteoUsuarios = db.Usuarios.Count();
+                string configPath = GetConfigPath();
+                string connectionString = GetConnectionString(configPath);
 
-                    Console.WriteLine("------------------------------------------");
-                    Console.WriteLine("¡CONEXIÓN EXITOSA!");
-                    Console.WriteLine($"Usuarios actuales en la base de datos: {conteoUsuarios}");
-                    Console.WriteLine("------------------------------------------");
+                using (var connection = new NpgsqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (var command = new NpgsqlCommand("SELECT 1", connection))
+                    {
+                        var result = command.ExecuteScalar();
+                        return (true, $"Conexion correcta a la base de datos.\nResultado de SELECT 1: {result}");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("------------------------------------------");
-                Console.WriteLine("ERROR AL CONECTAR:");
-                // Mostramos la InnerException porque suele dar el detalle real del error de red/login
-                Console.WriteLine(ex.InnerException?.Message ?? ex.Message);
-                Console.WriteLine("------------------------------------------");
+                return (false, ex.InnerException?.Message ?? ex.Message);
             }
+        }
 
-            Console.WriteLine("Presiona cualquier tecla para salir...");
-            Console.ReadKey();
+        public static (bool Success, string Message) CheckData()
+        {
+            try
+            {
+                string connectionString = GetConnectionString(GetConfigPath());
+                string[] tables =
+                {
+                    "Usuario",
+                    "Evento",
+                    "Competidor",
+                    "Encargado",
+                    "Publico",
+                    "Votacion",
+                    "Proyecto",
+                    "Dashboard",
+                    "Hoja_de_ruta",
+                    "participa_en",
+                    "Vota_en"
+                };
+
+                using (var connection = new NpgsqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var lines = tables
+                        .Select(table => $"{table}: {GetRowCount(connection, table)} registros")
+                        .ToArray();
+
+                    return (true, "Comprobacion de datos:\n" + string.Join("\n", lines));
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.InnerException?.Message ?? ex.Message);
+            }
+        }
+
+        private static string GetConfigPath()
+        {
+            string[] candidates =
+            {
+                Path.Combine(AppContext.BaseDirectory, "Votify.dll.config"),
+                Path.Combine(Directory.GetCurrentDirectory(), "App.config")
+            };
+
+            string? path = candidates.FirstOrDefault(File.Exists);
+            if (path is null)
+                throw new FileNotFoundException("No se ha encontrado App.config ni Votify.dll.config.");
+
+            return path;
+        }
+
+        private static string GetConnectionString(string configPath)
+        {
+            var document = XDocument.Load(configPath);
+            var connectionString = document
+                .Descendants("add")
+                .FirstOrDefault(x => (string?)x.Attribute("name") == "VotifyDbConnection")
+                ?.Attribute("connectionString")
+                ?.Value;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException("No se ha encontrado la cadena VotifyDbConnection en la configuracion.");
+
+            return connectionString;
+        }
+
+        private static int GetRowCount(NpgsqlConnection connection, string tableName)
+        {
+            using (var command = new NpgsqlCommand($"select count(*) from \"{tableName}\"", connection))
+            {
+                return Convert.ToInt32(command.ExecuteScalar());
+            }
         }
     }
 }
