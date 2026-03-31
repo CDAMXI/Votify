@@ -9,5 +9,6 @@ namespace Votify.Entities
         //Atributos de Rol
 
         //Relaciones
+        public Votacion votacion;
     }
 }

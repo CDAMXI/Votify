@@ -11,5 +11,6 @@ namespace Votify.Entities
         public DateTime Fecha { get; set; }
 
         //Relaciones
+        public Evento evento;
     }
 }

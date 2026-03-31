@@ -12,5 +12,6 @@ namespace Votify.Entities
         public int MaxVotosPersona { get; set; }
 
         //Relaciones
+        public Evento evento;
     }
 }

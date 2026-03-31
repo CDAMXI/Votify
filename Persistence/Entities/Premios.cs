@@ -12,5 +12,7 @@ namespace Votify.Entities
         public string Descripcion { get; set; }
 
         //Relaciones
+        public Votacion votacion;
+        public Categoria categoria;
     }
 }

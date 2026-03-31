@@ -10,5 +10,7 @@ namespace Votify.Entities
         public DateTime FechaAsignacion { get; set; }
 
         //Relaciones
+        public Evento evento; //Verificar
+        public Usuario usuario; //Verificar
     }
 }
