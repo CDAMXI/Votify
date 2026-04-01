@@ -15,7 +15,7 @@ namespace Votify.Entities
 
         //Relaciones
         public ICollection<Sugerencias> sugerencias;
-        public Rol rol;
+        public ICollection<Rol> roles;
         public ICollection<Proyecto> proyectos;
         public ICollection<Categoria> categorias;
         public Reglas reglas;

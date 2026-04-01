@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -16,6 +17,10 @@ namespace Votify.Entities
         public ICollection<Competidor> competidores;
         public ICollection<Jurado> jurados;
         public ICollection<Publico> publicos;
-        public EncargadoVotacion Encargado { get; set; }
+        public EncargadoVotacion Encargado;
+        public ICollection<Criterio> criterios;
+        public ICollection<Voto> votos;
+        public Categoria categoria;
+        public Ranking ranking;
     }
 }

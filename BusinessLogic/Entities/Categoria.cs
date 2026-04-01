@@ -10,12 +10,10 @@ namespace Votify.Entities
         {
         }
 
-        public Categoria(string username, string email, string password, int id) : this()
+        public Categoria(string nombre, string descripcion) : this()
         {
-            Username = username;
-            Email = email;
-            Password = password;
-            Id = id;
+            Nombre = nombre;
+            Descripcion = descripcion;
         }
     }
 }

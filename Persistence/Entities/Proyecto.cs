@@ -15,5 +15,7 @@ namespace Votify.Entities
         //Relaciones
         public Competidor competidor;
         public Evento evento;
+        public Categoria categoria;
+        public ICollection<Voto> votos;
     }
 }

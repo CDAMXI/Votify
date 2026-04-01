@@ -12,7 +12,5 @@ namespace Votify.Entities
 
         //Relaciones
         public Dashboard dashboard;
-        public Categoria categoria; //Definir multiplicidad
-        public Votacion votacion; //Definir multiplicidad
     }
 }
