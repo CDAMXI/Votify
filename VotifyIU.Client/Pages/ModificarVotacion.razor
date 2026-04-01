@@ -1,0 +1,58 @@
+﻿@page "/votacion/{VotacionId}"
+@using Votify.shared
+@using Votify
+@inject NavigationManager NavigationManager
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
+    <div class="w-full max-w-md px-6">
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+
+            <div class="flex justify-center mb-8">
+                <img src="images/votify-logo.png" alt="Votify" class="h-16 object-contain" />
+            </div>
+
+            <div class="text-center mb-8">
+                <h1 class="text-3xl text-[#1A281B] mb-2">Modificar Votación</h1>
+                <p class="text-[#6C8A6C]">Configura la votación</p>
+            </div>
+
+            <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit" class="space-y-6">
+
+                <div class="space-y-2">
+                    <label class="text-[#4C6B4F]">Fecha de fin</label>
+                    <InputDate @bind-Value="votacionDto.FechaFin"
+                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
+                    Modificar Votación
+                </button>
+
+            </EditForm>
+
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public int VotacionId { get; set; }
+
+    private VotacionDTO votacionDto = new VotacionDTO();
+
+    protected override void OnInitialized()
+    {
+        //var service = new Votify.BusinessLogic.Service.IVotifyService();
+        //var votacion = service.GetVotacionById(VotacionId);
+        //votacionDto.FechaFin = votacion.FechaFin;
+    }
+
+    public void HandleSubmit()
+    {
+        //var service = new Votify.BusinessLogic.Service.IVotifyService();
+        //service.modificarVotacion(VotacionId, votacionDto.FechaFin)
+
+        //NavigationManager.NavigateTo("/votacion/{votacionId}");
+    }
+}

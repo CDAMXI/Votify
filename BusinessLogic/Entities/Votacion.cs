@@ -7,12 +7,14 @@ namespace Votify.Entities
     public partial class Votacion
     {
         public Votacion() { }
-        public Votacion(DateTime fechaIni, DateTime fechaFin, bool estado)
+        public Votacion(DateTime fechaIni, DateTime fechaFin, bool estado, EncargadoVotacion encargado)
         {
             //Id = id;
             FechaIni = fechaIni;
             FechaFin = fechaFin;
             Estado = estado;
+            Encargado = encargado;
         }
+
     }
 }

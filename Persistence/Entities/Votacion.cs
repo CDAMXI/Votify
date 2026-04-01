@@ -16,5 +16,6 @@ namespace Votify.Entities
         public ICollection<Competidor> competidores;
         public ICollection<Jurado> jurados;
         public ICollection<Publico> publicos;
+        public EncargadoVotacion Encargado { get; set; }
     }
 }

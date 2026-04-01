@@ -7,6 +7,7 @@ namespace Votify.BuisnessLogic.Service
     internal class VotifyService : IVotifyService
     {
         public Usuario usuario;
+        public Rol rol;
         private readonly IDAL dal;
         public VotifyService(IDAL dal)
         {
@@ -75,17 +76,40 @@ namespace Votify.BuisnessLogic.Service
 
         public void crearVotoación(DateTime end, bool status)
         {
-           Votacion votacion = new Votacion(DateTime.Now, end, status);
-           dal.Insert<Votacion>(votacion);
+            if (rol is EncargadoVotacion)
+            {
+                EncargadoVotacion encargado = rol as EncargadoVotacion;
+                Votacion votacion = new Votacion(DateTime.Now, end, status, encargado);
+                dal.Insert<Votacion>(votacion);
+                dal.Commit();
+                encargado.votaciones.Add(votacion);
+                dal.Insert<EncargadoVotacion>(encargado);
+            }
+
         }
         public void borrarVotacion(int idVotacion)
         {
-            Votacion vot = dal.GetById<Votacion>(idVotacion);
-            if (usuario is EncargadoVotacion)
+            Votacion votacion = dal.GetById<Votacion>(idVotacion);
+            EncargadoVotacion encargado = rol as EncargadoVotacion;
+            if (votacion.Encargado == rol)
             {
-                dal.Delete<Votacion>(vot);
+                dal.Delete<Votacion>(votacion);
+                dal.Commit();
             }
             else throw new ServiceException("No es Encargado de la votacion");
+        }
+
+        public void modificarFecha(int votacionId, DateTime newEnd)
+        {
+            Votacion votacion = dal.GetById<Votacion>(votacionId);
+            EncargadoVotacion encargado = rol as EncargadoVotacion;
+            if (votacion.Encargado == rol)
+            {
+                votacion.FechaFin = newEnd;
+                dal.Insert<Votacion>(votacion);
+                dal.Commit();
+            }
+            else throw new ServiceException("No es Encargado de votación");
         }
     }
 }
