@@ -20,6 +20,7 @@ namespace Votify.BuisnessLogic.Service
             if(User != null && password == User.Password)
             {
                 usuario = User;
+                rol = User.roles?.FirstOrDefault();
             }
             else throw new ServiceException("Usuario o contraseña no válidos");
         }
@@ -28,6 +29,7 @@ namespace Votify.BuisnessLogic.Service
             if (usuario != null)
             {
                 usuario = null;
+                rol = null;
             }
             else throw new ServiceException("No hay ningún usuario logueado");
         }
@@ -64,9 +66,43 @@ namespace Votify.BuisnessLogic.Service
             return usuario;
         }
 
-        public void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion)
+        public void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion, string? comentario)
         {
-            throw new NotImplementedException();
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+
+            if (rol == null)
+                throw new ServiceException("No hay ningún rol activo");
+
+            if (rol is Organizador || rol is EncargadoVotacion)
+                throw new ServiceException("El rol actual no puede votar");
+
+            if (comentario != null && comentario.Length > 500)
+                throw new ServiceException("El comentario no puede superar los 500 caracteres");
+
+            Votacion votacion = dal.GetById<Votacion>(idVotacion);
+            if (votacion == null)
+                throw new ServiceException("La votación no existe");
+
+            Proyecto proyecto = dal.GetById<Proyecto>(idCompetidor);
+            if (proyecto == null)
+                throw new ServiceException("El proyecto no existe");
+
+            Evento evento = votacion.evento;
+            if (evento == null)
+                throw new ServiceException("La votación no está asociada a ningún evento");
+
+
+            if (rol is Competidor && !evento.PermiteCompetidoresVotar)
+                throw new ServiceException("Los competidores no pueden votar en este evento");
+
+            Voto voto = new Voto(puntuacion, comentario ?? string.Empty, DateTime.Now);
+            voto.votacion = votacion;
+            voto.proyecto = proyecto;
+            voto.votante = rol;
+
+            dal.Insert<Voto>(voto);
+            dal.Commit();
         }
 
         public void Commit()

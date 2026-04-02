@@ -25,7 +25,11 @@ namespace Votify.Persistence
 
         // Los DbSets deben ser PUBLIC para que el motor los encuentre correctamente
         public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Evento> Eventos { get; set; }
         public DbSet<Votacion> Votaciones { get; set; }
+
+        public DbSet<Voto> Votos { get; set; }
+        public DbSet<Proyecto> Proyectos { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {

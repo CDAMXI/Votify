@@ -22,5 +22,7 @@ namespace Votify.Entities
         public ICollection<Voto> votos;
         public Categoria categoria;
         public Ranking ranking;
+        public virtual Evento evento { get; set; }
+
     }
 }

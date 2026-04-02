@@ -12,6 +12,9 @@ namespace Votify.Entities
         public DateTime FechaIni { get; set; }
         public DateTime FechaFin { get; set; }
         public string Descripcion { get; set; }
+        public bool PermiteCompetidoresVotar { get; set; }
+        
+
 
         //Relaciones
         public ICollection<Sugerencias> sugerencias;
@@ -19,5 +22,6 @@ namespace Votify.Entities
         public ICollection<Proyecto> proyectos;
         public ICollection<Categoria> categorias;
         public Reglas reglas;
+        public virtual ICollection<Votacion> votaciones { get; set; }
     }
 }
