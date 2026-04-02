@@ -1,6 +1,7 @@
 ﻿@page "/"
 @page "/login"
 @using Votify.shared
+@layout EmptyLayout
 @inject NavigationManager NavigationManager
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
@@ -8,7 +9,7 @@
         <div class="bg-white rounded-2xl shadow-2xl p-8">
 
             <div class="flex justify-center mb-8">
-                <img src="images/votify-logo.png" alt="Votify" class="h-16 object-contain" />
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
             </div>
 
             <div class="text-center mb-8">
@@ -24,7 +25,7 @@
                                @bind-Value="loginDto.Username"
                                placeholder="Ingresa tu usuario"
                                required
-                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
                 <div class="space-y-2">
@@ -34,11 +35,11 @@
                                @bind-Value="loginDto.Password"
                                placeholder="Ingresa tu contraseña"
                                required
-                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
                 <button type="submit"
-                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
+                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
                     Iniciar Sesión
                 </button>
             </EditForm>
