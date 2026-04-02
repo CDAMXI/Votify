@@ -13,7 +13,7 @@ namespace Votify.Entities
 
         //Relaciones
         public Votacion votacion;
-        public Proyecto poryecto;
+        public Proyecto proyecto;
         public Rol votante;
     }
 }
