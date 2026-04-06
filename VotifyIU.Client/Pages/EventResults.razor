@@ -1,5 +1,7 @@
 ﻿@page "/event-results/{EventId}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
+@layout EmptyLayout
 @inject NavigationManager NavigationManager
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
@@ -18,6 +20,8 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        @if (Rol == "EXPERT" || Rol == "ORGANIZER" || Rol == "VOTING_MANAGER")
+{
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🏆</div>
@@ -137,11 +141,19 @@
                 </div>
             }
         </div>
+        }
+        else if (Rol == "COMPETITOR")
+        {
+            <p>Aquí verás tus resultados cuando estén disponibles.</p>
+        }
     </main>
 </div>
 
 @code {
     [Parameter] public string? EventId { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Rol { get; set; }
 
     private string GetRankColor(int rank) => rank switch
     {

@@ -1,4 +1,5 @@
 ﻿@page "/dashboard"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
@@ -19,14 +20,11 @@
             </div>
         </div>
     </header>
-
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
             <h2 class="text-3xl font-bold text-[#1A281B] mb-4">Bienvenido a Votify</h2>
             <p class="text-[#4C6B4F] leading-relaxed">
-                Votify surge como una plataforma inteligente que redefinirá la interacción entre organizadores,
-                expertos, participantes y público en general. Se pasará de un simple conteo de votos a una
-                experiencia inmersiva de evaluación analítica.
+                <strong class="text-[#6C8A6C]">Votify</strong> es un sistema multiplataforma para gestionar votaciones y evaluaciones en eventos competitivos como hackathons, ferias de innovación y concursos.
             </p>
         </div>
 
@@ -45,9 +43,22 @@
                             </span>
                             @if (ev.Status == "active")
                             {
-                                <div class="flex items-center gap-1 text-[#70D939]">
-                                    <span class="text-xs font-medium">● Votación abierta</span>
-                                </div>
+                                if(rolActual == "EXPERT" || rolActual == "PUBLIC")
+                                {
+                                    <div class="flex items-center gap-1 text-[#6C8A6C]">
+                                        <span class="text-xs font-medium">● Votación abierta</span>
+                                    </div>
+                                } else if (rolActual == "COMPETIDOR")
+                                { 
+                                    <div class="flex items-center gap-1 text-[#70D939]">
+                                        <span class="text-xs font-medium">● Ver mi Evaluación</span>
+                                    </div>
+                                } else if(rolActual == "ORGANIZER" || rolActual == "VOTING_MANAGER")
+                                {
+                                    <div class="flex items-center gap-1 text-[#70D939]">
+                                        <span class="text-xs font-medium">● Gestionar</span>
+                                    </div>
+                                }
                             }
                         </div>
 
@@ -93,20 +104,22 @@
 </div>
 
 @code {
+    private string rolActual = "EXPERT";
+
     private void NavigateToEvent(string id)
     {
-        NavigationManager.NavigateTo($"/event-voting/{id}");
+        NavigationManager.NavigateTo($"/event-voting/{id}?rol={rolActual}");
     }
 
     private void NavigateToResults(string id)
     {
         // Reemplaza "/event-results/" con la ruta real de tu página de resultados
-        NavigationManager.NavigateTo($"/event-results/{id}");
+        NavigationManager.NavigateTo($"/event-results/{id}?rol={rolActual}");
     }
 
     private string GetStatusColor(string status) => status switch
     {
-        "active" => "bg-[#70D939] text-white",
+        "active" => "bg-[#6C8A6C] text-white",
         "upcoming" => "bg-[#B5D6AC] text-[#1A281B]",
         "finished" => "bg-[#A6AAA9] text-white",
         _ => "bg-gray-300"
@@ -114,7 +127,7 @@
 
     private string GetStatusText(string status) => status switch
     {
-        "active" => "En curso",
+        "active" => "En Curso",
         "upcoming" => "Próximamente",
         "finished" => "Finalizado",
         _ => status

@@ -1,4 +1,5 @@
 ﻿@page "/votacion/{VotacionId}"
+<Routes @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
 @using Votify.shared
 @using Votify
 @inject NavigationManager NavigationManager
