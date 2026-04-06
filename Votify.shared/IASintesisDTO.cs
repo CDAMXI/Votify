@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Votify.shared
 {
-    internal interface IASintesisDTO
+    public interface IASintesisDTO
     {
        public int Id { get; set; }
         public string Propuesta { get; set; }

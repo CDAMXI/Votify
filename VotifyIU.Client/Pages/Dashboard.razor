@@ -80,10 +80,25 @@
 
                         @if (ev.Status == "active")
                         {
-                            <button @onclick="() => NavigateToEvent(ev.Id)"
-                                    class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
-                                Votar Ahora
-                            </button>
+                            if(rolActual == "EXPERT" || rolActual == "PUBLIC")
+                            {
+                                <button @onclick="() => NavigateToEvent(ev.Id)"
+                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                    Votar Ahora
+                                </button>
+                            } else if(rolActual == "COMPETITOR")
+                            {
+                                <button @onclick="() => NavigateToEvent(ev.Id)"
+                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                    Ver Mi Evaluación
+                                </button>
+                            } else if(rolActual == "ORGANIZER" || rolActual == "VOTING_MANAGER")
+                            {
+                                <button @onclick="() => NavigateToResults(ev.Id)"
+                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                    Gestionar
+                                </button>
+                            }
                         }
                         else if (ev.Status == "upcoming")
                         {
