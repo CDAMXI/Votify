@@ -4,7 +4,7 @@ using Votify.Entities;
 
 namespace Votify.BuisnessLogic.Service
 {
-    internal class VotifyService : IVotifyService
+    public class VotifyService : IVotifyService
     {
         public Usuario usuario;
         public Rol rol;
@@ -58,7 +58,13 @@ namespace Votify.BuisnessLogic.Service
 
         public void Registrar(string username, string email, string password)
         {
-            throw new NotImplementedException();
+            Usuario existingUser = dal.GetById<Usuario>(username);
+            if (existingUser != null)
+                throw new ServiceException("El usuario ya existe");
+
+            Usuario newUser = new Usuario(username, email, password, 0);
+            dal.Insert<Usuario>(newUser);
+            dal.Commit();
         }
 
         public Usuario GetUsuarioActual()
@@ -146,6 +152,13 @@ namespace Votify.BuisnessLogic.Service
                 dal.Commit();
             }
             else throw new ServiceException("No es Encargado de votación");
+        }
+        public Rol GetRolEnEvento(int idEvento)
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+
+            return usuario.roles?.FirstOrDefault(r => r.evento?.IdEvento == idEvento);
         }
     }
 }

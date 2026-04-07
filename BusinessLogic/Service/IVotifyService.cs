@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Votify.Entities;
 
-internal interface IVotifyService
+public interface IVotifyService
 {
     void LogIn(string user, string password);
     void LogOut();
@@ -13,4 +13,6 @@ internal interface IVotifyService
     void Commit();
     void crearVotoación(DateTime end, bool status);
     void borrarVotacion(int idVotacion);
+    public void modificarFecha(int votacionId, DateTime newEnd);
+    public Rol GetRolEnEvento(int idEvento);
 }
