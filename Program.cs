@@ -34,5 +34,3 @@ if (Environment.GetCommandLineArgs().Any(arg => string.Equals(arg, "--checkdb", 
 
 // Aqui ira la inicializacion real del DAL y el servicio
 // IVotifyService service = new VotifyService(new EntityFrameworkDAL(new VotifyDBContext()));
-
-Application.Run(new FormLogin(/* service */));

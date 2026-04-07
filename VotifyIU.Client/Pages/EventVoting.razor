@@ -4,6 +4,12 @@
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 
+<style>
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+</style>
+
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -69,14 +75,29 @@
                             <div class="flex-1">
                                 <label class="text-[#1A281B] text-base font-bold">
                                     @criterion.Name
-                                    <span class="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
+                                    <span claNo ss="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
                                 </label>
                                 <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
                             </div>
-                            <div class="ml-4 text-right">
-                                <span class="text-3xl font-bold text-[#6C8A6C]">@GetScore(criterion.Id)</span>
-                                <span class="text-[#A6AAA9]">/10</span>
-                            </div>
+                                <div class="ml-4 text-right">
+                                    @if (editingCriteria.Contains(criterion.Id))
+                                    {
+                                        <input type="number"
+                                               min="0" max="10" step="0.01"
+                                               value="@GetScore(criterion.Id)"
+                                               @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
+                                               @onblur="() => ToggleEditMode(criterion.Id)"
+                                               class="text-3xl font-bold text-[#6C8A6C] w-20 bg-transparent border-b-2 border-[#6C8A6C] outline-none text-right" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-3xl font-bold text-[#6C8A6C] cursor-pointer"
+                                              @onclick="() => ToggleEditMode(criterion.Id)">
+                                            @GetScore(criterion.Id)
+                                        </span>
+                                    }
+                                    <span class="text-[#A6AAA9]">/10</span>
+                                </div>
                         </div>
 
                         <input type="range"
@@ -138,6 +159,7 @@
     [SupplyParameterFromQuery]
     public string? Rol { get; set; }
 
+    private HashSet<string> editingCriteria = new();
     private int currentProjectIndex = 0;
     private string comments = "";
     private HashSet<string> votedProjects = new();
@@ -154,6 +176,14 @@
         new Criterion { Id = "2", Name = "Viabilidad", Weight = 25, Description = "Calidad técnica." }
     };
 
+    private void ToggleEditMode(string criterionId)
+    {
+        if (editingCriteria.Contains(criterionId))
+            editingCriteria.Remove(criterionId);
+        else
+            editingCriteria.Add(criterionId);
+    }
+
     private double GetScore(string criterionId)
     {
         string key = $"{mockProjects[currentProjectIndex].Id}-{criterionId}";
@@ -165,6 +195,8 @@
         if (double.TryParse(val, out double result))
         {
             string key = $"{mockProjects[currentProjectIndex].Id}-{criterionId}";
+            result = Math.Clamp(result, 0, 10);
+            result = Math.Round(result, 2);
             scores[key] = result;
         }
     }
