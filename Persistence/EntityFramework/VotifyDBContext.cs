@@ -34,9 +34,17 @@ namespace Votify.Persistence
 
         public DbSet<Voto> Votos { get; set; }
         public DbSet<Proyecto> Proyectos { get; set; }
+        public DbSet<Rol> Roles { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Rol>()
+                .Map<Jurado>(m => m.Requires("TipoRol").HasValue("EXPERT"))
+                .Map<Competidor>(m => m.Requires("TipoRol").HasValue("COMPETITOR"))
+                .Map<Organizador>(m => m.Requires("TipoRol").HasValue("ORGANIZER"))
+                .Map<EncargadoVotacion>(m => m.Requires("TipoRol").HasValue("VOTING_MANAGER"))
+                .Map<Publico>(m => m.Requires("TipoRol").HasValue("PUBLIC"));
+
             // PostgreSQL usa el esquema 'public' por defecto
             modelBuilder.HasDefaultSchema("public");
 
