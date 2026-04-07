@@ -144,7 +144,58 @@
         }
         else if (Rol == "COMPETITOR")
         {
-            <p>Aquí verás tus resultados cuando estén disponibles.</p>
+        var myProject = mockResults[0];
+    
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-[#1A281B]">@myProject.Name</h2>
+                    <p class="text-[#6C8A6C]">@myProject.Team</p>
+                    <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-xs font-bold mt-2">@myProject.Category</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-[#6C8A6C] mb-1">Tu puntuación</div>
+                    <div class="text-5xl font-black text-[#6C8A6C]">@myProject.TotalScore</div>
+                    <div class="text-sm text-[#A6AAA9]">/10</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6 bg-[#F8FAF7] p-4 rounded-lg">
+                <div class="text-center">
+                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Innovación</div>
+                    <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Innovation</div>
+                </div>
+                <div class="text-center border-l border-[#B5D6AC]/30">
+                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Técnica</div>
+                    <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Technical</div>
+                </div>
+                <div class="text-center border-l border-[#B5D6AC]/30">
+                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Impacto</div>
+                    <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Impact</div>
+                </div>
+                <div class="text-center border-l border-[#B5D6AC]/30">
+                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Presentación</div>
+                    <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Presentation</div>
+                </div>
+                <div class="text-center border-l border-[#B5D6AC]/30">
+                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Diseño</div>
+                    <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Design</div>
+                </div>
+            </div>
+
+            @if (myProject.Comments.Any())
+            {
+                <div class="bg-[#EFEFEE] rounded-lg p-4">
+                    <p class="text-xs font-bold text-[#4C6B4F] mb-2 uppercase tracking-wider">Feedback recibido:</p>
+                    <ul class="space-y-1">
+                        @foreach (var comment in myProject.Comments)
+                        {
+                            <li class="text-sm text-[#6C8A6C]">" @comment "</li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
         }
     </main>
 </div>
