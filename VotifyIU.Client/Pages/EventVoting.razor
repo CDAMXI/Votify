@@ -85,7 +85,7 @@
                                         <input type="number"
                                                min="0" max="10" step="0.01"
                                                value="@GetScore(criterion.Id)"
-                                               @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
+                                               @onchange="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
                                                @onblur="() => ToggleEditMode(criterion.Id)"
                                                class="text-3xl font-bold text-[#6C8A6C] w-20 bg-transparent border-b-2 border-[#6C8A6C] outline-none text-right" />
                                     }
@@ -219,7 +219,7 @@
         votedProjects.Add(mockProjects[currentProjectIndex].Id);
         if (currentProjectIndex < mockProjects.Count - 1)
         {
-            currentProjectIndex++;
+            currentProjectIndex++; 
             comments = "";
         }
         else
