@@ -11,6 +11,10 @@ namespace Votify.Entities
         public string Comentario { get; set; }
         public DateTime Fecha { get; set; }
 
+        public int VotanteId { get; set; }
+        public int VotacionId { get; set; }
+        public int ProyectoId { get; set; }
+
         //Relaciones
         public Votacion votacion;
         public Proyecto proyecto;

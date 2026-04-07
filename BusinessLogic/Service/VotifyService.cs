@@ -2,7 +2,7 @@
 using Votify.Entities;
 
 
-namespace Votify.BuisnessLogic.Service
+namespace Votify.BusinessLogic.Service
 {
     public class VotifyService : IVotifyService
     {
@@ -57,15 +57,15 @@ namespace Votify.BuisnessLogic.Service
          */
 
         public void Registrar(string username, string email, string password)
-        {
-            Usuario existingUser = dal.GetById<Usuario>(username);
-            if (existingUser != null)
-                throw new ServiceException("El usuario ya existe");
+{
+    Usuario existingUser = dal.GetById<Usuario>(username);
+    if (existingUser != null)
+        throw new ServiceException("El usuario ya existe");
 
-            Usuario newUser = new Usuario(username, email, password, 0);
-            dal.Insert<Usuario>(newUser);
-            dal.Commit();
-        }
+    Usuario newUser = new Usuario(username, email, password, 0);
+    dal.Insert<Usuario>(newUser);
+    dal.Commit();
+}
 
         public Usuario GetUsuarioActual()
         {

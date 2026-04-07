@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Votify.BuisnessLogic.Service
+namespace Votify.BusinessLogic.Service
 {
     internal class ServiceException : Exception
     {

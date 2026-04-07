@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
+using System.Data.Entity.Infrastructure.Annotations;
 using System.Linq;
 using Votify.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Entity.Infrastructure.Annotations;
 
 namespace Votify.Persistence
 {
@@ -35,6 +39,18 @@ namespace Votify.Persistence
         {
             // PostgreSQL usa el esquema 'public' por defecto
             modelBuilder.HasDefaultSchema("public");
+
+            modelBuilder.Entity<Voto>().Property(v => v.VotanteId).HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("IX_Voto_Unique", 1) { IsUnique = true }));
+
+            modelBuilder.Entity<Voto>()
+                .Property(v => v.VotacionId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(
+                    new IndexAttribute("IX_Voto_Unique", 2) { IsUnique = true }));
+
+            modelBuilder.Entity<Voto>()
+                .Property(v => v.ProyectoId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(
+                    new IndexAttribute("IX_Voto_Unique", 3) { IsUnique = true }));
 
             base.OnModelCreating(modelBuilder);
         }

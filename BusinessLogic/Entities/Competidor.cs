@@ -13,7 +13,7 @@ namespace Votify.Entities
 
         public override double NormalizedScore()
         {
-            throw new NotImplementedException();
+            return rawScore;
         }
 
         public override string RolVotante() => "COMPETITOR";
