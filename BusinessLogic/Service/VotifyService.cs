@@ -102,6 +102,10 @@ namespace Votify.BusinessLogic.Service
             if (rol is Competidor && !evento.PermiteCompetidoresVotar)
                 throw new ServiceException("Los competidores no pueden votar en este evento");
 
+            bool yaVotó = dal.GetWhere<Voto>(v => v.votante == rol && v.votacion == votacion && v.proyecto == proyecto).Any();
+            if (yaVotó)
+                throw new ServiceException("Ya has votado en este proyecto para esta votación");
+
             Voto voto = new Voto(puntuacion, comentario ?? string.Empty, DateTime.Now);
             voto.votacion = votacion;
             voto.proyecto = proyecto;

@@ -9,6 +9,7 @@ namespace Votify.Entities
         public Jurado() : base() { }
         public Jurado(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore) { }
 
+        //Método Fábrica
         public override string RolVotante() => "EXPERT";
         public override double NormalizedScore() => rawScore * 1.2;
     }

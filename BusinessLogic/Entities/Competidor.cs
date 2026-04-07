@@ -16,6 +16,7 @@ namespace Votify.Entities
             return rawScore;
         }
 
+        //Método Fábrica
         public override string RolVotante() => "COMPETITOR";
     }
 }

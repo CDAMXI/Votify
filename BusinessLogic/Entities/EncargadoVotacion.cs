@@ -12,6 +12,7 @@
             votaciones = new List<Votacion>();
         }
 
+        //Método Fábrica
         public override string RolVotante() => "VOTING_MANAGER";
         public override double NormalizedScore() => rawScore;
     }
