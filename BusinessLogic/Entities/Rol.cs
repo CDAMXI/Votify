@@ -6,7 +6,7 @@ namespace Votify.Entities
 {
     public abstract partial class Rol
     {
-        protected double rawScore; // campo compartido
+        public double rawScore; // campo compartido
         public Rol() { }
 
         public Rol(DateTime fechaAsignacion, double rawScore)

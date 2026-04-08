@@ -16,7 +16,7 @@ namespace Votify.Entities
             return rawScore;
         }
 
-        //Método Fábrica
+        //Identificador de tipo (usado por RolFactory)
         public override string RolVotante() => "COMPETITOR";
     }
 }

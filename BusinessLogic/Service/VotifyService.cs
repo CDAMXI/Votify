@@ -13,14 +13,18 @@ namespace Votify.BusinessLogic.Service
         {
             this.dal = dal;
         }
-        
+        // Usamos el método fábrica
         public void LogIn(String user, String password)
         {
             Usuario User = dal.GetById<Usuario>(user);
-            if(User != null && password == User.Password)
+            if (User != null && password == User.Password)
             {
                 usuario = User;
-                rol = User.roles?.FirstOrDefault();
+                Rol rolRecuperado = User.roles?.FirstOrDefault();
+                if (rolRecuperado != null)
+                    rol = RolFactory.Create(rolRecuperado.RolVotante(), rolRecuperado.FechaAsignacion, rolRecuperado.RawScore());
+                else
+                    rol = null;
             }
             else throw new ServiceException("Usuario o contraseña no válidos");
         }
@@ -163,6 +167,25 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException("No hay ningún usuario logueado");
 
             return usuario.roles?.FirstOrDefault(r => r.evento?.IdEvento == idEvento);
+        }
+        // Usamos el método fábrica
+        public void AsignarRolEnEvento(string tipoRol, int idEvento)
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+
+            Evento evento = dal.GetById<Evento>(idEvento);
+            if (evento == null)
+                throw new ServiceException("El evento no existe");
+
+            Rol nuevoRol = RolFactory.Create(tipoRol, DateTime.Now, 0);
+            nuevoRol.evento = evento;
+
+            usuario.roles ??= new List<Rol>();
+            usuario.roles.Add(nuevoRol);
+
+            dal.Insert<Rol>(nuevoRol);
+            dal.Commit();
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Votify.Entities
         public Organizador() : base() { }
         public Organizador(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore) { }
 
-        //Método Fábrica
+        //Identificador de tipo (usado por RolFactory)
         public override string RolVotante() => "ORGANIZER";
         public override double NormalizedScore() => rawScore;
     }

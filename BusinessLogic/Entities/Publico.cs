@@ -13,7 +13,7 @@ namespace Votify.Entities
         {
         }
 
-        //Método Fábrica
+        //Identificador de tipo (usado por RolFactory)
         public override string RolVotante() => "PUBLIC";
         public override double NormalizedScore() => rawScore * 0.8;
     }
