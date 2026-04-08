@@ -5,8 +5,6 @@ using System.Data.Entity;
 using System.Data.Entity.Infrastructure.Annotations;
 using System.Linq;
 using Votify.Entities;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Data.Entity.Infrastructure.Annotations;
 
 namespace Votify.Persistence
 {

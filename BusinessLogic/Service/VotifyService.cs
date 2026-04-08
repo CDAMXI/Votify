@@ -6,8 +6,8 @@ namespace Votify.BusinessLogic.Service
 {
     public class VotifyService : IVotifyService
     {
-        public Usuario usuario;
-        public Rol rol;
+        public Usuario? usuario;
+        public Rol? rol;
         private readonly IDAL dal;
         public VotifyService(IDAL dal)
         {
