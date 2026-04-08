@@ -131,10 +131,15 @@
 
             <div class="mb-6">
                 <label for="comments" class="text-[#1A281B] font-bold mb-2 block">Comentarios (opcional)</label>
-                <textarea id="comments"
-                          @bind="comments"
-                          placeholder="Comparte tus observaciones sobre el proyecto..."
-                          class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border-[#B5D6AC] focus:ring-2 focus:ring-[#6C8A6C] outline-none transition-all"></textarea>
+                <div class="relative">
+                    <textarea id="comments"
+                              value="@comments"
+                              @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
+                              maxlength="500"
+                              placeholder="Comparte tus observaciones sobre el proyecto..."
+                              class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border-[#B5D6AC] focus:ring-2 focus:ring-[#6C8A6C] outline-none transition-all"></textarea>
+                    <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
+                </div>
             </div>
 
             <div class="flex gap-4">
@@ -182,6 +187,7 @@
 
     private HashSet<string> editingCriteria = new();
     private int currentProjectIndex = 0;
+    private int commentLength = 0;
     private string comments = "";
     private HashSet<string> votedProjects = new();
     private Dictionary<string, double> scores = new();
