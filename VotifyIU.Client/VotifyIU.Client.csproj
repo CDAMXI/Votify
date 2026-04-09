@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Votify.csproj" />
     <ProjectReference Include="..\Votify.shared\Votify.shared.csproj" />
   </ItemGroup>
 

@@ -1,18 +1,19 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Votify.Entities
 {
     public partial class Ranking
     {
-        //Atributos
+        [Key]
+        public int Id { get; set; }
         public int Posicion { get; set; }
         public double PuntajeTotal { get; set; }
-        public bool EsManual { get; set; } // si fue intervenido manualmente por el jurado
+        public bool EsManual { get; set; }
 
-        //Relaciones
-        public Proyecto proyecto;
-        public Votacion votacion;
+        public virtual Proyecto proyecto { get; set; }
+        public virtual Votacion votacion { get; set; }
     }
 }

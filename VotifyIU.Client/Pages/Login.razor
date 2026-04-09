@@ -4,6 +4,7 @@
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
+@inject HttpClient Http
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
     <div class="w-full max-w-md px-6">
@@ -17,6 +18,13 @@
                 <h1 class="text-3xl text-[#1A281B] mb-2">Bienvenido a Votify</h1>
                 <p class="text-[#6C8A6C]">Inicia sesión para votar en hackathones</p>
             </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-xl text-sm text-center">
+                    @errorMessage
+                </div>
+            }
 
             <EditForm Model="@loginDto" OnValidSubmit="HandleSubmit" class="space-y-6">
 
@@ -39,9 +47,9 @@
                                class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
-                    Iniciar Sesión
+                <button type="submit" disabled="@isLoading"
+                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium disabled:opacity-60">
+                    @(isLoading ? "Iniciando sesión..." : "Iniciar Sesión")
                 </button>
             </EditForm>
 
@@ -58,24 +66,45 @@
     </div>
 </div>
 @code {
-    // 1. Instanciamos el DTO para capturar los datos
     private UserLoginDTO loginDto = new UserLoginDTO();
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
 
-    // 2. Método que se ejecuta al enviar el formulario
-    private void HandleSubmit()
+    private async Task HandleSubmit()
     {
-        // Aquí conectaremos con la API y Supabase más adelante
-        Console.WriteLine($"Intentando loguear a: {loginDto.Username}");
+        isLoading = true;
+        errorMessage = string.Empty;
 
-        // Redirigir al dashboard simulando la navegación
-        NavigationManager.NavigateTo("/dashboard");
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/auth/login", new
+            {
+                Username = loginDto.Username,
+                Password = loginDto.Password
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorMessage = "Usuario o contraseña incorrectos.";
+            }
+        }
+        catch
+        {
+            errorMessage = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
-    // Nota: Lo ideal es que esta clase viva en Votify.Shared,
-    // pero la pongo aquí para que el código te funcione de inmediato.
     public class UserLoginDTO
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-}
+    }
 }

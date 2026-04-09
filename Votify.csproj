@@ -1,9 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
-		<TargetFramework>net10.0-windows</TargetFramework>
-		<UseWindowsForms>true</UseWindowsForms>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -11,10 +9,11 @@
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="EntityFramework6.Npgsql" Version="6.4.3" />
-		<PackageReference Include="Npgsql" Version="10.0.2" />
+		<PackageReference Include="Npgsql" Version="6.0.11" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Remove="Program.cs" />
 		<Compile Remove="VotifyIU\**\*.cs;VotifyIU.Client\**\*.cs;Votify.shared\**\*.cs" />
 		<EmbeddedResource Remove="VotifyIU\**;VotifyIU.Client\**;Votify.shared\**" />
 		<None Remove="VotifyIU\**;VotifyIU.Client\**;Votify.shared\**" />

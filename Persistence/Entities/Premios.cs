@@ -1,18 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Votify.Entities
 {
     public partial class Premios
     {
-        //Atributos
-        public int Id{ get; set; }
+        [Key]
+        public int Id { get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
 
-        //Relaciones
-        public Votacion votacion;
-        public Categoria categoria;
+        public virtual Votacion votacion { get; set; }
+        public virtual Categoria categoria { get; set; }
     }
 }

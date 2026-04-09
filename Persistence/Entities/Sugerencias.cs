@@ -1,16 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Votify.Entities
 {
     public partial class Sugerencias
     {
-        //Atributos
+        [Key]
+        public int Id { get; set; }
         public string Contenido { get; set; }
         public DateTime Fecha { get; set; }
 
-        //Relaciones
-        public Evento evento;
+        public virtual Evento evento { get; set; }
     }
 }

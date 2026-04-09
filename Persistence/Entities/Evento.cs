@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Votify.Entities
@@ -7,6 +8,7 @@ namespace Votify.Entities
     public partial class Evento
     {
         //Atributos
+        [Key]
         public int IdEvento { get; set; }
         public string Nombre { get; set; }
         public DateTime FechaIni { get; set; }
@@ -17,11 +19,11 @@ namespace Votify.Entities
 
 
         //Relaciones
-        public ICollection<Sugerencias> sugerencias;
-        public ICollection<Rol> roles;
-        public ICollection<Proyecto> proyectos;
-        public ICollection<Categoria> categorias;
-        public Reglas reglas;
+        public virtual ICollection<Sugerencias> sugerencias { get; set; }
+        public virtual ICollection<Rol> roles { get; set; }
+        public virtual ICollection<Proyecto> proyectos { get; set; }
+        public virtual ICollection<Categoria> categorias { get; set; }
+        public virtual Reglas reglas { get; set; }
         public virtual ICollection<Votacion> votaciones { get; set; }
     }
 }

@@ -3,6 +3,7 @@
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
+@inject HttpClient Http
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#90A896] via-[#6C8A6C] to-[#4C6B4F] py-12 px-4">
     <div class="w-full max-w-md">
@@ -61,8 +62,16 @@
                                class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
-                <button type="submit" class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl mt-6 font-bold">
-                    Crear Cuenta
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="p-3 bg-red-100 text-red-700 rounded-xl text-sm text-center">
+                        @errorMessage
+                    </div>
+                }
+
+                <button type="submit" disabled="@isLoading"
+                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl mt-6 font-bold disabled:opacity-60">
+                    @(isLoading ? "Creando cuenta..." : "Crear Cuenta")
                 </button>
             </EditForm>
 
@@ -81,27 +90,55 @@
 @code {
     private RegisterRequestDTO registerDto = new RegisterRequestDTO();
     private string? profileImagePreview;
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
 
     private async Task HandleImageChange(InputFileChangeEventArgs e)
     {
         var file = e.File;
         if (file != null)
         {
-            // Redimensionamos para que no pese mucho (opcional)
             var resizedFile = await file.RequestImageFileAsync("image/png", 200, 200);
             var buffer = new byte[resizedFile.Size];
             await resizedFile.OpenReadStream().ReadAsync(buffer);
-
-            // Convertimos a Base64 para mostrar la vista previa
             profileImagePreview = $"data:image/png;base64,{Convert.ToBase64String(buffer)}";
             registerDto.ProfileImageBase64 = profileImagePreview;
         }
     }
 
-    private void HandleSubmit()
+    private async Task HandleSubmit()
     {
-        Console.WriteLine($"Registro: {registerDto.Username}, {registerDto.Email}");
-        NavigationManager.NavigateTo("/dashboard");
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/auth/register", new
+            {
+                Username = registerDto.Username,
+                Email    = registerDto.Email,
+                Password = registerDto.Password
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+            else
+            {
+                errorMessage = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrEmpty(errorMessage))
+                    errorMessage = "Error al crear la cuenta.";
+            }
+        }
+        catch
+        {
+            errorMessage = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     // Este DTO debería ir en tu proyecto Shared

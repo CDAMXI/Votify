@@ -14,14 +14,14 @@ namespace Votify.Entities
         public bool Estado { get; set; }
 
         //Relaciones
-        public ICollection<Competidor> competidores;
-        public ICollection<Jurado> jurados;
-        public ICollection<Publico> publicos;
-        public EncargadoVotacion Encargado;
-        public ICollection<Baremo> criterios;
-        public ICollection<Voto> votos;
-        public Categoria categoria;
-        public Ranking ranking;
+        public virtual ICollection<Competidor> competidores { get; set; }
+        public virtual ICollection<Jurado> jurados { get; set; }
+        public virtual ICollection<Publico> publicos { get; set; }
+        public virtual EncargadoVotacion Encargado { get; set; }
+        public virtual ICollection<Baremo> criterios { get; set; }
+        public virtual ICollection<Voto> votos { get; set; }
+        public virtual Categoria categoria { get; set; }
+        public virtual Ranking ranking { get; set; }
         public virtual Evento evento { get; set; }
 
     }

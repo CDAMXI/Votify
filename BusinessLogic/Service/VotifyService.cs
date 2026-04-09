@@ -16,7 +16,7 @@ namespace Votify.BusinessLogic.Service
         // Usamos el método fábrica
         public void LogIn(String user, String password)
         {
-            Usuario User = dal.GetById<Usuario>(user);
+            Usuario User = dal.GetWhere<Usuario>(u => u.Username == user).FirstOrDefault();
             if (User != null && password == User.Password)
             {
                 usuario = User;
@@ -60,9 +60,23 @@ namespace Votify.BusinessLogic.Service
          * }
          */
 
+        public void RestoreSession(string username)
+        {
+            Usuario user = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+            if (user == null)
+                throw new ServiceException("Usuario no encontrado");
+
+            usuario = user;
+            Rol rolRecuperado = user.roles?.FirstOrDefault();
+            if (rolRecuperado != null)
+                rol = RolFactory.Create(rolRecuperado.RolVotante(), rolRecuperado.FechaAsignacion, rolRecuperado.RawScore());
+            else
+                rol = null;
+        }
+
         public void Registrar(string username, string email, string password)
 {
-    Usuario existingUser = dal.GetById<Usuario>(username);
+    Usuario existingUser = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
     if (existingUser != null)
         throw new ServiceException("El usuario ya existe");
 
@@ -192,10 +206,8 @@ namespace Votify.BusinessLogic.Service
 
             Rol nuevoRol = RolFactory.Create(tipoRol, DateTime.Now, 0);
             nuevoRol.evento = evento;
-
             usuario.roles ??= new List<Rol>();
             usuario.roles.Add(nuevoRol);
-
             dal.Insert<Rol>(nuevoRol);
             dal.Commit();
         }

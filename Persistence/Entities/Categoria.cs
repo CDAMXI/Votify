@@ -1,17 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Votify.Entities
 {
     public partial class Categoria
     {
-        //Atributos
+        [Key]
+        public int Id { get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
 
-        //Relaciones
-        public Evento evento;
-        public ICollection<Premios> premios;
+        public virtual Evento evento { get; set; }
+        public virtual ICollection<Premios> premios { get; set; }
     }
 }

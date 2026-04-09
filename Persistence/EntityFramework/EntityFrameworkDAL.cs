@@ -10,9 +10,9 @@ namespace Votify.Persistence
 {
     public class EntityFrameworkDAL : IDAL
     {
-        private readonly DBContextVotify dbContext;
+        private readonly VotifyDBContext dbContext;
 
-        public EntityFrameworkDAL(DBContextVotify dbContext)
+        public EntityFrameworkDAL(VotifyDBContext dbContext)
         {
             this.dbContext = dbContext;
         }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Votify.BusinessLogic.Service
 {
-    internal class ServiceException : Exception
+    public class ServiceException : Exception
     {
         public ServiceException() { }
         public ServiceException(string message) : base(message) { }
