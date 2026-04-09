@@ -168,6 +168,18 @@ namespace Votify.BusinessLogic.Service
 
             return usuario.roles?.FirstOrDefault(r => r.evento?.IdEvento == idEvento);
         }
+
+        public bool HasVotadoEnEvento(int idEvento)
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+
+            return dal.GetWhere<Voto>(v =>
+                v.votante.usuario.Id == usuario.Id &&
+                v.votacion.evento.IdEvento == idEvento
+            ).Any();
+        }
+
         // Usamos el método fábrica
         public void AsignarRolEnEvento(string tipoRol, int idEvento)
         {

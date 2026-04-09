@@ -16,4 +16,6 @@ public interface IVotifyService
     public void modificarFecha(int votacionId, DateTime newEnd);
     public Rol GetRolEnEvento(int idEvento);
     void AsignarRolEnEvento(string tipoRol, int idEvento);
+
+    bool HasVotadoEnEvento(int idEvento);
 }

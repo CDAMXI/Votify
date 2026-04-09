@@ -3,13 +3,11 @@
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
-
 <style>
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
 </style>
-
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -27,150 +25,154 @@
             </div>
         </div>
     </header>
-
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (Rol == "EXPERT" || Rol == "PUBLIC"){
-        <div class="mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
-                <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
-            </div>
-            <div class="w-full bg-white rounded-full h-2 overflow-hidden">
-                <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full transition-all duration-300"
-                     style="width: @(GetProgress() + "%")">
+        @if (Rol == "EXPERT" || Rol == "PUBLIC")
+        {
+            @if (yaVotadoEnEvento)
+            {
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                    <p class="text-2xl font-bold text-[#1A281B] mb-2">Ya has votado en este evento</p>
+                    <p class="text-[#6C8A6C]">Tu evaluación ya fue registrada. No puedes volver a votar.</p>
+                    <a href="/dashboard" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
+                        Volver al Dashboard
+                    </a>
                 </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
-            @{
-                var project = mockProjects[currentProjectIndex];
             }
-            <div class="mb-6">
-                <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <h2 class="text-3xl font-bold text-[#1A281B] mb-2">@project.Name</h2>
-                        <p class="text-[#6C8A6C] mb-1">Equipo: @project.Team</p>
-                        <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-sm">
-                            @project.Category
-                        </span>
+            else
+            {
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
+                        <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
                     </div>
-                    @if (votedProjects.Contains(project.Id))
-                    {
-                        <div class="flex items-center gap-2 text-[#70D939] bg-[#E9EFE1] px-3 py-1 rounded-full">
-                            <span class="text-sm font-bold">★ Votado</span>
+                    <div class="w-full bg-white rounded-full h-2 overflow-hidden">
+                        <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full transition-all duration-300"
+                        style="width: @(GetProgress() + "%")">
                         </div>
-                    }
+                    </div>
                 </div>
-                <p class="text-[#4C6B4F] leading-relaxed">@project.Description</p>
-            </div>
-
-            <div class="space-y-6 mb-6">
-                <h3 class="text-xl font-bold text-[#1A281B]">Criterios de Evaluación</h3>
-
-                @foreach (var criterion in mockCriteria)
-                {
-                    <div class="bg-[#EFEFEE] rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex-1">
-                                <label class="text-[#1A281B] text-base font-bold">
-                                    @criterion.Name
-                                    <span claNo ss="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
-                                </label>
-                                <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
+                <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                    @{
+                        var project = mockProjects[currentProjectIndex];
+                    }
+                    <div class="mb-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h2 class="text-3xl font-bold text-[#1A281B] mb-2">@project.Name</h2>
+                                <p class="text-[#6C8A6C] mb-1">Equipo: @project.Team</p>
+                                <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-sm">
+                                    @project.Category
+                                </span>
                             </div>
-                                <div class="ml-4 text-right">
-                                    @if (editingCriteria.Contains(criterion.Id))
-                                    {
-                                        <input type="number"
-                                               min="0" max="10" step="0.01"
-                                               value="@GetScore(criterion.Id)"
-                                               @onchange="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
-                                               @onblur="() => ToggleEditMode(criterion.Id)"
-                                               class="text-3xl font-bold text-[#6C8A6C] w-20 bg-transparent border-b-2 border-[#6C8A6C] outline-none text-right" />
-                                    }
-                                    else if (votedProjects.Contains(project.Id))
-                                    {
-                                        <span class="text-3xl font-bold text-[#6C8A6C]">
-                                            @GetScore(criterion.Id)
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-3xl font-bold text-[#6C8A6C] cursor-pointer"
-                                              @onclick="() => ToggleEditMode(criterion.Id)">
-                                            @GetScore(criterion.Id)
-                                        </span>
-                                    }
-                                    <span class="text-[#A6AAA9]">/10</span>
+                            @if (votedProjects.Contains(project.Id))
+                            {
+                                <div class="flex items-center gap-2 text-[#70D939] bg-[#E9EFE1] px-3 py-1 rounded-full">
+                                    <span class="text-sm font-bold">★ Votado</span>
                                 </div>
+                            }
                         </div>
-
-                        <input type="range"
-                           min="0" max="10" step="0.5"
-                           value="@GetScore(criterion.Id)"
-                           disabled="@votedProjects.Contains(project.Id)"
-                           @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
-                           class="w-full h-2 bg-[#B5D6AC] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4" />
-
-                        <div class="flex justify-between text-xs text-[#A6AAA9]">
-                            <span>0 - Muy bajo</span>
-                            <span>5 - Promedio</span>
-                            <span>10 - Excelente</span>
+                        <p class="text-[#4C6B4F] leading-relaxed">@project.Description</p>
+                    </div>
+                    <div class="space-y-6 mb-6">
+                        <h3 class="text-xl font-bold text-[#1A281B]">Criterios de Evaluación</h3>
+                        @foreach (var criterion in mockCriteria)
+                        {
+                            <div class="bg-[#EFEFEE] rounded-xl p-6">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex-1">
+                                        <label class="text-[#1A281B] text-base font-bold">
+                                            @criterion.Name
+                                            <span claNo ss="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
+                                        </label>
+                                        <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
+                                    </div>
+                                    <div class="ml-4 text-right">
+                                        @if (editingCriteria.Contains(criterion.Id))
+                                        {
+                                            <input type="number"
+                                            min="0" max="10" step="0.01"
+                                            value="@GetScore(criterion.Id)"
+                                            @onchange="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
+                                            @onblur="() => ToggleEditMode(criterion.Id)"
+                                            class="text-3xl font-bold text-[#6C8A6C] w-20 bg-transparent border-b-2 border-[#6C8A6C] outline-none text-right" />
+                                        }
+                                        else if (votedProjects.Contains(project.Id))
+                                        {
+                                            <span class="text-3xl font-bold text-[#6C8A6C]">
+                                                @GetScore(criterion.Id)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-3xl font-bold text-[#6C8A6C] cursor-pointer"
+                                            @onclick="() => ToggleEditMode(criterion.Id)">
+                                                @GetScore(criterion.Id)
+                                            </span>
+                                        }
+                                        <span class="text-[#A6AAA9]">/10</span>
+                                    </div>
+                                </div>
+                                <input type="range"
+                                min="0" max="10" step="0.5"
+                                value="@GetScore(criterion.Id)"
+                                disabled="@votedProjects.Contains(project.Id)"
+                                @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
+                                class="w-full h-2 bg-[#B5D6AC] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4" />
+                                <div class="flex justify-between text-xs text-[#A6AAA9]">
+                                    <span>0 - Muy bajo</span>
+                                    <span>5 - Promedio</span>
+                                    <span>10 - Excelente</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] rounded-xl p-6 mb-6 shadow-md">
+                        <div class="flex items-center justify-between text-white font-bold">
+                            <span class="text-lg">Puntuación Total Ponderada</span>
+                            <span class="text-4xl">@CalculateTotalScore()/10</span>
                         </div>
                     </div>
-                }
-            </div>
-
-            <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] rounded-xl p-6 mb-6 shadow-md">
-                <div class="flex items-center justify-between text-white font-bold">
-                    <span class="text-lg">Puntuación Total Ponderada</span>
-                    <span class="text-4xl">@CalculateTotalScore()/10</span>
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <label for="comments" class="text-[#1A281B] font-bold mb-2 block">Comentarios (opcional)</label>
-                <div class="relative">
-                    <textarea id="comments"
-                              value="@comments"
-                              @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
-                              maxlength="500"
-                              placeholder="Comparte tus observaciones sobre el proyecto..."
-                              class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border-[#B5D6AC] focus:ring-2 focus:ring-[#6C8A6C] outline-none transition-all"></textarea>
-                    <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
-                </div>
-            </div>
-
-            <div class="flex gap-4">
-               @if (votedProjects.Contains(project.Id))
-                {
-                    <span class="flex-1 text-center text-sm text-[#A6AAA9] py-4 font-medium">✓ Ya evaluado</span>
-                    @if (currentProjectIndex < mockProjects.Count - 1)
-                    {
-                        <button @onclick="NavigateNext"
+                    <div class="mb-6">
+                        <label for="comments" class="text-[#1A281B] font-bold mb-2 block">Comentarios (opcional)</label>
+                        <div class="relative">
+                            <textarea id="comments"
+                            value="@comments"
+                            @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
+                            maxlength="500"
+                            placeholder="Comparte tus observaciones sobre el proyecto..."
+                            class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border-[#B5D6AC] focus:ring-2 focus:ring-[#6C8A6C] outline-none transition-all"></textarea>
+                            <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        @if (votedProjects.Contains(project.Id))
+                        {
+                            <span class="flex-1 text-center text-sm text-[#A6AAA9] py-4 font-medium">✓ Ya evaluado</span>
+                            @if (currentProjectIndex < mockProjects.Count - 1)
+                            {
+                                <button @onclick="NavigateNext"
                                 class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                            Siguiente Proyecto
-                        </button>
-                    }
-                }
-                else
-                {
-                    <button @onclick="SubmitVote"
+                                    Siguiente Proyecto
+                                </button>
+                            }
+                        }
+                        else
+                        {
+                            <button @onclick="SubmitVote"
                             class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                        @(currentProjectIndex < mockProjects.Count - 1 ? "Siguiente Proyecto" : "Finalizar Votación")
-                    </button>
-                }
-
-                @if (currentProjectIndex > 0)
-                {
-                    <button @onclick="PreviousProject"
+                                @(currentProjectIndex < mockProjects.Count - 1 ? "Siguiente Proyecto" : "Finalizar Votación")
+                            </button>
+                        }
+                        @if (currentProjectIndex > 0)
+                        {
+                            <button @onclick="PreviousProject"
                             class="px-8 border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
-                        Anterior
-                    </button>
-                    }
+                                Anterior
+                            </button>
+                        }
+                    </div>
                 </div>
-        </div>
+            }
         }
         else if (Rol == "COMPETITOR")
         {
@@ -178,31 +180,34 @@
         }
     </main>
 </div>
-
 @code {
     [Parameter] public string? EventId { get; set; }
     [Parameter]
     [SupplyParameterFromQuery]
     public string? Rol { get; set; }
-
     private HashSet<string> editingCriteria = new();
     private int currentProjectIndex = 0;
     private int commentLength = 0;
     private string comments = "";
     private HashSet<string> votedProjects = new();
     private Dictionary<string, double> scores = new();
-
     // Lógica de datos (Mock)
     private List<Project> mockProjects = new() {
         new Project { Id = "1", Name = "EcoTrack", Team = "Green Coders", Category = "Sostenibilidad", Description = "Rastreador de huella de carbono." },
         new Project { Id = "2", Name = "HealthAI", Team = "MedTech", Category = "Salud", Description = "IA para diagnóstico médico." }
     };
-
     private List<Criterion> mockCriteria = new() {
         new Criterion { Id = "1", Name = "Innovación", Weight = 25, Description = "Originalidad." },
         new Criterion { Id = "2", Name = "Viabilidad", Weight = 25, Description = "Calidad técnica." }
     };
-
+    private bool yaVotadoEnEvento = false;
+    protected override async Task OnInitializedAsync()
+    {
+        // Mock: simula que el usuario no ha votado aún
+        // Cuando el backend esté conectado, reemplazar por:
+        // yaVotadoEnEvento = await service.HasVotadoEnEvento(int.Parse(EventId ?? "0"));
+        yaVotadoEnEvento = true;
+    }
     private void ToggleEditMode(string criterionId)
     {
         if (editingCriteria.Contains(criterionId))
@@ -210,13 +215,11 @@
         else
             editingCriteria.Add(criterionId);
     }
-
     private double GetScore(string criterionId)
     {
         string key = $"{mockProjects[currentProjectIndex].Id}-{criterionId}";
         return scores.ContainsKey(key) ? scores[key] : 5.0;
     }
-
     private void HandleScoreChange(string criterionId, string? val)
     {
         if (double.TryParse(val, out double result))
@@ -227,7 +230,6 @@
             scores[key] = result;
         }
     }
-
     private string CalculateTotalScore()
     {
         double total = 0;
@@ -238,9 +240,7 @@
         }
         return total.ToString("F1");
     }
-
     private double GetProgress() => (votedProjects.Count / (double)mockProjects.Count) * 100;
-
     private void SubmitVote()
     {
         votedProjects.Add(mockProjects[currentProjectIndex].Id);
@@ -255,15 +255,12 @@
             NavigationManager.NavigateTo("/dashboard");
         }
     }
-
     private void NavigateNext()
     {
         if (currentProjectIndex < mockProjects.Count - 1)
             currentProjectIndex++;
     }
-
     private void PreviousProject() => currentProjectIndex--;
-
     public class Project { 
         public string Id { get; set; }
         public string Name { get; set; }
