@@ -14,7 +14,7 @@ namespace Votify.Entities
         VIDEO
     }
 
-    public partial class Criterio
+    public partial class Baremo
     {
         //Atributos
         public string Nombre { get; set; }

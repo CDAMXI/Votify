@@ -18,7 +18,7 @@ namespace Votify.Entities
         public ICollection<Jurado> jurados;
         public ICollection<Publico> publicos;
         public EncargadoVotacion Encargado;
-        public ICollection<Criterio> criterios;
+        public ICollection<Baremo> criterios;
         public ICollection<Voto> votos;
         public Categoria categoria;
         public Ranking ranking;
