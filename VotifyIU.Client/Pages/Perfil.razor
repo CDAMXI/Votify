@@ -36,10 +36,19 @@
                     }
                 </div>
                 <p class="text-xl font-bold text-[#1A281B]">@username</p>
-                <label class="cursor-pointer bg-[#E9EFE1] hover:bg-[#B5D6AC] text-[#4C6B4F] px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-                    Cambiar foto
-                    <InputFile OnChange="HandleFotoChange" accept="image/*" class="hidden" />
-                </label>
+                <div class="flex gap-2">
+                    <label class="cursor-pointer bg-[#E9EFE1] hover:bg-[#B5D6AC] text-[#4C6B4F] px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                        Cambiar foto
+                        <InputFile OnChange="HandleFotoChange" accept="image/*" class="hidden" />
+                    </label>
+                    @if (!string.IsNullOrEmpty(fotoPreview))
+                    {
+                        <button @onclick="QuitarFoto"
+                                class="bg-red-50 hover:bg-red-100 text-red-500 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                            Quitar foto
+                        </button>
+                    }
+                </div>
                 @if (!string.IsNullOrEmpty(fotoMsg))
                 {
                     <p class="text-sm @(fotoError ? "text-red-500" : "text-[#6C8A6C]")">@fotoMsg</p>
@@ -146,6 +155,14 @@
         if (res.IsSuccessStatusCode) { passwordActual = string.Empty; nuevaPassword = string.Empty; confirmarPassword = string.Empty; passwordMsg = "Contraseña actualizada."; passwordError = false; }
         else { passwordMsg = await res.Content.ReadAsStringAsync(); passwordError = true; }
         guardandoPassword = false;
+    }
+
+    private async Task QuitarFoto()
+    {
+        fotoMsg = string.Empty;
+        var res = await Http.PutAsJsonAsync("/api/perfil/foto", new { Base64Foto = "" });
+        if (res.IsSuccessStatusCode) { fotoPreview = null; fotoMsg = "Foto eliminada."; fotoError = false; }
+        else { fotoMsg = "Error al eliminar la foto."; fotoError = true; }
     }
 
     private async Task HandleFotoChange(InputFileChangeEventArgs e)
