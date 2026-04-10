@@ -1,0 +1,174 @@
+@page "/perfil"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+            <a href="/dashboard" class="flex items-center text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-md transition-colors">
+                <span class="mr-2">←</span> Volver
+            </a>
+            <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+            <h1 class="text-xl font-bold text-[#1A281B]">Mi Perfil</h1>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-4 py-10 space-y-6">
+
+        @if (cargando)
+        {
+            <p class="text-center text-[#6C8A6C]">Cargando...</p>
+        }
+        else
+        {
+            <!-- Foto de perfil -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center gap-4">
+                <div class="w-28 h-28 rounded-full bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] overflow-hidden border-4 border-[#6C8A6C] flex items-center justify-center">
+                    @if (!string.IsNullOrEmpty(fotoPreview))
+                    {
+                        <img src="@fotoPreview" class="w-full h-full object-cover" alt="Foto de perfil" />
+                    }
+                    else
+                    {
+                        <span class="text-4xl text-[#6C8A6C] font-bold">@(username?.Length > 0 ? username[0].ToString().ToUpper() : "?")</span>
+                    }
+                </div>
+                <p class="text-xl font-bold text-[#1A281B]">@username</p>
+                <label class="cursor-pointer bg-[#E9EFE1] hover:bg-[#B5D6AC] text-[#4C6B4F] px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                    Cambiar foto
+                    <InputFile OnChange="HandleFotoChange" accept="image/*" class="hidden" />
+                </label>
+                @if (!string.IsNullOrEmpty(fotoMsg))
+                {
+                    <p class="text-sm @(fotoError ? "text-red-500" : "text-[#6C8A6C]")">@fotoMsg</p>
+                }
+            </div>
+
+            <!-- Cambiar email -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+                <h2 class="text-lg font-bold text-[#1A281B]">Correo electrónico</h2>
+                <p class="text-sm text-[#6C8A6C]">Actual: <span class="font-medium text-[#1A281B]">@email</span></p>
+                <input @bind="nuevoEmail" type="email" placeholder="Nuevo correo electrónico"
+                       class="w-full h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C]" />
+                @if (!string.IsNullOrEmpty(emailMsg))
+                {
+                    <p class="text-sm @(emailError ? "text-red-500" : "text-[#6C8A6C]")">@emailMsg</p>
+                }
+                <button @onclick="GuardarEmail" disabled="@guardandoEmail"
+                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
+                    @(guardandoEmail ? "Guardando..." : "Guardar email")
+                </button>
+            </div>
+
+            <!-- Cambiar contraseña -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+                <h2 class="text-lg font-bold text-[#1A281B]">Contraseña</h2>
+                <input @bind="passwordActual" type="password" placeholder="Contraseña actual"
+                       class="w-full h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C]" />
+                <input @bind="nuevaPassword" type="password" placeholder="Nueva contraseña"
+                       class="w-full h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C]" />
+                <input @bind="confirmarPassword" type="password" placeholder="Confirmar nueva contraseña"
+                       class="w-full h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C]" />
+                @if (!string.IsNullOrEmpty(passwordMsg))
+                {
+                    <p class="text-sm @(passwordError ? "text-red-500" : "text-[#6C8A6C]")">@passwordMsg</p>
+                }
+                <button @onclick="GuardarPassword" disabled="@guardandoPassword"
+                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
+                    @(guardandoPassword ? "Guardando..." : "Cambiar contraseña")
+                </button>
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private bool cargando = true;
+    private string? username;
+    private string? email;
+    private string? fotoPreview;
+
+    private string nuevoEmail = string.Empty;
+    private string emailMsg = string.Empty;
+    private bool emailError = false;
+    private bool guardandoEmail = false;
+
+    private string passwordActual = string.Empty;
+    private string nuevaPassword = string.Empty;
+    private string confirmarPassword = string.Empty;
+    private string passwordMsg = string.Empty;
+    private bool passwordError = false;
+    private bool guardandoPassword = false;
+
+    private string fotoMsg = string.Empty;
+    private bool fotoError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var res = await Http.GetFromJsonAsync<PerfilDTO>("/api/perfil");
+            if (res != null)
+            {
+                username = res.Username;
+                email = res.Email;
+                fotoPreview = res.FotoPerfil;
+            }
+        }
+        catch
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task GuardarEmail()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoEmail)) { emailMsg = "Introduce un email válido."; emailError = true; return; }
+        guardandoEmail = true; emailMsg = string.Empty;
+        var res = await Http.PutAsJsonAsync("/api/perfil/email", new { NuevoEmail = nuevoEmail });
+        if (res.IsSuccessStatusCode) { email = nuevoEmail; nuevoEmail = string.Empty; emailMsg = "Email actualizado."; emailError = false; }
+        else { emailMsg = await res.Content.ReadAsStringAsync(); emailError = true; }
+        guardandoEmail = false;
+    }
+
+    private async Task GuardarPassword()
+    {
+        if (nuevaPassword != confirmarPassword) { passwordMsg = "Las contraseñas no coinciden."; passwordError = true; return; }
+        if (string.IsNullOrWhiteSpace(nuevaPassword)) { passwordMsg = "Introduce una contraseña válida."; passwordError = true; return; }
+        guardandoPassword = true; passwordMsg = string.Empty;
+        var res = await Http.PutAsJsonAsync("/api/perfil/password", new { PasswordActual = passwordActual, NuevaPassword = nuevaPassword });
+        if (res.IsSuccessStatusCode) { passwordActual = string.Empty; nuevaPassword = string.Empty; confirmarPassword = string.Empty; passwordMsg = "Contraseña actualizada."; passwordError = false; }
+        else { passwordMsg = await res.Content.ReadAsStringAsync(); passwordError = true; }
+        guardandoPassword = false;
+    }
+
+    private async Task HandleFotoChange(InputFileChangeEventArgs e)
+    {
+        fotoMsg = string.Empty;
+        try
+        {
+            var file = e.File;
+            var resized = await file.RequestImageFileAsync("image/jpeg", 300, 300);
+            var buffer = new byte[resized.Size];
+            await resized.OpenReadStream(maxAllowedSize: 1024 * 1024).ReadAsync(buffer);
+            var base64 = $"data:image/jpeg;base64,{Convert.ToBase64String(buffer)}";
+            var res = await Http.PutAsJsonAsync("/api/perfil/foto", new { Base64Foto = base64 });
+            if (res.IsSuccessStatusCode) { fotoPreview = base64; fotoMsg = "Foto actualizada."; fotoError = false; }
+            else { fotoMsg = "Error al subir la foto."; fotoError = true; }
+        }
+        catch { fotoMsg = "Error al procesar la imagen."; fotoError = true; }
+    }
+
+    private class PerfilDTO
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? FotoPerfil { get; set; }
+    }
+}

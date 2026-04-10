@@ -60,6 +60,39 @@ namespace Votify.BusinessLogic.Service
          * }
          */
 
+        public (string Username, string Email, string? FotoPerfil) GetPerfil()
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+            return (usuario.Username, usuario.Email, usuario.FotoPerfil);
+        }
+
+        public void UpdateEmail(string nuevoEmail)
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+            usuario.Email = nuevoEmail;
+            dal.Commit();
+        }
+
+        public void UpdatePassword(string passwordActual, string nuevaPassword)
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+            if (usuario.Password != passwordActual)
+                throw new ServiceException("La contraseña actual no es correcta");
+            usuario.Password = nuevaPassword;
+            dal.Commit();
+        }
+
+        public void UpdateFotoPerfil(string base64Foto)
+        {
+            if (usuario == null)
+                throw new ServiceException("No hay ningún usuario logueado");
+            usuario.FotoPerfil = base64Foto;
+            dal.Commit();
+        }
+
         public void RestoreSession(string username)
         {
             Usuario user = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();

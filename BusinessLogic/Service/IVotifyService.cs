@@ -18,4 +18,8 @@ public interface IVotifyService
     Rol GetRolEnEvento(int idEvento);
     void AsignarRolEnEvento(string tipoRol, int idEvento);
     bool HasVotadoEnEvento(int idEvento);
+    (string Username, string Email, string? FotoPerfil) GetPerfil();
+    void UpdateEmail(string nuevoEmail);
+    void UpdatePassword(string passwordActual, string nuevaPassword);
+    void UpdateFotoPerfil(string base64Foto);
 }

@@ -122,7 +122,62 @@ app.MapGet("/api/votos/hasVotado/{idEvento}", (int idEvento, IVotifyService serv
     }
 });
 
+app.MapGet("/api/perfil", (IVotifyService service, HttpContext http) =>
+{
+    var username = http.Session.GetString("username");
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var (user, email, foto) = service.GetPerfil();
+        return Results.Ok(new { Username = user, Email = email, FotoPerfil = foto });
+    }
+    catch (ServiceException) { return Results.Unauthorized(); }
+});
+
+app.MapPut("/api/perfil/email", (UpdateEmailRequest req, IVotifyService service, HttpContext http) =>
+{
+    var username = http.Session.GetString("username");
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.UpdateEmail(req.NuevoEmail);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapPut("/api/perfil/password", (UpdatePasswordRequest req, IVotifyService service, HttpContext http) =>
+{
+    var username = http.Session.GetString("username");
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.UpdatePassword(req.PasswordActual, req.NuevaPassword);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapPut("/api/perfil/foto", (UpdateFotoRequest req, IVotifyService service, HttpContext http) =>
+{
+    var username = http.Session.GetString("username");
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.UpdateFotoPerfil(req.Base64Foto);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
 app.Run();
 
 record LoginRequest(string Username, string Password);
 record RegisterRequest(string Username, string Email, string Password);
+record UpdateEmailRequest(string NuevoEmail);
+record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
+record UpdateFotoRequest(string Base64Foto);
