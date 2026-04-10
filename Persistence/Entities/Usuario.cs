@@ -12,6 +12,8 @@ namespace Votify.Entities
         public string Email { get; set; }
         public int Id { get; set; }
         public string? FotoPerfil { get; set; }
+        public string? ResetToken { get; set; }
+        public DateTime? ResetTokenExpiry { get; set; }
 
         //Relaciones
         public virtual ICollection<Rol> roles { get; set; }

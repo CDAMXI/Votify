@@ -93,6 +93,34 @@ namespace Votify.BusinessLogic.Service
             dal.Commit();
         }
 
+        public string GeneratePasswordResetToken(string email)
+        {
+            Usuario user = dal.GetWhere<Usuario>(u => u.Email == email).FirstOrDefault();
+            if (user == null)
+                throw new ServiceException("No existe ninguna cuenta con ese correo");
+
+            string token = Guid.NewGuid().ToString("N");
+            user.ResetToken = token;
+            user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(10);
+            dal.Commit();
+            return token;
+        }
+
+        public void ResetPassword(string token, string nuevaPassword)
+        {
+            Usuario user = dal.GetWhere<Usuario>(u => u.ResetToken == token).FirstOrDefault();
+            if (user == null)
+                throw new ServiceException("El enlace no es válido");
+
+            if (user.ResetTokenExpiry < DateTime.UtcNow)
+                throw new ServiceException("El enlace ha expirado");
+
+            user.Password = nuevaPassword;
+            user.ResetToken = null;
+            user.ResetTokenExpiry = null;
+            dal.Commit();
+        }
+
         public void RestoreSession(string username)
         {
             Usuario user = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();

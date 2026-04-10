@@ -3,15 +3,16 @@
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 relative flex items-center">
             <a href="/dashboard" class="flex items-center text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-md transition-colors">
                 <span class="mr-2">←</span> Volver
             </a>
             <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-            <h1 class="text-xl font-bold text-[#1A281B]">Mi Perfil</h1>
+            <h1 class="absolute left-1/2 -translate-x-1/2 text-3xl font-bold text-[#1A281B]">Mi Perfil</h1>
         </div>
     </header>
 
@@ -84,10 +85,15 @@
                 {
                     <p class="text-sm @(passwordError ? "text-red-500" : "text-[#6C8A6C]")">@passwordMsg</p>
                 }
-                <button @onclick="GuardarPassword" disabled="@guardandoPassword"
-                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
-                    @(guardandoPassword ? "Guardando..." : "Cambiar contraseña")
-                </button>
+                <div class="flex items-center justify-between">
+                    <button @onclick="GuardarPassword" disabled="@guardandoPassword"
+                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
+                        @(guardandoPassword ? "Guardando..." : "Cambiar contraseña")
+                    </button>
+                    <button @onclick="IrARecuperarPassword" class="text-sm text-[#6C8A6C] hover:text-[#4C6B4F] transition-colors bg-transparent border-none p-0 cursor-pointer">
+                        ¿Olvidaste tu contraseña?
+                    </button>
+                </div>
             </div>
         }
     </main>
@@ -136,6 +142,23 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Cuando esta pestaña recupera el foco (ej: se cerró la pestaña del reset),
+            // verificar si la sesión sigue activa. Si no, mandar al login.
+            await JS.InvokeVoidAsync("eval", """
+                document.addEventListener('visibilitychange', async function() {
+                    if (!document.hidden) {
+                        const res = await fetch('/api/perfil');
+                        if (!res.ok) window.location.href = '/login';
+                    }
+                });
+            """);
+        }
+    }
+
     private async Task GuardarEmail()
     {
         if (string.IsNullOrWhiteSpace(nuevoEmail)) { emailMsg = "Introduce un email válido."; emailError = true; return; }
@@ -152,9 +175,18 @@
         if (string.IsNullOrWhiteSpace(nuevaPassword)) { passwordMsg = "Introduce una contraseña válida."; passwordError = true; return; }
         guardandoPassword = true; passwordMsg = string.Empty;
         var res = await Http.PutAsJsonAsync("/api/perfil/password", new { PasswordActual = passwordActual, NuevaPassword = nuevaPassword });
-        if (res.IsSuccessStatusCode) { passwordActual = string.Empty; nuevaPassword = string.Empty; confirmarPassword = string.Empty; passwordMsg = "Contraseña actualizada."; passwordError = false; }
+        if (res.IsSuccessStatusCode)
+        {
+            await Http.PostAsync("/api/auth/logout", null);
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
         else { passwordMsg = await res.Content.ReadAsStringAsync(); passwordError = true; }
         guardandoPassword = false;
+    }
+
+    private void IrARecuperarPassword()
+    {
+        NavigationManager.NavigateTo("/recuperar-password?returnUrl=/perfil");
     }
 
     private async Task QuitarFoto()

@@ -22,4 +22,6 @@ public interface IVotifyService
     void UpdateEmail(string nuevoEmail);
     void UpdatePassword(string passwordActual, string nuevaPassword);
     void UpdateFotoPerfil(string base64Foto);
+    string GeneratePasswordResetToken(string email);
+    void ResetPassword(string token, string nuevaPassword);
 }

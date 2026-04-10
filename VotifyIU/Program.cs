@@ -1,9 +1,13 @@
 using System.Data.Common;
+using VotifyIU.Services;
 using VotifyIU.Client.Pages;
 using VotifyIU.Components;
 using Votify.BusinessLogic.Service;
 using Votify.Persistence;
 using Npgsql;
+
+// Npgsql 6+ rechaza DateTime sin Kind=Utc en columnas timestamptz — activar comportamiento legacy
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // Registrar el proveedor Npgsql para EF6 (necesario en .NET Core+)
 DbProviderFactories.RegisterFactory("Npgsql", NpgsqlFactory.Instance);
@@ -34,6 +38,7 @@ builder.Services.AddScoped<VotifyDBContext>(sp =>
 });
 builder.Services.AddScoped<IDAL, EntityFrameworkDAL>();
 builder.Services.AddScoped<IVotifyService, VotifyService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
@@ -122,6 +127,30 @@ app.MapGet("/api/votos/hasVotado/{idEvento}", (int idEvento, IVotifyService serv
     }
 });
 
+app.MapPost("/api/auth/forgot-password", async (ForgotPasswordRequest req, IVotifyService service, IEmailService email, HttpRequest http) =>
+{
+    try
+    {
+        string token = service.GeneratePasswordResetToken(req.Email);
+        string baseUrl = $"{http.Scheme}://{http.Host}";
+        string resetLink = $"{baseUrl}/reset-password?token={token}";
+        await email.SendPasswordResetAsync(req.Email, resetLink);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapPost("/api/auth/reset-password", (ResetPasswordRequest req, IVotifyService service, HttpContext context) =>
+{
+    try
+    {
+        service.ResetPassword(req.Token, req.NuevaPassword);
+        context.Session.Clear(); // Cerrar sesión inmediatamente al restablecer contraseña
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
 app.MapGet("/api/perfil", (IVotifyService service, HttpContext http) =>
 {
     var username = http.Session.GetString("username");
@@ -178,6 +207,8 @@ app.Run();
 
 record LoginRequest(string Username, string Password);
 record RegisterRequest(string Username, string Email, string Password);
+record ForgotPasswordRequest(string Email);
+record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
