@@ -1,59 +1,117 @@
-﻿@page "/votacion/{VotacionId}"
-<Routes @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
+﻿@page "/votacion/{VotacionId:int}"
 @using Votify.shared
-@using Votify
 @inject NavigationManager NavigationManager
+@inject HttpClient Http
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
     <div class="w-full max-w-md px-6">
         <div class="bg-white rounded-2xl shadow-2xl p-8">
 
             <div class="flex justify-center mb-8">
-                <img src="images/votify-logo.png" alt="Votify" class="h-16 object-contain" />
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
             </div>
 
             <div class="text-center mb-8">
-                <h1 class="text-3xl text-[#1A281B] mb-2">Modificar Votación</h1>
-                <p class="text-[#6C8A6C]">Configura la votación</p>
+                <h1 class="text-3xl text-[#1A281B] mb-2">Modificar votación</h1>
+                <p class="text-[#6C8A6C]">Actualiza la fecha de cierre</p>
             </div>
 
-            <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit" class="space-y-6">
-
-                <div class="space-y-2">
-                    <label class="text-[#4C6B4F]">Fecha de fin</label>
-                    <InputDate @bind-Value="votacionDto.FechaFin"
-                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-xl text-sm text-center">
+                    @errorMessage
                 </div>
+            }
 
-                <button type="submit"
-                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
-                    Modificar Votación
-                </button>
+            @if (isLoadingData)
+            {
+                <p class="text-center text-[#6C8A6C]">Cargando votación...</p>
+            }
+            else
+            {
+                <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit" class="space-y-6">
 
-            </EditForm>
+                    <div class="space-y-2">
+                        <label class="text-[#4C6B4F]">Fecha de fin</label>
+                        <InputDate @bind-Value="votacionDto.FechaFin"
+                                   disabled="@isSaving"
+                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                    </div>
+
+                    <button type="submit" disabled="@isSaving"
+                            class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium disabled:opacity-60">
+                        @(isSaving ? "Guardando cambios..." : "Guardar cambios")
+                    </button>
+
+                </EditForm>
+            }
 
         </div>
     </div>
 </div>
 
-
 @code {
+    [Parameter]
     public int VotacionId { get; set; }
 
-    private VotacionDTO votacionDto = new VotacionDTO();
+    private VotacionDTO votacionDto = new();
+    private bool isLoadingData = true;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        //var service = new Votify.BusinessLogic.Service.IVotifyService();
-        //var votacion = service.GetVotacionById(VotacionId);
-        //votacionDto.FechaFin = votacion.FechaFin;
+        try
+        {
+            var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{VotacionId}");
+
+            if (votacion != null)
+            {
+                votacionDto = votacion;
+            }
+            else
+            {
+                errorMessage = "No se encontró la votación.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Error al cargar la votación.";
+        }
+        finally
+        {
+            isLoadingData = false;
+        }
     }
 
-    public void HandleSubmit()
+    private async Task HandleSubmit()
     {
-        //var service = new Votify.BusinessLogic.Service.IVotifyService();
-        //service.modificarVotacion(VotacionId, votacionDto.FechaFin)
+        isSaving = true;
+        errorMessage = string.Empty;
 
-        //NavigationManager.NavigateTo("/votacion/{votacionId}");
+        try
+        {
+            var response = await Http.PutAsJsonAsync(
+                $"/api/votaciones/{VotacionId}",
+                votacionDto
+            );
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo($"/votacion/{VotacionId}");
+            }
+            else
+            {
+                errorMessage = "No se pudo actualizar la votación.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Error de conexión con el servidor.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 }

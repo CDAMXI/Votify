@@ -1,6 +1,7 @@
 ﻿@page "/event-voting/{EventId}"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
+@using System.Linq
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
@@ -43,8 +44,11 @@
             {
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
-                        <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
+                        <div class="flex items-center gap-4">   
+                            <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
+                            <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
+                            <span class="   text-sm text-[#4C6B4F]">• Votos realizados: @votesSubmitted/3</span>
+                        </div>            
                     </div>
                     <div class="w-full bg-white rounded-full h-2 overflow-hidden">
                         <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full transition-all duration-300"
@@ -159,9 +163,9 @@
                         }
                         else
                         {
-                            <button @onclick="SubmitVote"
+                        <button @onclick="SubmitVote"
                             class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                                @(currentProjectIndex < mockProjects.Count - 1 ? "Siguiente Proyecto" : "Finalizar Votación")
+                                @(((votesSubmitted + 1) >= 3 || IsLastProject) ? "Votar (Finalizar votación)" : (currentProjectIndex < mockProjects.Count - 1 ? "Siguiente Proyecto" : "Finalizar Votación"))
                             </button>
                         }
                         @if (currentProjectIndex > 0)
@@ -169,6 +173,13 @@
                             <button @onclick="PreviousProject"
                             class="px-8 border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
                                 Anterior
+                            </button>
+                        }
+                        @if (!votedProjects.Contains(project.Id))
+                        {
+                            <button @onclick="SkipNext"
+                                class="px-6 border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                                @(IsLastProject ? "Saltar Proyecto (Finalizar votación)" : "Saltar Proyecto")
                             </button>
                         }
                     </div>
@@ -192,14 +203,21 @@
     private string comments = "";
     private HashSet<string> votedProjects = new();
     private Dictionary<string, double> scores = new();
+    private int votesSubmitted = 0; 
     // Lógica de datos (Mock)
     private List<Project> mockProjects = new() {
         new Project { Id = "1", Name = "EcoTrack", Team = "Green Coders", Category = "Sostenibilidad", Description = "Rastreador de huella de carbono." },
-        new Project { Id = "2", Name = "HealthAI", Team = "MedTech", Category = "Salud", Description = "IA para diagnóstico médico." }
+        new Project { Id = "2", Name = "HealthAI", Team = "MedTech", Category = "Salud", Description = "IA para diagnóstico médico." },
+        new Project { Id = "3", Name = "EduSmart", Team = "Future Minds", Category = "Educación", Description = "Plataforma adaptativa de aprendizaje con IA." },
+        new Project { Id = "4", Name = "SafeCity", Team = "UrbanTech", Category = "Smart Cities", Description = "Sistema de alerta temprana para emergencias urbanas." },
+        new Project { Id = "5", Name = "FoodSaver", Team = "ZeroWaste", Category = "Sostenibilidad", Description = "App para reducir el desperdicio de alimentos." },
+        new Project { Id = "6", Name = "FinTrack", Team = "FinTech Lab", Category = "Finanzas", Description = "Gestor inteligente de gastos personales." }
     };
     private List<Criterion> mockCriteria = new() {
-        new Criterion { Id = "1", Name = "Innovación", Weight = 25, Description = "Originalidad." },
-        new Criterion { Id = "2", Name = "Viabilidad", Weight = 25, Description = "Calidad técnica." }
+        new Criterion { Id = "1", Name = "Innovación", Weight = 25, Description = "Originalidad de la solución." },
+        new Criterion { Id = "2", Name = "Viabilidad", Weight = 25, Description = "Factibilidad técnica y económica." },
+        new Criterion { Id = "3", Name = "Impacto", Weight = 25, Description = "Valor generado para usuarios o sociedad." },
+        new Criterion { Id = "4", Name = "Presentación", Weight = 25, Description = "Claridad y calidad de la exposición." }
     };
     private bool yaVotadoEnEvento = false;
     protected override async Task OnInitializedAsync()
@@ -212,6 +230,8 @@
         {
             yaVotadoEnEvento = false;
         }
+        // Inicializar contador de votaciones locales (si ya hay elementos e    n votedProjects)
+        votesSubmitted = votedProjects.Count;
     }
     private void ToggleEditMode(string criterionId)
     {
@@ -246,9 +266,38 @@
         return total.ToString("F1");
     }
     private double GetProgress() => (votedProjects.Count / (double)mockProjects.Count) * 100;
+    private int NonVotedCount => mockProjects.Count(p => !votedProjects.Contains(p.Id));
+    private int NonVotedRemainingExcludingCurrent => mockProjects.Count(p => !votedProjects.Contains(p.Id) && p.Id != mockProjects[currentProjectIndex].Id);
+    private bool IsLastProject => currentProjectIndex == mockProjects.Count - 1;
     private async Task SubmitVote()
     {
+        // Limitar a 3 votaciones por evento
+        if (votesSubmitted >= 3)
+        {
+            // opcional: mostrar mensaje o redirigir al dashboard
+            NavigationManager.NavigateTo("/dashboard");
+            return; 
+        }
+
         votedProjects.Add(mockProjects[currentProjectIndex].Id);
+        votesSubmitted++;
+
+        if (votesSubmitted >= 3)
+        {
+            // Al alcanzar el límite, finalizar y volver al dashboard
+            await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+            NavigationManager.NavigateTo("/dashboard");
+            return;
+        }
+
+        // Si es el último proyecto de la lista, finalizar la votación tras votar
+        if (IsLastProject)
+        {
+            await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+            NavigationManager.NavigateTo("/dashboard");
+            return;
+        }
+
         if (currentProjectIndex < mockProjects.Count - 1)
         {
             currentProjectIndex++;
@@ -256,9 +305,49 @@
         }
         else
         {
+            // Fallback: finalizar
             await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
             NavigationManager.NavigateTo("/dashboard");
         }
+    }
+
+    private async Task FinalizeVotingAsync()
+    {
+        try
+        {
+            await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+        }
+        catch
+        {
+            // Ignorar errores en finalización del ejemplo
+        }
+        NavigationManager.NavigateTo("/dashboard");
+    }
+
+    private async Task SkipNext()
+    {
+        // Solo finalizar si el proyecto actual es el último de la lista.
+        if (IsLastProject)
+        {
+            await FinalizeVotingAsync();
+            return;
+        }
+
+        // Buscar siguiente proyecto no votado; si no hay, avanzar al siguiente índice hasta el final
+        int nextIndex = currentProjectIndex + 1;
+        while (nextIndex < mockProjects.Count && votedProjects.Contains(mockProjects[nextIndex].Id))
+        {
+            nextIndex++;
+        }
+
+        if (nextIndex < mockProjects.Count)
+        {
+            currentProjectIndex = nextIndex;
+            return;
+        }
+
+        // No se encontró proyecto no votado después: mover al último proyecto disponible (sin finalizar)
+        currentProjectIndex = mockProjects.Count - 1;
     }
     private void NavigateNext()
     {

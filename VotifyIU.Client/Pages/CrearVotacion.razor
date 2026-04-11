@@ -1,47 +1,56 @@
 ﻿@page "/crear-votacion"
 @using Votify.shared
 @inject NavigationManager NavigationManager
+@inject HttpClient Http
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
     <div class="w-full max-w-md px-6">
         <div class="bg-white rounded-2xl shadow-2xl p-8">
 
             <div class="flex justify-center mb-8">
-                <img src="images/votify-logo.png" alt="Votify" class="h-16 object-contain" />
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
             </div>
 
             <div class="text-center mb-8">
-                <h1 class="text-3xl text-[#1A281B] mb-2">Crear Votación</h1>
+                <h1 class="text-3xl text-[#1A281B] mb-2">Crear votación</h1>
                 <p class="text-[#6C8A6C]">Configura una nueva votación</p>
             </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-xl text-sm text-center">
+                    @errorMessage
+                </div>
+            }
 
             <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit" class="space-y-6">
 
                 <div class="space-y-2">
-                    <label for="titulo" class="text-[#4C6B4F]">Titulo</label>
-                    <InputText id="titulo"
-                               @bind-Value="votacionDto.Titulo"
+                    <label class="text-[#4C6B4F]">Título</label>
+                    <InputText @bind-Value="votacionDto.Titulo"
                                placeholder="¿Cómo se llamará la votación?"
+                               disabled="@isLoading"
                                required
-                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
-
                 <div class="space-y-2">
                     <label class="text-[#4C6B4F]">Descripción</label>
                     <InputTextArea @bind-Value="votacionDto.Descripcion"
                                    placeholder="Describe la votación"
-                                   class="w-full px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                                   disabled="@isLoading"
+                                   class="w-full rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
                 <div class="space-y-2">
                     <label class="text-[#4C6B4F]">Fecha de fin</label>
                     <InputDate @bind-Value="votacionDto.FechaFin"
-                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                               disabled="@isLoading"
+                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium">
-                    Crear Votación
+                <button type="submit" disabled="@isLoading"
+                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium disabled:opacity-60">
+                    @(isLoading ? "Creando votación..." : "Crear votación")
                 </button>
 
             </EditForm>
@@ -53,15 +62,39 @@
 @code {
     private VotacionDTO votacionDto = new VotacionDTO
     {
-        FechaIni = DateTime.Now
+        FechaIni = DateTime.Now,
+        FechaFin = DateTime.Now.AddDays(1)
     };
 
-    private void HandleSubmit()
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    private async Task HandleSubmit()
     {
-        //var servicio = new Votify.BusinessLogic.Service.IVotifyService();
-        //servicio.crearVotoación(votacionDto.FechaFin, true);
+        isLoading = true;
+        errorMessage = string.Empty;
 
-        //NavigationManager.NavigateTo("/votacion/{votacionId}");
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/votaciones", votacionDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var votacionId = await response.Content.ReadFromJsonAsync<int>();
+                NavigationManager.NavigateTo($"/votacion/{votacionId}");
+            }
+            else
+            {
+                errorMessage = "No se pudo crear la votación.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Error de conexión con el servidor.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
-
 }
