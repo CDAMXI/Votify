@@ -188,7 +188,131 @@
         }
         else if (Rol == "COMPETITOR")
         {
-            <p>No tienes acceso a votar. Puedes ver tus resultados en el dashboard.</p>
+            <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 text-center">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] flex items-center justify-center mx-auto mb-4 text-4xl">🚀</div>
+                <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Tu proyecto está siendo evaluado</h2>
+                <p class="text-[#6C8A6C] mb-6">Los jurados están revisando tu trabajo ahora mismo. Los resultados estarán disponibles al terminar la votación.</p>
+                <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left">
+                    <h3 class="text-lg font-bold text-[#1A281B] mb-3">Tu proyecto</h3>
+                    @{var myProj = mockProjects[0];}
+                    <p class="text-xl font-bold text-[#4C6B4F]">@myProj.Name</p>
+                    <p class="text-sm text-[#6C8A6C]">Equipo: @myProj.Team</p>
+                    <span class="inline-block mt-2 px-3 py-1 bg-white text-[#4C6B4F] rounded-full text-xs font-bold">@myProj.Category</span>
+                    <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@myProj.Description</p>
+                </div>
+                <div class="flex items-center justify-center gap-3 text-[#6C8A6C]">
+                    <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0s"></div>
+                    <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0.2s"></div>
+                    <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0.4s"></div>
+                    <span class="text-sm font-medium ml-2">Votación en curso</span>
+                </div>
+            </div>
+        }
+        else if (Rol == "ORGANIZER")
+        {
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">👥</div>
+                    <div>
+                        <p class="text-xs text-[#6C8A6C] font-medium">Participantes</p>
+                        <p class="text-2xl font-bold text-[#1A281B]">250</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">🏆</div>
+                    <div>
+                        <p class="text-xs text-[#6C8A6C] font-medium">Proyectos</p>
+                        <p class="text-2xl font-bold text-[#1A281B]">@mockProjects.Count</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">⚖️</div>
+                    <div>
+                        <p class="text-xs text-[#6C8A6C] font-medium">Jurados</p>
+                        <p class="text-2xl font-bold text-[#1A281B]">18</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                <h2 class="text-xl font-bold text-[#1A281B] mb-4">Proyectos inscritos</h2>
+                <div class="space-y-3">
+                    @foreach (var proj in mockProjects)
+                    {
+                        <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                            <div>
+                                <p class="font-bold text-[#1A281B]">@proj.Name</p>
+                                <p class="text-sm text-[#6C8A6C]">@proj.Team · @proj.Category</p>
+                            </div>
+                            <span class="px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] text-xs font-bold rounded-full">Inscrito</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h2 class="text-xl font-bold text-[#1A281B] mb-4">Criterios de evaluación</h2>
+                <div class="space-y-3">
+                    @foreach (var criterion in mockCriteria)
+                    {
+                        <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                            <div>
+                                <p class="font-bold text-[#1A281B]">@criterion.Name</p>
+                                <p class="text-sm text-[#6C8A6C]">@criterion.Description</p>
+                            </div>
+                            <span class="text-lg font-bold text-[#4C6B4F]">@criterion.Weight%</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (Rol == "VOTING_MANAGER")
+        {
+            <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-[#1A281B]">Control de votación</h2>
+                    <span class="px-4 py-2 bg-[#6C8A6C] text-white text-sm font-bold rounded-full">● Votación abierta</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <button class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                        ⏸ Pausar votación
+                    </button>
+                    <button class="bg-red-50 border-2 border-red-300 text-red-500 py-4 rounded-xl font-bold hover:bg-red-100 transition-colors">
+                        ⏹ Cerrar votación
+                    </button>
+                </div>
+                <div class="bg-[#E9EFE1] rounded-xl p-5 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-[#4C6B4F]">Progreso general</span>
+                        <span class="text-sm font-bold text-[#1A281B]">12 / 18 jurados han votado</span>
+                    </div>
+                    <div class="w-full bg-white rounded-full h-3 overflow-hidden">
+                        <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full transition-all duration-300" style="width: 66%"></div>
+                    </div>
+                    <p class="text-xs text-[#6C8A6C] mt-2">66% completado</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h2 class="text-xl font-bold text-[#1A281B] mb-4">Estado por proyecto</h2>
+                <div class="space-y-3">
+                    @foreach (var (proj, idx) in mockProjects.Select((p, i) => (p, i)))
+                    {
+                        int votos = idx == 0 ? 12 : 7;
+                        int total = 18;
+                        double pct = (votos / (double)total) * 100;
+                        <div class="p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="font-bold text-[#1A281B]">@proj.Name</p>
+                                <span class="text-sm font-bold text-[#4C6B4F]">@votos/@total votos</span>
+                            </div>
+                            <div class="w-full bg-white rounded-full h-2 overflow-hidden">
+                                <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full" style="width: @(pct.ToString("F0"))%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
         }
     </main>
 </div>

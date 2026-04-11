@@ -4,6 +4,7 @@
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
@@ -13,6 +14,17 @@
                     <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
                 </div>
                 <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-medium text-[#6C8A6C]">Rol:</label>
+                        <select value="@rolActual" @onchange="OnRolChanged"
+                                class="text-sm bg-[#E9EFE1] border border-[#B5D6AC] text-[#1A281B] rounded-lg px-3 py-2 focus:outline-none focus:border-[#6C8A6C] cursor-pointer">
+                            <option value="PUBLIC">Público</option>
+                            <option value="COMPETITOR">Competidor</option>
+                            <option value="EXPERT">Jurado</option>
+                            <option value="ORGANIZER">Organizador</option>
+                            <option value="VOTING_MANAGER">Encargado Votación</option>
+                        </select>
+                    </div>
                     <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
                         Cerrar Sesión
                     </a>
@@ -149,6 +161,25 @@
             fotoPerfil = res?.FotoPerfil;
         }
         catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var saved = await JS.InvokeAsync<string?>("sessionStorage.getItem", "votify_rol");
+            if (!string.IsNullOrEmpty(saved))
+            {
+                rolActual = saved;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task OnRolChanged(ChangeEventArgs e)
+    {
+        rolActual = e.Value?.ToString() ?? "EXPERT";
+        await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", rolActual);
     }
 
     private class PerfilDTO
