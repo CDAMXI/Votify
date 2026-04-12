@@ -151,8 +151,10 @@
             await JS.InvokeVoidAsync("eval", """
                 document.addEventListener('visibilitychange', async function() {
                     if (!document.hidden) {
-                        const res = await fetch('/api/perfil');
-                        if (!res.ok) window.location.href = '/login';
+                        try {
+                            const res = await fetch('/api/perfil');
+                            if (res.status === 401) window.location.href = '/login';
+                        } catch {}
                     }
                 });
             """);

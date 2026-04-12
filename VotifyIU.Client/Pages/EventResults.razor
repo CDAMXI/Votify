@@ -13,7 +13,7 @@
                         <span class="mr-2">←</span> Volver al Dashboard
                     </a>
                     <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-                    <h1 class="text-xl font-bold text-[#1A281B]">Resultados - HackUPC 2026</h1>
+                    <h1 class="text-xl font-bold text-[#1A281B]">Resultados - @NombreEvento</h1>
                 </div>
             </div>
         </div>
@@ -242,20 +242,39 @@
     [SupplyParameterFromQuery]
     public string? Rol { get; set; }
 
+    private static readonly Dictionary<string, string> nombresEventos = new()
+    {
+        { "1", "HackUPC 2026" },
+        { "2", "StartupWeekend BCN" },
+        { "3", "DevFest 2026" }
+    };
+
+    private string NombreEvento => nombresEventos.TryGetValue(EventId ?? "", out var n) ? n : "Evento";
+
+    private static readonly Dictionary<string, List<ProjectResult>> resultadosPorEvento = new()
+    {
+        ["1"] = new()
+        {
+            new ProjectResult { Id="1", Name="HealthAI", Team="MedTech", Category="Salud", TotalScore=8.7, Votes=45, Rank=1, Comments=new(){"Excelente IA", "Impacto real"}, CriteriaScores=new(){Innovation=9.2, Technical=8.5, Impact=9.0, Presentation=8.3, Design=8.2}},
+            new ProjectResult { Id="2", Name="EcoTrack", Team="Green Coders", Category="Sostenibilidad", TotalScore=8.3, Votes=45, Rank=2, Comments=new(){"Interfaz intuitiva"}, CriteriaScores=new(){Innovation=8.0, Technical=8.2, Impact=9.1, Presentation=8.0, Design=8.5}},
+            new ProjectResult { Id="3", Name="EduConnect", Team="Learning Lab", Category="Educación", TotalScore=7.9, Votes=45, Rank=3, Comments=new(){"Gran propuesta"}, CriteriaScores=new(){Innovation=7.5, Technical=8.0, Impact=8.2, Presentation=7.8, Design=8.0}}
+        },
+        ["3"] = new()
+        {
+            new ProjectResult { Id="1", Name="CloudSync", Team="ByteForce", Category="Cloud", TotalScore=9.1, Votes=62, Rank=1, Comments=new(){"Arquitectura sólida", "Gran escalabilidad"}, CriteriaScores=new(){Innovation=9.5, Technical=9.2, Impact=8.9, Presentation=9.0, Design=8.8}},
+            new ProjectResult { Id="2", Name="DevOps AI", Team="PipelineHeroes", Category="DevOps", TotalScore=8.6, Votes=62, Rank=2, Comments=new(){"Automatización impresionante"}, CriteriaScores=new(){Innovation=8.8, Technical=9.0, Impact=8.4, Presentation=8.2, Design=8.5}},
+            new ProjectResult { Id="3", Name="OpenAPI Hub", Team="RestMasters", Category="APIs", TotalScore=8.1, Votes=62, Rank=3, Comments=new(){"Documentación excelente"}, CriteriaScores=new(){Innovation=7.9, Technical=8.3, Impact=8.0, Presentation=8.4, Design=8.0}}
+        }
+    };
+
+    private List<ProjectResult> mockResults => resultadosPorEvento.TryGetValue(EventId ?? "", out var r) ? r : resultadosPorEvento["1"];
+
     private string GetRankColor(int rank) => rank switch
     {
         1 => "from-yellow-400 to-yellow-600",
         2 => "from-slate-300 to-slate-500",
         3 => "from-orange-400 to-orange-600",
         _ => "from-[#6C8A6C] to-[#4C6B4F]"
-    };
-
-    // Datos simulados
-    private List<ProjectResult> mockResults = new()
-    {
-        new ProjectResult { Id="1", Name="HealthAI", Team="MedTech", Category="Salud", TotalScore=8.7, Votes=45, Rank=1, Comments=new(){"Excelente IA", "Impacto real"}, CriteriaScores=new(){Innovation=9.2, Technical=8.5, Impact=9.0, Presentation=8.3, Design=8.2}},
-        new ProjectResult { Id="2", Name="EcoTrack", Team="Green Coders", Category="Sostenibilidad", TotalScore=8.3, Votes=45, Rank=2, Comments=new(){"Interfaz intuitiva"}, CriteriaScores=new(){Innovation=8.0, Technical=8.2, Impact=9.1, Presentation=8.0, Design=8.5}},
-        new ProjectResult { Id="3", Name="EduConnect", Team="Learning Lab", Category="Educación", TotalScore=7.9, Votes=45, Rank=3, Comments=new(){"Gran propuesta"}, CriteriaScores=new(){Innovation=7.5, Technical=8.0, Impact=8.2, Presentation=7.8, Design=8.0}}
     };
 
     public class ProjectResult
