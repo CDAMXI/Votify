@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "VotifyIU (http)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "VotifyIU/VotifyIU.csproj", "--launch-profile", "http"],
+      "port": 5138
+    },
+    {
+      "name": "VotifyIU (https)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "VotifyIU/VotifyIU.csproj", "--launch-profile", "https"],
+      "port": 7083
+    }
+  ]
+}
