@@ -1,4 +1,5 @@
 using System.Data.Common;
+using Votify.shared;
 using VotifyIU.Services;
 using VotifyIU.Client.Pages;
 using VotifyIU.Components;
@@ -186,6 +187,68 @@ app.MapPut("/api/perfil/foto", (UpdateFotoRequest req, IVotifyService service, H
     {
         service.RestoreSession(username);
         service.UpdateFotoPerfil(req.Base64Foto);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        int idVotacion = service.CrearVotacion(req.FechaFin, true);
+        return Results.Ok(idVotacion);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var votaciones = service.GetMisVotaciones().Select(v => new VotacionDTO
+        {
+            Id = v.Id,
+            Titulo = $"Votación #{v.Id}",
+            FechaIni = v.FechaIni,
+            FechaFin = v.FechaFin
+        });
+        return Results.Ok(votaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var votacion = service.GetVotacion(id);
+        return Results.Ok(new VotacionDTO
+        {
+            Id = votacion.Id,
+            FechaIni = votacion.FechaIni,
+            FechaFin = votacion.FechaFin
+        });
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapPut("/api/votaciones/{id}", (int id, VotacionDTO req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.ModificarFechaVotacion(id, req.FechaFin);
         return Results.Ok();
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }

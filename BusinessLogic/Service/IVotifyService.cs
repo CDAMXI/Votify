@@ -27,7 +27,9 @@ public interface IVotifyService
     void Commit();
 
     // Votaciones
-    void CrearVotacion(DateTime fechaFin, bool activa);
+    int CrearVotacion(DateTime fechaFin, bool activa);
+    Votacion GetVotacion(int idVotacion);
+    IEnumerable<Votacion> GetMisVotaciones();
     void BorrarVotacion(int idVotacion);
     void ModificarFechaVotacion(int idVotacion, DateTime nuevaFechaFin);
 

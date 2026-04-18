@@ -141,16 +141,26 @@ namespace Votify.BusinessLogic.Service
 
         public void Commit() => dal.Commit();
 
-        public void CrearVotacion(DateTime fechaFin, bool activa)
+        public int CrearVotacion(DateTime fechaFin, bool activa)
         {
-            if (rol is not EncargadoVotacion encargado)
-                throw new ServiceException("Solo el encargado de votación puede crear votaciones");
+            RequireUsuarioLogueado();
+
+            EncargadoVotacion encargado = new EncargadoVotacion(DateTime.Now, 0);
+            encargado.usuario = usuario;
 
             Votacion votacion = new Votacion(DateTime.Now, fechaFin, activa, encargado);
-            dal.Insert<Votacion>(votacion);
-            encargado.votaciones.Add(votacion);
+
             dal.Insert<EncargadoVotacion>(encargado);
+            dal.Insert<Votacion>(votacion);
             dal.Commit();
+
+            return votacion.Id;
+        }
+
+        public IEnumerable<Votacion> GetMisVotaciones()
+        {
+            RequireUsuarioLogueado();
+            return dal.GetWhere<Votacion>(v => v.Encargado != null && v.Encargado.usuario.Id == usuario!.Id);
         }
 
         public void BorrarVotacion(int idVotacion)
@@ -163,14 +173,24 @@ namespace Votify.BusinessLogic.Service
             dal.Commit();
         }
 
-        public void ModificarFechaVotacion(int idVotacion, DateTime nuevaFechaFin)
+        public Votacion GetVotacion(int idVotacion)
         {
             Votacion votacion = dal.GetById<Votacion>(idVotacion);
-            if (votacion.Encargado != rol)
+            if (votacion == null)
+                throw new ServiceException("La votación no existe");
+            return votacion;
+        }
+
+        public void ModificarFechaVotacion(int idVotacion, DateTime nuevaFechaFin)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = dal.GetById<Votacion>(idVotacion);
+            if (votacion == null)
+                throw new ServiceException("La votación no existe");
+            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
                 throw new ServiceException("No eres el encargado de esta votación");
 
             votacion.FechaFin = nuevaFechaFin;
-            dal.Insert<Votacion>(votacion);
             dal.Commit();
         }
 

@@ -86,7 +86,7 @@
                                     </div>
                                 } else if(rolActual == "ORGANIZER" || rolActual == "VOTING_MANAGER")
                                 {
-                                    <div class="flex items-center gap-1 text-[#70D939]">
+                                    <div class="flex items-center gap-1 text-[#6C8A6C]">
                                         <span class="text-xs font-medium">● Gestionar</span>
                                     </div>
                                 }
@@ -161,6 +161,25 @@
             fotoPerfil = res?.FotoPerfil;
         }
         catch { }
+
+        try
+        {
+            var votaciones = await Http.GetFromJsonAsync<List<VotacionDTO>>("/api/votaciones");
+            if (votaciones != null)
+            {
+                mockEvents = votaciones.Select(v => new EventModel
+                {
+                    Id = v.Id.ToString(),
+                    Name = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
+                    Description = string.IsNullOrEmpty(v.Descripcion) ? "Sin descripción" : v.Descripcion,
+                    Date = v.FechaFin.ToString("dd/MM/yyyy"),
+                    Status = v.FechaFin >= DateTime.Today ? "active" : "finished",
+                    Participants = 0,
+                    Projects = 0
+                }).ToList();
+            }
+        }
+        catch { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -219,13 +238,7 @@
         NavigationManager.NavigateTo("/crear-votacion");
     }
 
-    // Mock Data
-    private List<EventModel> mockEvents = new()
-    {
-        new EventModel { Id = "1", Name = "HackUPC 2026", Description = "Hackathon universitario de innovación tecnológica", Date = "15-17 Marzo 2026", Participants = 250, Status = "active", Projects = 45 },
-        new EventModel { Id = "2", Name = "StartupWeekend BCN", Description = "Competición de emprendimiento y startups", Date = "22-24 Marzo 2026", Participants = 180, Status = "upcoming", Projects = 0 },
-        new EventModel { Id = "3", Name = "DevFest 2026", Description = "Festival de desarrolladores y nuevas tecnologías", Date = "1-3 Marzo 2026", Participants = 320, Status = "finished", Projects = 62 }
-    };
+    private List<EventModel> mockEvents = new();
 
     public class EventModel
     {

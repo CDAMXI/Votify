@@ -1,8 +1,10 @@
 ﻿@page "/crear-votacion"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
     <div class="w-full max-w-md px-6">
@@ -81,8 +83,8 @@
 
             if (response.IsSuccessStatusCode)
             {
-                var votacionId = await response.Content.ReadFromJsonAsync<int>();
-                NavigationManager.NavigateTo($"/votacion/{votacionId}");
+                try { await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", "VOTING_MANAGER"); } catch { }
+                NavigationManager.NavigateTo("/dashboard");
             }
             else
             {
