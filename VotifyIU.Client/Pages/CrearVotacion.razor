@@ -83,12 +83,14 @@
 
             if (response.IsSuccessStatusCode)
             {
-                try { await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", "VOTING_MANAGER"); } catch { }
+                try { await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", "ENCARGADO"); } catch { }
                 NavigationManager.NavigateTo("/dashboard");
             }
             else
             {
-                errorMessage = "No se pudo crear la votación.";
+                errorMessage = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorMessage))
+                    errorMessage = "No se pudo crear la votación.";
             }
         }
         catch

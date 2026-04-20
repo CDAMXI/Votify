@@ -7,10 +7,11 @@ namespace Votify.Entities
     public partial class HojaRuta
     {
         //Atributos
-        public string Contenido { get; set; }
+        public int Id { get; set; }
+        public string Descripcion { get; set; }
         public DateTime FechaGeneracion { get; set; }
 
         //Relaciones
-        public Dashboard dashboard;
+        public virtual Competidor competidor { get; set; }
     }
 }

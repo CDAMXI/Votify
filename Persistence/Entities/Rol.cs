@@ -10,6 +10,9 @@ namespace Votify.Entities
         //Atributos
         [Key]
         public int Id { get; set; }
+        public int UsuarioId { get; set; }
+        public int EventoId { get; set; }
+        public string TipoRol { get; set; }
         public DateTime FechaAsignacion { get; set; }
 
         //Relaciones

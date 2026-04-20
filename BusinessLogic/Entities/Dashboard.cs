@@ -12,6 +12,7 @@ namespace Votify.Entities
         {
             PuntuacionGlobal = puntuacionGlobal;
             PuntuacionPorDimencion = puntuacionPorDimencion;
+            Descripcion = string.Empty;
         }
     }
 }

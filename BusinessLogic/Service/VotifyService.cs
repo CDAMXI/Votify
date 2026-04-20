@@ -47,9 +47,16 @@ namespace Votify.BusinessLogic.Service
 
         public void Registrar(string username, string email, string password)
         {
+            username = username.Trim();
+            email = email.Trim().ToLowerInvariant();
+
             bool usuarioExistente = dal.GetWhere<Usuario>(u => u.Username == username).Any();
             if (usuarioExistente)
                 throw new ServiceException("El usuario ya existe");
+
+            bool emailExistente = dal.GetWhere<Usuario>(u => u.Email.ToLower() == email).Any();
+            if (emailExistente)
+                throw new ServiceException("El correo ya está registrado");
 
             dal.Insert<Usuario>(new Usuario(username, email, password, 0));
             dal.Commit();
@@ -141,15 +148,45 @@ namespace Votify.BusinessLogic.Service
 
         public void Commit() => dal.Commit();
 
-        public int CrearVotacion(DateTime fechaFin, bool activa)
+        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa)
         {
             RequireUsuarioLogueado();
 
-            EncargadoVotacion encargado = new EncargadoVotacion(DateTime.Now, 0);
+            DateTime fechaInicio = DateTime.Now;
+            if (fechaFin <= fechaInicio)
+                throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
+
+            string nombre = string.IsNullOrWhiteSpace(titulo) ? "Votacion" : titulo.Trim();
+            string descripcionNormalizada = descripcion?.Trim() ?? string.Empty;
+
+            Evento evento = new Evento
+            {
+                Nombre = nombre,
+                Descripcion = descripcionNormalizada,
+                FechaIni = fechaInicio,
+                FechaFin = fechaFin,
+                PermiteCompetidoresVotar = false,
+                organizador = usuario!,
+                OrganizadorId = usuario!.Id
+            };
+
+            Organizador organizador = new Organizador(fechaInicio, 0)
+            {
+                usuario = usuario,
+                evento = evento
+            };
+
+            EncargadoVotacion encargado = new EncargadoVotacion(fechaInicio, 0);
             encargado.usuario = usuario;
+            encargado.evento = evento;
 
-            Votacion votacion = new Votacion(DateTime.Now, fechaFin, activa, encargado);
+            Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado);
+            votacion.Titulo = nombre;
+            votacion.Descripcion = descripcionNormalizada;
+            votacion.evento = evento;
 
+            dal.Insert<Evento>(evento);
+            dal.Insert<Organizador>(organizador);
             dal.Insert<EncargadoVotacion>(encargado);
             dal.Insert<Votacion>(votacion);
             dal.Commit();
@@ -230,9 +267,7 @@ namespace Votify.BusinessLogic.Service
         private void CargarRolDeUsuario(Usuario user)
         {
             Rol? rolRecuperado = user.roles?.FirstOrDefault();
-            rol = rolRecuperado != null
-                ? RolFactory.Create(rolRecuperado.RolVotante(), rolRecuperado.FechaAsignacion, rolRecuperado.RawScore())
-                : null;
+            rol = rolRecuperado;
         }
 
         private void RequireUsuarioLogueado()

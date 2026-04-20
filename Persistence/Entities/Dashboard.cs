@@ -7,11 +7,12 @@ namespace Votify.Entities
     public partial class Dashboard
     {
         //Atributos
-        public int PuntuacionGlobal { get; set; }
+        public int Id { get; set; }
+        public double PuntuacionGlobal { get; set; }
         public int PuntuacionPorDimencion { get; set; }
+        public string Descripcion { get; set; }
 
         //Relaciones
-        public HojaRuta hojaRuta;
-        public Competidor competidor;
+        public virtual Competidor competidor { get; set; }
     }
 }

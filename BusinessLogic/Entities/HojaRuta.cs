@@ -10,7 +10,7 @@ namespace Votify.Entities
 
         public HojaRuta(string contenido, DateTime fechaGeneracion)
         {
-            Contenido = contenido;
+            Descripcion = contenido;
             FechaGeneracion = fechaGeneracion;
         }
     }

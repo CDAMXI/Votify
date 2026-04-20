@@ -18,11 +18,11 @@
                         <label class="text-xs font-medium text-[#6C8A6C]">Rol:</label>
                         <select value="@rolActual" @onchange="OnRolChanged"
                                 class="text-sm bg-[#E9EFE1] border border-[#B5D6AC] text-[#1A281B] rounded-lg px-3 py-2 focus:outline-none focus:border-[#6C8A6C] cursor-pointer">
-                            <option value="PUBLIC">Público</option>
-                            <option value="COMPETITOR">Competidor</option>
-                            <option value="EXPERT">Jurado</option>
-                            <option value="ORGANIZER">Organizador</option>
-                            <option value="VOTING_MANAGER">Encargado Votación</option>
+                            <option value="PUBLICO">Público</option>
+                            <option value="COMPETIDOR">Competidor</option>
+                            <option value="JURADO">Jurado</option>
+                            <option value="ORGANIZADOR">Organizador</option>
+                            <option value="ENCARGADO">Encargado Votación</option>
                         </select>
                     </div>
                     <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
@@ -44,7 +44,7 @@
             </p>
         </div>
 
-        @if (rolActual == "VOTING_MANAGER" || rolActual == "ORGANIZER")
+        @if (rolActual == "ENCARGADO" || rolActual == "ORGANIZADOR")
         {
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-[#1A281B]">Eventos Disponibles</h2>
@@ -73,18 +73,18 @@
                             </span>
                             @if (ev.Status == "active")
                             {
-                                if(rolActual == "EXPERT" || rolActual == "PUBLIC")
+                                if(rolActual == "JURADO" || rolActual == "PUBLICO")
                                 {
                                     <div class="flex items-center gap-1 text-[#6C8A6C]">
                                         <span class="text-xs font-medium">● Votación abierta</span>
                                     </div>
                                 }
-                                else if (rolActual == "COMPETITOR")
+                                else if (rolActual == "COMPETIDOR")
                                 { 
                                     <div class="flex items-center gap-1 text-[#70D939]">
                                         <span class="text-xs font-medium">● En evaluación</span>
                                     </div>
-                                } else if(rolActual == "ORGANIZER" || rolActual == "VOTING_MANAGER")
+                                } else if(rolActual == "ORGANIZADOR" || rolActual == "ENCARGADO")
                                 {
                                     <div class="flex items-center gap-1 text-[#6C8A6C]">
                                         <span class="text-xs font-medium">● Gestionar</span>
@@ -110,19 +110,19 @@
 
                         @if (ev.Status == "active")
                         {
-                            if(rolActual == "EXPERT" || rolActual == "PUBLIC")
+                            if(rolActual == "JURADO" || rolActual == "PUBLICO")
                             {
                                 <button @onclick="() => NavigateToEvent(ev.Id)"
                                         class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
                                     Votar Ahora
                                 </button>
-                            } else if(rolActual == "COMPETITOR")
+                            } else if(rolActual == "COMPETIDOR")
                             {
                                 <button @onclick="() => NavigateToEvent(ev.Id)"
                                         class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
                                     Ver Mi Evaluación
                                 </button>
-                            } else if(rolActual == "ORGANIZER" || rolActual == "VOTING_MANAGER")
+                            } else if(rolActual == "ORGANIZADOR" || rolActual == "ENCARGADO")
                             {
                                 <button @onclick="() => NavigateToResults(ev.Id)"
                                         class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
@@ -150,7 +150,7 @@
 </div>
 
 @code {
-    private string rolActual = "EXPERT";
+    private string rolActual = "JURADO";
     private string? fotoPerfil;
 
     protected override async Task OnInitializedAsync()
@@ -197,7 +197,7 @@
 
     private async Task OnRolChanged(ChangeEventArgs e)
     {
-        rolActual = e.Value?.ToString() ?? "EXPERT";
+        rolActual = e.Value?.ToString() ?? "JURADO";
         await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", rolActual);
     }
 

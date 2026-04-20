@@ -198,7 +198,7 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     try
     {
         service.RestoreSession(username);
-        int idVotacion = service.CrearVotacion(req.FechaFin, true);
+        int idVotacion = service.CrearVotacion(req.Titulo, req.Descripcion, req.FechaFin, true);
         return Results.Ok(idVotacion);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -214,6 +214,8 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
         var votaciones = service.GetMisVotaciones().Select(v => new VotacionDTO
         {
             Id = v.Id,
+            IdEvento = v.evento.IdEvento,
+            Descripcion = v.Descripcion,
             Titulo = $"Votación #{v.Id}",
             FechaIni = v.FechaIni,
             FechaFin = v.FechaFin
@@ -234,6 +236,9 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
         return Results.Ok(new VotacionDTO
         {
             Id = votacion.Id,
+            IdEvento = votacion.evento.IdEvento,
+            Titulo = votacion.Titulo,
+            Descripcion = votacion.Descripcion,
             FechaIni = votacion.FechaIni,
             FechaFin = votacion.FechaFin
         });
