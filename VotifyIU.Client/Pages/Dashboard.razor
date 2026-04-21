@@ -56,7 +56,7 @@
             @foreach (var ev in mockEvents)
             {
                 <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-[#B5D6AC]/30">
-                    <div class="p-6">
+                    <div class="p-6 flex flex-col h-full">
                         <div class="flex items-center justify-between mb-4">
                             <span class="px-3 py-1 rounded-full text-xs font-bold @GetStatusColor(ev.Status)">
                                 @GetStatusText(ev.Status)
@@ -84,7 +84,7 @@
                         </div>
 
                         <h3 class="text-xl font-bold text-[#1A281B] mb-2">@ev.Name</h3>
-                        <p class="text-[#6C8A6C] text-sm mb-4">@ev.Description</p>
+                        <p class="text-[#6C8A6C] text-sm mb-4 line-clamp-2 h-10 overflow-hidden">@ev.Description</p>
 
                         <div class="space-y-2 mb-6 text-sm text-[#4C6B4F]">
                             <div class="flex items-center gap-2">
@@ -98,6 +98,7 @@
                             </div>
                         </div>
 
+                        <div class="mt-auto">
                         @if (ev.Status == "active")
                         {
                             if(rolActual == "JURADO" || rolActual == "PUBLICO")
@@ -132,6 +133,7 @@
                                 Ver Resultados
                             </button>
                         }
+                        </div>
                     </div>
                 </div>
             }

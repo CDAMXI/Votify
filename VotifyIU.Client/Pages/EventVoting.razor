@@ -28,7 +28,7 @@
         </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (Rol == "JURADO" || Rol == "PUBLICO")
+        @if (Rol == "JURADO")
         {
             @if (yaVotadoEnEvento)
             {
@@ -183,6 +183,92 @@
                             </button>
                         }
                     </div>
+                </div>
+            }
+        }
+        else if (Rol == "PUBLICO")
+        {
+            @if (yaVotadoEnEvento)
+            {
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                    <p class="text-2xl font-bold text-[#1A281B] mb-2">Ya has votado en este evento</p>
+                    <p class="text-[#6C8A6C]">Tu voto ya fue registrado.</p>
+                    <a href="/dashboard" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
+                        Volver al Dashboard
+                    </a>
+                </div>
+            }
+            else if (!publicoMostrarVotacion)
+            {
+                <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                    <h2 class="text-xl font-bold text-[#1A281B] mb-4">Proyectos del evento</h2>
+                    <div class="space-y-3">
+                        @for (int i = 0; i < mockProjects.Count; i++)
+                        {
+                            var proj = mockProjects[i];
+                            var idx = i;
+                            <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                                <div>
+                                    <p class="font-bold text-[#1A281B]">@proj.Name</p>
+                                    <p class="text-sm text-[#6C8A6C]">@proj.Team · @proj.Category</p>
+                                    <p class="text-sm text-[#4C6B4F] mt-1">@proj.Description</p>
+                                </div>
+                                <button @onclick="() => { publicoProyectoIndex = idx; publicoMostrarVotacion = true; }"
+                                        class="ml-4 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                                    Votar
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                var proj = mockProjects[publicoProyectoIndex];
+                <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                    <button @onclick="() => publicoMostrarVotacion = false"
+                            class="mb-4 text-[#6C8A6C] hover:underline flex items-center gap-1">
+                        ← Volver a la lista
+                    </button>
+                    <h2 class="text-3xl font-bold text-[#1A281B] mb-2">@proj.Name</h2>
+                    <p class="text-[#6C8A6C] mb-1">Equipo: @proj.Team</p>
+                    <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-sm mb-4">@proj.Category</span>
+                    <p class="text-[#4C6B4F] mb-6">@proj.Description</p>
+
+                    <div class="space-y-6 mb-6">
+                        <h3 class="text-xl font-bold text-[#1A281B]">Criterios de Evaluación</h3>
+                        @foreach (var criterion in mockCriteria)
+                        {
+                            <div class="bg-[#EFEFEE] rounded-xl p-6">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex-1">
+                                        <label class="text-[#1A281B] text-base font-bold">
+                                            @criterion.Name
+                                            <span class="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
+                                        </label>
+                                        <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
+                                    </div>
+                                    <div class="ml-4 text-right">
+                                        <span class="text-3xl font-bold text-[#6C8A6C]">@GetScore(criterion.Id)</span>
+                                        <span class="text-[#A6AAA9]">/10</span>
+                                    </div>
+                                </div>
+                                <input type="range" min="0" max="10" step="0.5"
+                                       value="@GetScore(criterion.Id)"
+                                       @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
+                                       class="w-full h-2 bg-[#B5D6AC] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4" />
+                                <div class="flex justify-between text-xs text-[#A6AAA9]">
+                                    <span>0 - Muy bajo</span>
+                                    <span>5 - Promedio</span>
+                                    <span>10 - Excelente</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <button @onclick="SubmitVotoPublico"
+                            class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
+                        Enviar voto
+                    </button>
                 </div>
             }
         }
@@ -479,6 +565,17 @@
             currentProjectIndex++;
     }
     private void PreviousProject() => currentProjectIndex--;
+
+    private bool publicoMostrarVotacion = false;
+    private int publicoProyectoIndex = 0;
+
+    private async Task SubmitVotoPublico()
+    {
+        await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+        yaVotadoEnEvento = true;
+        publicoMostrarVotacion = false;
+    }
+
     public class Project { 
         public string Id { get; set; }
         public string Name { get; set; }

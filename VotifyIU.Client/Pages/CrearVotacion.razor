@@ -38,10 +38,15 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-[#4C6B4F]">Descripción</label>
-                    <InputTextArea @bind-Value="votacionDto.Descripcion"
-                                   placeholder="Describe la votación"
-                                   disabled="@isLoading"
-                                   class="w-full rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                    <div class="relative">
+                        <textarea value="@votacionDto.Descripcion"
+                                  @oninput="(e) => { votacionDto.Descripcion = e.Value?.ToString() ?? string.Empty; descripcionLength = votacionDto.Descripcion.Length; }"
+                                  maxlength="500"
+                                  placeholder="Describe la votación"
+                                  disabled="@isLoading"
+                                  class="w-full min-h-[100px] rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]"></textarea>
+                        <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@descripcionLength/500</span>
+                    </div>
                 </div>
 
                 <div class="space-y-2">
@@ -71,6 +76,7 @@
 
     private bool isLoading = false;
     private string errorMessage = string.Empty;
+    private int descripcionLength = 0;
 
     private async Task HandleSubmit()
     {
