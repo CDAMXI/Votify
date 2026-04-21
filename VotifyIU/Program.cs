@@ -214,15 +214,16 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
         var votaciones = service.GetMisVotaciones().Select(v => new VotacionDTO
         {
             Id = v.Id,
-            IdEvento = v.evento.IdEvento,
+            IdEvento = v.evento?.IdEvento ?? 0,
             Descripcion = v.Descripcion,
-            Titulo = $"Votación #{v.Id}",
+            Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
             FechaIni = v.FechaIni,
             FechaFin = v.FechaFin
-        });
+        }).ToList();
         return Results.Ok(votaciones);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
 app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>

@@ -198,18 +198,22 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
 
-            // EF6+Npgsql falla al generar el JOIN Roles → Usuarios en una query de Votaciones.
-            // En cambio, usuario.roles ya está cargado por RestoreSession (dirección Usuarios → Roles,
-            // que sí funciona). Extraemos los IDs en memoria y filtramos por FK directamente.
-            var encargadoIds = usuario!.roles
+            // EF6+Npgsql falla con JOINs profundos desde Votaciones hacia Roles/Usuarios.
+            // Solución: obtener IDs de encargado desde usuario.roles (ya cargado en memoria),
+            // luego materializar TODAS las votaciones con una sola SELECT sin JOIN,
+            // y filtrar en memoria con lazy loading solo sobre la tabla Roles.
+            var encargadoIds = (usuario!.roles
                 ?.OfType<EncargadoVotacion>()
                 .Select(e => e.Id)
-                .ToList() ?? new List<int>();
+                .ToHashSet()) ?? new HashSet<int>();
 
             if (!encargadoIds.Any())
                 return Enumerable.Empty<Votacion>();
 
-            return dal.GetWhere<Votacion>(v => encargadoIds.Contains(v.Encargado.Id));
+            return dal.GetAll<Votacion>()   // SELECT * FROM Votaciones — sin JOINs
+                      .ToList()             // materializar en memoria
+                      .Where(v => v.Encargado != null && encargadoIds.Contains(v.Encargado.Id))
+                      .ToList();
         }
 
         public void BorrarVotacion(int idVotacion)

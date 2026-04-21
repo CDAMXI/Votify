@@ -48,7 +48,7 @@
             <h2 class="text-2xl font-bold text-[#1A281B]">Eventos Disponibles</h2>
             <button @onclick="IrACrearVotacion"
                     class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white px-5 py-2 rounded-xl font-medium shadow-md transition-all">
-                + Crear votación
+                + Crear Evento
             </button>
         </div>
 
@@ -70,8 +70,8 @@
                                     </div>
                                 }
                                 else if (rolActual == "COMPETIDOR")
-                                { 
-                                    <div class="flex items-center gap-1 text-[#70D939]">
+                                {
+                                    <div class="flex items-center gap-1 text-[#6C8A6C]">
                                         <span class="text-xs font-medium">● En evaluación</span>
                                     </div>
                                 } else if(rolActual == "ORGANIZADOR" || rolActual == "ENCARGADO")
