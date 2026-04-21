@@ -197,7 +197,19 @@ namespace Votify.BusinessLogic.Service
         public IEnumerable<Votacion> GetMisVotaciones()
         {
             RequireUsuarioLogueado();
-            return dal.GetWhere<Votacion>(v => v.Encargado != null && v.Encargado.usuario.Id == usuario!.Id);
+
+            // EF6+Npgsql falla al generar el JOIN Roles → Usuarios en una query de Votaciones.
+            // En cambio, usuario.roles ya está cargado por RestoreSession (dirección Usuarios → Roles,
+            // que sí funciona). Extraemos los IDs en memoria y filtramos por FK directamente.
+            var encargadoIds = usuario!.roles
+                ?.OfType<EncargadoVotacion>()
+                .Select(e => e.Id)
+                .ToList() ?? new List<int>();
+
+            if (!encargadoIds.Any())
+                return Enumerable.Empty<Votacion>();
+
+            return dal.GetWhere<Votacion>(v => encargadoIds.Contains(v.Encargado.Id));
         }
 
         public void BorrarVotacion(int idVotacion)
