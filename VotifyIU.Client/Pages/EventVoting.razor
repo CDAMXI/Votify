@@ -207,9 +207,13 @@
                                 {
                                     <span class="ml-4 px-4 py-2 rounded-xl text-sm font-bold bg-[#E9EFE1] text-[#6C8A6C]">✓ Votado</span>
                                 }
+                                else if (publicosVotados.Count >= 3)
+                                {
+                                    <span class="ml-4 px-4 py-2 rounded-xl text-sm font-bold bg-[#EFEFEE] text-[#A6AAA9]">Límite alcanzado</span>
+                                }
                                 else
                                 {
-                                    <button @onclick="() => { publicoProyectoIndex = idx; publicoMostrarVotacion = true; }"
+                                    <button @onclick="() => { publicoProyectoIndex = idx; currentProjectIndex = idx; publicoMostrarVotacion = true; }"
                                             class="ml-4 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity">
                                         Votar
                                     </button>
@@ -246,7 +250,21 @@
                                         <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
                                     </div>
                                     <div class="ml-4 text-right">
-                                        <span class="text-3xl font-bold text-[#6C8A6C]">@GetScore(criterion.Id)</span>
+                                        @if (editingCriteria.Contains(criterion.Id))
+                                        {
+                                            <input type="number" min="0" max="10" step="0.01"
+                                                   value="@GetScore(criterion.Id)"
+                                                   @onchange="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
+                                                   @onblur="() => ToggleEditMode(criterion.Id)"
+                                                   class="text-3xl font-bold text-[#6C8A6C] w-20 bg-transparent border-b-2 border-[#6C8A6C] outline-none text-right" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-3xl font-bold text-[#6C8A6C] cursor-pointer"
+                                                  @onclick="() => ToggleEditMode(criterion.Id)">
+                                                @GetScore(criterion.Id)
+                                            </span>
+                                        }
                                         <span class="text-[#A6AAA9]">/10</span>
                                     </div>
                                 </div>
