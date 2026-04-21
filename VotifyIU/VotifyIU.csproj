@@ -11,7 +11,7 @@
     <ProjectReference Include="..\Votify.shared\Votify.shared.csproj" />
     <ProjectReference Include="..\VotifyIU.Client\VotifyIU.Client.csproj" />
     <ProjectReference Include="..\Votify.csproj" />
-    <PackageReference Include="MailKit" Version="4.15.1" />
+    <PackageReference Include="MailKit" Version="4.16.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.3" />
   </ItemGroup>
 
