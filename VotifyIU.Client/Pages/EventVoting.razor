@@ -188,17 +188,7 @@
         }
         else if (Rol == "PUBLICO")
         {
-            @if (yaVotadoEnEvento)
-            {
-                <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
-                    <p class="text-2xl font-bold text-[#1A281B] mb-2">Ya has votado en este evento</p>
-                    <p class="text-[#6C8A6C]">Tu voto ya fue registrado.</p>
-                    <a href="/dashboard" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
-                        Volver al Dashboard
-                    </a>
-                </div>
-            }
-            else if (!publicoMostrarVotacion)
+            @if (!publicoMostrarVotacion)
             {
                 <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                     <h2 class="text-xl font-bold text-[#1A281B] mb-4">Proyectos del evento</h2>
@@ -213,10 +203,17 @@
                                     <p class="text-sm text-[#6C8A6C]">@proj.Team · @proj.Category</p>
                                     <p class="text-sm text-[#4C6B4F] mt-1">@proj.Description</p>
                                 </div>
-                                <button @onclick="() => { publicoProyectoIndex = idx; publicoMostrarVotacion = true; }"
-                                        class="ml-4 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity">
-                                    Votar
-                                </button>
+                                @if (publicosVotados.Contains(idx))
+                                {
+                                    <span class="ml-4 px-4 py-2 rounded-xl text-sm font-bold bg-[#E9EFE1] text-[#6C8A6C]">✓ Votado</span>
+                                }
+                                else
+                                {
+                                    <button @onclick="() => { publicoProyectoIndex = idx; publicoMostrarVotacion = true; }"
+                                            class="ml-4 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                                        Votar
+                                    </button>
+                                }
                             </div>
                         }
                     </div>
@@ -568,12 +565,13 @@
 
     private bool publicoMostrarVotacion = false;
     private int publicoProyectoIndex = 0;
+    private HashSet<int> publicosVotados = new();
 
     private async Task SubmitVotoPublico()
     {
-        await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
-        yaVotadoEnEvento = true;
+        publicosVotados.Add(publicoProyectoIndex);
         publicoMostrarVotacion = false;
+        await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
     }
 
     public class Project { 
