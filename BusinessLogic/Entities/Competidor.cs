@@ -6,9 +6,13 @@ namespace Votify.Entities
 {
     public partial class Competidor : Rol
     {
-        public Competidor() : base() { }
+        public Competidor() : base()
+        {
+            TipoRol = "COMPETIDOR";
+        }
         public Competidor(DateTime fechaAsignacion, double rawScore) : base(fechaAsignacion, rawScore)
         {
+            TipoRol = "COMPETIDOR";
         }
 
         public override double NormalizedScore()
@@ -17,6 +21,6 @@ namespace Votify.Entities
         }
 
         //Identificador de tipo (usado por RolFactory)
-        public override string RolVotante() => "COMPETITOR";
+        public override string RolVotante() => "COMPETIDOR";
     }
 }

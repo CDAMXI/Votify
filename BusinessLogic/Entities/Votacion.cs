@@ -10,6 +10,8 @@ namespace Votify.Entities
         public Votacion(DateTime fechaIni, DateTime fechaFin, bool estado, EncargadoVotacion encargado)
         {
             //Id = id;
+            Titulo = "Votacion";
+            Descripcion = string.Empty;
             FechaIni = fechaIni;
             FechaFin = fechaFin;
             Estado = estado;

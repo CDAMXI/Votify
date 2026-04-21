@@ -28,7 +28,7 @@
         </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (Rol == "EXPERT" || Rol == "PUBLIC")
+        @if (Rol == "JURADO" || Rol == "PUBLICO")
         {
             @if (yaVotadoEnEvento)
             {
@@ -186,7 +186,7 @@
                 </div>
             }
         }
-        else if (Rol == "COMPETITOR")
+        else if (Rol == "COMPETIDOR")
         {
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 text-center">
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] flex items-center justify-center mx-auto mb-4 text-4xl">🚀</div>
@@ -208,7 +208,7 @@
                 </div>
             </div>
         }
-        else if (Rol == "ORGANIZER")
+        else if (Rol == "ORGANIZADOR")
         {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
@@ -266,7 +266,7 @@
                 </div>
             </div>
         }
-        else if (Rol == "VOTING_MANAGER")
+        else if (Rol == "ENCARGADO")
         {
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <div class="flex items-center justify-between mb-6">

@@ -49,7 +49,7 @@ namespace Votify.Persistence
 
         public IEnumerable<T> GetWhere<T>(Expression<Func<T, bool>> predicate) where T : class
         {
-            return dbContext.Set<T>().Where(predicate).AsEnumerable();
+            return dbContext.Set<T>().Where(predicate).ToList();
         }
 
         public void Commit()
@@ -73,7 +73,6 @@ namespace Votify.Persistence
             _transaction = dbContext.Database.BeginTransaction();
         }
 
-        // Sería mejor cambiar el nombre al metodo Commit y dejarlo como SaveChanges()
         public void CommitTransaction()
         {
             _transaction.Commit();

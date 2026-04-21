@@ -36,6 +36,7 @@
                         <label class="text-[#4C6B4F]">Fecha de fin</label>
                         <InputDate @bind-Value="votacionDto.FechaFin"
                                    disabled="@isSaving"
+                                   min="@DateTime.Today.ToString("yyyy-MM-dd")"
                                    class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                     </div>
 
@@ -55,7 +56,7 @@
     [Parameter]
     public int VotacionId { get; set; }
 
-    private VotacionDTO votacionDto = new();
+    private VotacionDTO votacionDto = new() { FechaFin = DateTime.Today };
     private bool isLoadingData = true;
     private bool isSaving = false;
     private string errorMessage = string.Empty;

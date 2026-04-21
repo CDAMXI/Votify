@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
 using System.Data.Entity.Infrastructure.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using Npgsql;
 using Votify.Entities;
@@ -13,7 +10,6 @@ namespace Votify.Persistence
     [DbConfigurationType(typeof(VotifyDbConfiguration))]
     public class VotifyDBContext : DbContext
     {
-        // El nombre "VotifyDbConnection" debe coincidir con el del App.config o Web.config
         private const string DefaultConnection =
             "Host=aws-1-eu-west-1.pooler.supabase.com;Port=5432;Database=postgres;" +
             "Username=postgres.qoahzxuzktsrzleaxjeo;Password=yvuWJPRkV5uWleTN";
@@ -34,86 +30,247 @@ namespace Votify.Persistence
 
         static VotifyDBContext()
         {
-            // Nota: DropCreateDatabaseIfModelChanges puede fallar en Supabase si no tienes 
-            // permisos de superusuario para borrar la DB. Es mejor usar null o Migrations.
             Database.SetInitializer<VotifyDBContext>(null);
         }
 
-        // Los DbSets deben ser PUBLIC para que el motor los encuentre correctamente
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Evento> Eventos { get; set; }
         public DbSet<Votacion> Votaciones { get; set; }
-
         public DbSet<Voto> Votos { get; set; }
         public DbSet<Proyecto> Proyectos { get; set; }
         public DbSet<Rol> Roles { get; set; }
+        public DbSet<Competidor> Competidores { get; set; }
+        public DbSet<Publico> Publicos { get; set; }
+        public DbSet<EncargadoVotacion> Encargados { get; set; }
+        public DbSet<Jurado> Jurados { get; set; }
+        public DbSet<Organizador> Organizadores { get; set; }
+        public DbSet<Dashboard> Dashboards { get; set; }
+        public DbSet<HojaRuta> HojasRuta { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Rol>()
-                .Map<Jurado>(m => m.Requires("TipoRol").HasValue("EXPERT"))
-                .Map<Competidor>(m => m.Requires("TipoRol").HasValue("COMPETITOR"))
-                .Map<Organizador>(m => m.Requires("TipoRol").HasValue("ORGANIZER"))
-                .Map<EncargadoVotacion>(m => m.Requires("TipoRol").HasValue("VOTING_MANAGER"))
-                .Map<Publico>(m => m.Requires("TipoRol").HasValue("PUBLIC"));
-
-            // PostgreSQL usa el esquema 'public' por defecto
             modelBuilder.HasDefaultSchema("public");
 
-            modelBuilder.Entity<Voto>().Property(v => v.VotanteId).HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("IX_Voto_Unique", 1) { IsUnique = true }));
-
-            modelBuilder.Entity<Voto>()
-                .Property(v => v.VotacionId)
-                .HasColumnAnnotation("Index", new IndexAnnotation(
-                    new IndexAttribute("IX_Voto_Unique", 2) { IsUnique = true }));
-
-            modelBuilder.Entity<Voto>()
-                .Property(v => v.ProyectoId)
-                .HasColumnAnnotation("Index", new IndexAnnotation(
-                    new IndexAttribute("IX_Voto_Unique", 3) { IsUnique = true }));
-
-            // Relaciones 1-a-1 explícitas
-            modelBuilder.Entity<Reglas>()
-                .HasRequired(r => r.evento)
-                .WithOptional(e => e.reglas);
-
-            modelBuilder.Entity<Ranking>()
-                .HasRequired(r => r.votacion)
-                .WithOptional(v => v.ranking);
-
-            modelBuilder.Entity<Ranking>()
-                .HasRequired(r => r.proyecto)
-                .WithMany();
-
-            modelBuilder.Entity<Categoria>()
-                .HasRequired(c => c.evento)
-                .WithMany(e => e.categorias);
-
-            modelBuilder.Entity<Sugerencias>()
-                .HasRequired(s => s.evento)
-                .WithMany(e => e.sugerencias);
-
-            modelBuilder.Entity<Baremo>()
-                .HasRequired(b => b.votacion)
-                .WithMany(v => v.criterios);
-
-            modelBuilder.Entity<Premios>()
-                .HasRequired(p => p.votacion)
-                .WithMany();
-
-            modelBuilder.Entity<Premios>()
-                .HasOptional(p => p.categoria)
-                .WithMany(c => c.premios);
-
-            modelBuilder.Entity<Proyecto>()
-                .HasOptional(p => p.categoria)
-                .WithMany();
-
-            modelBuilder.Entity<Proyecto>()
-                .HasOptional(p => p.evento)
-                .WithMany(e => e.proyectos);
+            IgnoreEntitiesNotPresentInCurrentSchema(modelBuilder);
+            ConfigureUsuario(modelBuilder);
+            ConfigureEvento(modelBuilder);
+            ConfigureRoles(modelBuilder);
+            ConfigureVotacion(modelBuilder);
+            ConfigureProyecto(modelBuilder);
+            ConfigureVoto(modelBuilder);
+            ConfigureDashboard(modelBuilder);
+            ConfigureHojaRuta(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
+        }
+
+        private static void IgnoreEntitiesNotPresentInCurrentSchema(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Ignore<Baremo>();
+            modelBuilder.Ignore<Categoria>();
+            modelBuilder.Ignore<Certificado>();
+            modelBuilder.Ignore<Premios>();
+            modelBuilder.Ignore<Ranking>();
+            modelBuilder.Ignore<Reglas>();
+            modelBuilder.Ignore<Sugerencias>();
+        }
+
+        private static void ConfigureUsuario(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Usuario>().ToTable("usuario");
+            modelBuilder.Entity<Usuario>().HasKey(u => u.Id);
+            modelBuilder.Entity<Usuario>().Property(u => u.Id).HasColumnName("id_usuario");
+            modelBuilder.Entity<Usuario>().Property(u => u.Username).HasColumnName("nombre").IsRequired();
+            modelBuilder.Entity<Usuario>().Property(u => u.Email).HasColumnName("email").IsRequired();
+            modelBuilder.Entity<Usuario>().Property(u => u.Password).HasColumnName("password_hash").IsRequired();
+            modelBuilder.Entity<Usuario>().Property(u => u.FotoPerfil).HasColumnName("foto_perfil");
+            modelBuilder.Entity<Usuario>().Property(u => u.ResetToken).HasColumnName("reset_token");
+            modelBuilder.Entity<Usuario>().Property(u => u.ResetTokenExpiry).HasColumnName("reset_token_expiry");
+        }
+
+        private static void ConfigureEvento(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Evento>().ToTable("evento");
+            modelBuilder.Entity<Evento>().HasKey(e => e.IdEvento);
+            modelBuilder.Entity<Evento>().Property(e => e.IdEvento).HasColumnName("id_evento");
+            modelBuilder.Entity<Evento>().Property(e => e.OrganizadorId).HasColumnName("id_organizador");
+            modelBuilder.Entity<Evento>().Property(e => e.Nombre).HasColumnName("nombre").IsRequired();
+            modelBuilder.Entity<Evento>().Property(e => e.Descripcion).HasColumnName("descripcion");
+            modelBuilder.Entity<Evento>().Property(e => e.FechaIni).HasColumnName("fecha_inicio");
+            modelBuilder.Entity<Evento>().Property(e => e.FechaFin).HasColumnName("fecha_fin");
+            modelBuilder.Entity<Evento>().Property(e => e.PermiteCompetidoresVotar).HasColumnName("permite_competidores_votar");
+
+            modelBuilder.Entity<Evento>()
+                .HasRequired(e => e.organizador)
+                .WithMany(u => u.eventos)
+                .HasForeignKey(e => e.OrganizadorId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Evento>().Ignore(e => e.sugerencias);
+            modelBuilder.Entity<Evento>().Ignore(e => e.categorias);
+            modelBuilder.Entity<Evento>().Ignore(e => e.reglas);
+        }
+
+        private static void ConfigureRoles(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Rol>().ToTable("rol_evento");
+            modelBuilder.Entity<Rol>().HasKey(r => r.Id);
+            modelBuilder.Entity<Rol>().Property(r => r.Id).HasColumnName("id_rol_evento");
+            modelBuilder.Entity<Rol>().Property(r => r.UsuarioId).HasColumnName("id_usuario");
+            modelBuilder.Entity<Rol>().Property(r => r.EventoId).HasColumnName("id_evento");
+            modelBuilder.Entity<Rol>().Property(r => r.TipoRol).HasColumnName("tipo_rol").IsRequired();
+            modelBuilder.Entity<Rol>().Property(r => r.FechaAsignacion).HasColumnName("fecha_asignacion");
+
+            modelBuilder.Entity<Rol>()
+                .HasRequired(r => r.usuario)
+                .WithMany(u => u.roles)
+                .HasForeignKey(r => r.UsuarioId)
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Rol>()
+                .HasRequired(r => r.evento)
+                .WithMany(e => e.roles)
+                .HasForeignKey(r => r.EventoId)
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Competidor>().ToTable("competidor");
+            modelBuilder.Entity<Competidor>().Property(r => r.Id).HasColumnName("id_competidor");
+
+            modelBuilder.Entity<Publico>().ToTable("publico");
+            modelBuilder.Entity<Publico>().Property(r => r.Id).HasColumnName("id_publico");
+
+            modelBuilder.Entity<EncargadoVotacion>().ToTable("encargado");
+            modelBuilder.Entity<EncargadoVotacion>().Property(r => r.Id).HasColumnName("id_encargado");
+
+            modelBuilder.Entity<Jurado>().ToTable("jurado");
+            modelBuilder.Entity<Jurado>().Property(r => r.Id).HasColumnName("id_jurado");
+
+            modelBuilder.Entity<Organizador>().ToTable("organizador");
+            modelBuilder.Entity<Organizador>().Property(r => r.Id).HasColumnName("id_organizador");
+        }
+
+        private static void ConfigureVotacion(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Votacion>().ToTable("votacion");
+            modelBuilder.Entity<Votacion>().HasKey(v => v.Id);
+            modelBuilder.Entity<Votacion>().Property(v => v.Id).HasColumnName("id_votacion");
+            modelBuilder.Entity<Votacion>().Property(v => v.Titulo).HasColumnName("titulo").IsRequired();
+            modelBuilder.Entity<Votacion>().Property(v => v.Descripcion).HasColumnName("descripcion");
+            modelBuilder.Entity<Votacion>().Property(v => v.FechaIni).HasColumnName("fecha_inicio");
+            modelBuilder.Entity<Votacion>().Property(v => v.FechaFin).HasColumnName("fecha_fin");
+            modelBuilder.Entity<Votacion>().Property(v => v.Estado).HasColumnName("estado");
+
+            modelBuilder.Entity<Votacion>()
+                .HasRequired(v => v.evento)
+                .WithMany(e => e.votaciones)
+                .Map(m => m.MapKey("id_evento"))
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Votacion>()
+                .HasRequired(v => v.Encargado)
+                .WithMany(e => e.votaciones)
+                .Map(m => m.MapKey("id_encargado"))
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Votacion>().Ignore(v => v.competidores);
+            modelBuilder.Entity<Votacion>().Ignore(v => v.jurados);
+            modelBuilder.Entity<Votacion>().Ignore(v => v.publicos);
+            modelBuilder.Entity<Votacion>().Ignore(v => v.criterios);
+            modelBuilder.Entity<Votacion>().Ignore(v => v.categoria);
+            modelBuilder.Entity<Votacion>().Ignore(v => v.ranking);
+        }
+
+        private static void ConfigureProyecto(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Proyecto>().ToTable("proyecto");
+            modelBuilder.Entity<Proyecto>().HasKey(p => p.Id);
+            modelBuilder.Entity<Proyecto>().Property(p => p.Id).HasColumnName("id_proyecto");
+            modelBuilder.Entity<Proyecto>().Property(p => p.Nombre).HasColumnName("nombre").IsRequired();
+            modelBuilder.Entity<Proyecto>().Property(p => p.Descripcion).HasColumnName("descripcion");
+
+            modelBuilder.Entity<Proyecto>()
+                .HasRequired(p => p.evento)
+                .WithMany(e => e.proyectos)
+                .Map(m => m.MapKey("id_evento"))
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Proyecto>()
+                .HasRequired(p => p.competidor)
+                .WithMany()
+                .Map(m => m.MapKey("id_competidor"))
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Proyecto>().Ignore(p => p.Materiales);
+            modelBuilder.Entity<Proyecto>().Ignore(p => p.categoria);
+        }
+
+        private static void ConfigureVoto(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Voto>().ToTable("voto");
+            modelBuilder.Entity<Voto>().HasKey(v => v.Id);
+            modelBuilder.Entity<Voto>().Property(v => v.Id).HasColumnName("id_voto");
+            modelBuilder.Entity<Voto>().Property(v => v.VotacionId).HasColumnName("id_votacion");
+            modelBuilder.Entity<Voto>().Property(v => v.ProyectoId).HasColumnName("id_proyecto");
+            modelBuilder.Entity<Voto>().Property(v => v.VotanteId).HasColumnName("id_votante");
+            modelBuilder.Entity<Voto>().Property(v => v.Valor).HasColumnName("valor");
+            modelBuilder.Entity<Voto>().Property(v => v.Comentario).HasColumnName("comentario");
+            modelBuilder.Entity<Voto>().Property(v => v.Fecha).HasColumnName("fecha");
+
+            modelBuilder.Entity<Voto>().Property(v => v.VotacionId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("uq_voto_votacion_proyecto_votante", 1) { IsUnique = true }));
+            modelBuilder.Entity<Voto>().Property(v => v.ProyectoId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("uq_voto_votacion_proyecto_votante", 2) { IsUnique = true }));
+            modelBuilder.Entity<Voto>().Property(v => v.VotanteId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("uq_voto_votacion_proyecto_votante", 3) { IsUnique = true }));
+
+            modelBuilder.Entity<Voto>()
+                .HasRequired(v => v.votacion)
+                .WithMany(v => v.votos)
+                .HasForeignKey(v => v.VotacionId)
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Voto>()
+                .HasRequired(v => v.proyecto)
+                .WithMany(p => p.votos)
+                .HasForeignKey(v => v.ProyectoId)
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Voto>()
+                .HasRequired(v => v.votante)
+                .WithMany()
+                .HasForeignKey(v => v.VotanteId)
+                .WillCascadeOnDelete(false);
+        }
+
+        private static void ConfigureDashboard(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Dashboard>().ToTable("dashboard");
+            modelBuilder.Entity<Dashboard>().HasKey(d => d.Id);
+            modelBuilder.Entity<Dashboard>().Property(d => d.Id).HasColumnName("id_dashboard");
+            modelBuilder.Entity<Dashboard>().Property(d => d.PuntuacionGlobal).HasColumnName("puntuacion_global");
+            modelBuilder.Entity<Dashboard>().Property(d => d.Descripcion).HasColumnName("descripcion");
+            modelBuilder.Entity<Dashboard>().Ignore(d => d.PuntuacionPorDimencion);
+
+            modelBuilder.Entity<Dashboard>()
+                .HasRequired(d => d.competidor)
+                .WithMany()
+                .Map(m => m.MapKey("id_competidor"))
+                .WillCascadeOnDelete(true);
+        }
+
+        private static void ConfigureHojaRuta(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<HojaRuta>().ToTable("hoja_ruta");
+            modelBuilder.Entity<HojaRuta>().HasKey(h => h.Id);
+            modelBuilder.Entity<HojaRuta>().Property(h => h.Id).HasColumnName("id_hoja_ruta");
+            modelBuilder.Entity<HojaRuta>().Property(h => h.Descripcion).HasColumnName("descripcion").IsRequired();
+            modelBuilder.Entity<HojaRuta>().Property(h => h.FechaGeneracion).HasColumnName("fecha_generacion");
+
+            modelBuilder.Entity<HojaRuta>()
+                .HasRequired(h => h.competidor)
+                .WithMany()
+                .Map(m => m.MapKey("id_competidor"))
+                .WillCascadeOnDelete(true);
         }
 
         public void Rollback()
@@ -137,10 +294,8 @@ namespace Votify.Persistence
 
         public void RemoveAllData()
         {
-            // En EF6 para Postgres, borrar todo suele requerir ejecutar SQL crudo
-            this.Database.ExecuteSqlCommand("TRUNCATE TABLE \"Usuarios\" CASCADE;");
-            this.Database.ExecuteSqlCommand("TRUNCATE TABLE \"Votaciones\" CASCADE;");
+            Database.ExecuteSqlCommand("TRUNCATE TABLE public.usuario CASCADE;");
+            Database.ExecuteSqlCommand("TRUNCATE TABLE public.evento CASCADE;");
         }
     }
 }
-

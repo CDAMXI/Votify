@@ -39,17 +39,19 @@ namespace Votify.Tests
                 string connectionString = GetConnectionString(GetConfigPath());
                 string[] tables =
                 {
-                    "Usuario",
-                    "Evento",
-                    "Competidor",
-                    "Encargado",
-                    "Publico",
-                    "Votacion",
-                    "Proyecto",
-                    "Dashboard",
-                    "Hoja_de_ruta",
-                    "participa_en",
-                    "Vota_en"
+                    "usuario",
+                    "evento",
+                    "rol_evento",
+                    "competidor",
+                    "publico",
+                    "encargado",
+                    "jurado",
+                    "organizador",
+                    "votacion",
+                    "proyecto",
+                    "voto",
+                    "dashboard",
+                    "hoja_ruta"
                 };
 
                 using (var connection = new NpgsqlConnection(connectionString))
@@ -101,7 +103,7 @@ namespace Votify.Tests
 
         private static int GetRowCount(NpgsqlConnection connection, string tableName)
         {
-            using (var command = new NpgsqlCommand($"select count(*) from \"{tableName}\"", connection))
+            using (var command = new NpgsqlCommand($"select count(*) from public.{tableName}", connection))
             {
                 return Convert.ToInt32(command.ExecuteScalar());
             }

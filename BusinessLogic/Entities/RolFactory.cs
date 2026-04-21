@@ -12,11 +12,11 @@ namespace Votify.Entities
         {
             return tipoRol switch
             {
-                "EXPERT" => new Jurado(fechaAsignacion, rawScore),
-                "COMPETITOR" => new Competidor(fechaAsignacion, rawScore),
-                "ORGANIZER" => new Organizador(fechaAsignacion, rawScore),
-                "VOTING_MANAGER" => new EncargadoVotacion(fechaAsignacion, rawScore),
-                "PUBLIC" => new Publico(fechaAsignacion, rawScore),
+                "JURADO" => new Jurado(fechaAsignacion, rawScore),
+                "COMPETIDOR" => new Competidor(fechaAsignacion, rawScore),
+                "ORGANIZADOR" => new Organizador(fechaAsignacion, rawScore),
+                "ENCARGADO" => new EncargadoVotacion(fechaAsignacion, rawScore),
+                "PUBLICO" => new Publico(fechaAsignacion, rawScore),
                 _ => throw new ServiceException($"Tipo de rol desconocido: {tipoRol}")
             };
         }

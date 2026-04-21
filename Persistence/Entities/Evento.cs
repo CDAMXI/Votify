@@ -10,6 +10,7 @@ namespace Votify.Entities
         //Atributos
         [Key]
         public int IdEvento { get; set; }
+        public int OrganizadorId { get; set; }
         public string Nombre { get; set; }
         public DateTime FechaIni { get; set; }
         public DateTime FechaFin { get; set; }
@@ -19,6 +20,7 @@ namespace Votify.Entities
 
 
         //Relaciones
+        public virtual Usuario organizador { get; set; }
         public virtual ICollection<Sugerencias> sugerencias { get; set; }
         public virtual ICollection<Rol> roles { get; set; }
         public virtual ICollection<Proyecto> proyectos { get; set; }
