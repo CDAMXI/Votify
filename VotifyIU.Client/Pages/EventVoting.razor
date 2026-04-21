@@ -280,6 +280,17 @@
                             </div>
                         }
                     </div>
+                    <div class="mb-6">
+                        <label class="text-[#1A281B] font-bold mb-2 block">Comentarios (opcional)</label>
+                        <div class="relative">
+                            <textarea value="@comments"
+                                      @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
+                                      maxlength="500"
+                                      placeholder="Comparte tus observaciones sobre el proyecto..."
+                                      class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border-[#B5D6AC] focus:ring-2 focus:ring-[#6C8A6C] outline-none transition-all"></textarea>
+                            <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
+                        </div>
+                    </div>
                     <button @onclick="SubmitVotoPublico"
                             class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
                         Enviar voto
@@ -589,6 +600,8 @@
     {
         publicosVotados.Add(publicoProyectoIndex);
         publicoMostrarVotacion = false;
+        comments = "";
+        commentLength = 0;
         await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
     }
 
