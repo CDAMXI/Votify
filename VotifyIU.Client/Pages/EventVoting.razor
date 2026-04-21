@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @using System.Linq
+@using Microsoft.AspNetCore.Components.Forms
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
@@ -77,6 +78,15 @@
                             }
                         </div>
                         <p class="text-[#4C6B4F] leading-relaxed">@project.Description</p>
+                    <div class="mt-4">
+                        @if (Rol == "EXPERT" || Rol == "PUBLIC")
+                        {
+                            <button @onclick="() => OpenContentModal(project)"
+                                class="px-4 py-2 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-md font-bold hover:bg-[#E9EFE1] transition-colors">
+                                Visualizar contenido
+                            </button>
+                        }
+                    </div>
                     </div>
                     <div class="space-y-6 mb-6">
                         <h3 class="text-xl font-bold text-[#1A281B]">Criterios de Evaluación</h3>
@@ -165,7 +175,7 @@
                         {
                         <button @onclick="SubmitVote"
                             class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                                @(((votesSubmitted + 1) >= 3 || IsLastProject) ? "Votar (Finalizar votación)" : (currentProjectIndex < mockProjects.Count - 1 ? "Siguiente Proyecto" : "Finalizar Votación"))
+                                @(((votesSubmitted + 1) >= 3 || IsLastProject) ? "Votar (Finalizar votación)" : (currentProjectIndex < mockProjects.Count - 1 ? "Votar" : "Finalizar Votación"))
                             </button>
                         }
                         @if (currentProjectIndex > 0)
@@ -199,6 +209,29 @@
                     <p class="text-sm text-[#6C8A6C]">Equipo: @myProj.Team</p>
                     <span class="inline-block mt-2 px-3 py-1 bg-white text-[#4C6B4F] rounded-full text-xs font-bold">@myProj.Category</span>
                     <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@myProj.Description</p>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-[#1A281B] mb-2">Subir contenido (PNG)</label>
+                        <div class="flex items-center gap-3">
+                            <InputFile OnChange="@(e => OnSelectedFile(e, myProj.Id))" accept="image/png" />
+                            <button @onclick="() => OpenContentModal(myProj)" class="px-3 py-2 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-md font-bold hover:bg-[#E9EFE1] transition-colors">
+                                Visualizar contenido
+                            </button>
+                            <button @onclick="() => ShowDeleteConfirm(myProj.Id, myProj.Name)" class="px-3 py-2 bg-white border-2 border-red-300 text-red-500 rounded-md font-bold hover:bg-red-50 transition-colors">
+                                Eliminar contenido
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(uploadMessage))
+                        {
+                            <p class="text-sm text-[#6C8A6C] mt-2">@uploadMessage</p>
+                        }
+                        @if (!string.IsNullOrEmpty(previewImageUrl))
+                        {
+                            <div class="mt-3">
+                                <p class="text-sm text-[#4C6B4F] mb-1">Previsualización (confirma para subir):</p>
+                                <img src="@previewImageUrl" alt="Preview" class="w-48 rounded-md border" />
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="flex items-center justify-center gap-3 text-[#6C8A6C]">
                     <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0s"></div>
@@ -316,6 +349,54 @@
         }
     </main>
 </div>
+@* Modal para visualizar contenido multimedia *@
+@if (showContentModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 relative">
+            <button @onclick="CloseContentModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">✕</button>
+            <h3 class="text-xl font-bold text-[#1A281B] mb-4">@modalProjectName</h3>
+            @* Imagen: se sirve desde wwwroot/imagenes/projects/{id}.png. Si no existe, onerror ocultará la imagen y mostrará el mensaje de fallback *@
+            <img id="proj-img-@modalProjectId" src="/imagenes/projects/@(modalProjectId).png?v=@modalImageVersion" alt="@modalProjectName" class="w-full rounded-md mb-4" onerror="this.style.display='none'; var f=document.getElementById('no-content-@(modalProjectId)'); if(f) f.style.display='block';" />
+            <div id="no-content-@modalProjectId" style="display:none;" class="text-sm text-[#6C8A6C]">El equipo no ha subido contenido.</div>
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirm)
+{
+    <div class="fixed inset-0 z-70 flex items-center justify-center bg-black/60">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 relative">
+            <button @onclick="CancelDelete" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">✕</button>
+            <h3 class="text-lg font-bold text-[#1A281B] mb-2">Confirmar eliminación</h3>
+            <p class="text-sm text-[#6C8A6C] mb-4">¿Seguro que deseas eliminar el contenido de <strong>@deleteProjectName</strong>? Esta acción no se puede deshacer.</p>
+            <div class="flex justify-end gap-3">
+                <button @onclick="CancelDelete" class="px-4 py-2 border rounded-md">Cancelar</button>
+                <button @onclick="ConfirmDeleteAsync" class="px-4 py-2 bg-red-500 text-white rounded-md">Eliminar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showUploadConfirm)
+{
+    <div class="fixed inset-0 z-60 flex items-center justify-center bg-black/60">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 relative">
+            <button @onclick="CancelUpload" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">✕</button>
+            <h3 class="text-lg font-bold text-[#1A281B] mb-2">Confirmar subida</h3>
+            <p class="text-sm text-[#6C8A6C] mb-4">¿Deseas subir esta imagen? Si ya hay una, será reemplazada.</p>
+            @if (!string.IsNullOrEmpty(previewImageUrl))
+            {
+                <img src="@previewImageUrl" alt="Preview" class="w-full rounded-md mb-4" />
+            }
+            <div class="flex justify-end gap-3">
+                <button @onclick="CancelUpload" class="px-4 py-2 border rounded-md">Cancelar</button>
+                <button @onclick="ConfirmUploadAsync" class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-md">Subir</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public string? EventId { get; set; }
     [Parameter]
@@ -328,6 +409,19 @@
     private HashSet<string> votedProjects = new();
     private Dictionary<string, double> scores = new();
     private int votesSubmitted = 0; 
+    // Modal state (solo título por ahora)
+    private bool showContentModal = false;
+    private string modalProjectName = string.Empty;
+    private string modalProjectId = string.Empty;
+    private string uploadMessage = string.Empty;
+    private IBrowserFile? pendingFile = null;
+    private string? pendingProjectId = null;
+    private string previewImageUrl = string.Empty;
+    private bool showUploadConfirm = false;
+    private long modalImageVersion = 0;
+    private bool showDeleteConfirm = false;
+    private string deleteProjectId = string.Empty;
+    private string deleteProjectName = string.Empty;
     // Lógica de datos (Mock)
     private List<Project> mockProjects = new() {
         new Project { Id = "1", Name = "EcoTrack", Team = "Green Coders", Category = "Sostenibilidad", Description = "Rastreador de huella de carbono." },
@@ -354,8 +448,222 @@
         {
             yaVotadoEnEvento = false;
         }
-        // Inicializar contador de votaciones locales (si ya hay elementos e    n votedProjects)
+        // Inicializar contador de votaciones locales (si ya hay elementos en votedProjects)
         votesSubmitted = votedProjects.Count;
+    }
+
+    private void OpenContentModal(Project project)
+    {
+        modalProjectName = project.Name;
+        modalProjectId = project.Id;
+        // add cache busting param so updated image is fetched after upload
+        modalImageVersion = DateTime.UtcNow.Ticks;
+        showContentModal = true;
+    }
+
+    private void CloseContentModal()
+    {
+        showContentModal = false;
+        modalProjectName = string.Empty;
+    }
+
+    private async Task OnSelectedFile(InputFileChangeEventArgs e, string projectId)
+    {
+        uploadMessage = string.Empty;
+        var file = e.File;
+        if (file == null)
+        {
+            uploadMessage = "No se seleccionó archivo.";
+            return;
+        }
+
+        if (!string.Equals(file.ContentType, "image/png", StringComparison.OrdinalIgnoreCase))
+        {
+            uploadMessage = "Solo se permiten archivos PNG.";
+            return;
+        }
+
+        // store pending file and build preview
+        pendingFile = file;
+        pendingProjectId = projectId;
+
+        try
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(10 * 1024 * 1024).CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            previewImageUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
+            // show confirmation modal
+            showUploadConfirm = true;
+        }
+        catch (Exception ex)
+        {
+            uploadMessage = "Error al leer fichero: " + ex.Message;
+        }
+    }
+
+    private async Task ConfirmUploadAsync()
+    {
+        uploadMessage = string.Empty;
+        if (pendingFile == null || string.IsNullOrEmpty(pendingProjectId))
+        {
+            uploadMessage = "No hay fichero pendiente.";
+            showUploadConfirm = false;
+            previewImageUrl = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var content = new MultipartFormDataContent();
+            var stream = pendingFile.OpenReadStream(10 * 1024 * 1024);
+            var sc = new StreamContent(stream);
+            sc.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(pendingFile.ContentType);
+            content.Add(sc, "file", $"{pendingProjectId}.png");
+
+            var resp = await Http.PostAsync($"/api/projects/{pendingProjectId}/content", content);
+            if (resp.IsSuccessStatusCode)
+            {
+                uploadMessage = "Contenido subido correctamente.";
+                // bump image version so modal image fetches fresh copy
+                modalImageVersion = DateTime.UtcNow.Ticks;
+                // open modal to show uploaded content
+                modalProjectId = pendingProjectId!;
+                var proj = mockProjects.FirstOrDefault(p => p.Id == modalProjectId);
+                modalProjectName = proj?.Name ?? string.Empty;
+                showContentModal = true;
+            }
+            else
+            {
+                uploadMessage = $"Error al subir contenido ({(int)resp.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadMessage = "Error al subir: " + ex.Message;
+        }
+
+        // clear pending
+        pendingFile = null;
+        pendingProjectId = null;
+        previewImageUrl = string.Empty;
+        showUploadConfirm = false;
+    }
+
+    private async Task DeleteProjectContentAsync(string projectId)
+    {
+        uploadMessage = string.Empty;
+        try
+        {
+            var resp = await Http.DeleteAsync($"/api/projects/{projectId}/content");
+            if (resp.IsSuccessStatusCode)
+            {
+                uploadMessage = "Contenido eliminado correctamente.";
+                // clear preview if it was the same project
+                if (pendingProjectId == projectId)
+                {
+                    pendingFile = null;
+                    pendingProjectId = null;
+                    previewImageUrl = string.Empty;
+                    showUploadConfirm = false;
+                }
+                // update modal image version so modal shows fallback
+                modalImageVersion = DateTime.UtcNow.Ticks;
+                // open modal to show fallback message
+                var proj = mockProjects.FirstOrDefault(p => p.Id == projectId);
+                modalProjectName = proj?.Name ?? string.Empty;
+                modalProjectId = projectId;
+                showContentModal = true;
+            }
+            else if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // If no image, open modal to inform
+                var proj = mockProjects.FirstOrDefault(p => p.Id == projectId);
+                modalProjectName = proj?.Name ?? string.Empty;
+                modalProjectId = projectId;
+                showContentModal = true;
+                uploadMessage = "No existe contenido para eliminar.";
+            }
+            else
+            {
+                int status = (int)resp.StatusCode;
+                uploadMessage = $"Error al eliminar contenido ({status}).";
+                
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadMessage = "Error al eliminar: " + ex.Message;
+        }
+    }
+
+    private void CancelUpload()
+    {
+        pendingFile = null;
+        pendingProjectId = null;
+        previewImageUrl = string.Empty;
+        uploadMessage = "Carga cancelada.";
+        showUploadConfirm = false;
+    }
+
+    private void ShowDeleteConfirm(string projectId, string projectName)
+    {
+        deleteProjectId = projectId;
+        deleteProjectName = projectName;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        deleteProjectId = string.Empty;
+        deleteProjectName = string.Empty;
+        showDeleteConfirm = false;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (string.IsNullOrEmpty(deleteProjectId))
+        {
+            uploadMessage = "Proyecto inválido.";
+            showDeleteConfirm = false;
+            return;
+        }
+
+        try
+        {
+            var resp = await Http.DeleteAsync($"/api/projects/{deleteProjectId}/content");
+            if (resp.IsSuccessStatusCode)
+            {
+                uploadMessage = "Contenido eliminado correctamente.";
+                // bump version so modal image will not show cached deleted image
+                modalImageVersion = DateTime.UtcNow.Ticks;
+            }
+            else if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                uploadMessage = "No existe contenido para eliminar.";
+            }
+            else
+            {
+                uploadMessage = $"Error al eliminar contenido ({(int)resp.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadMessage = "Error al eliminar: " + ex.Message;
+        }
+
+        // close confirmation
+        showDeleteConfirm = false;
+        deleteProjectId = string.Empty;
+        deleteProjectName = string.Empty;
+        // clear any pending upload preview for the same project
+        if (pendingProjectId == deleteProjectId)
+        {
+            pendingFile = null;
+            pendingProjectId = null;
+            previewImageUrl = string.Empty;
+            showUploadConfirm = false;
+        }
     }
     private void ToggleEditMode(string criterionId)
     {

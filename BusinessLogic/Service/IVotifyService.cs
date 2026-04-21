@@ -12,11 +12,12 @@ public interface IVotifyService
     Usuario GetUsuarioActual();
     void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion, string? comentario);
     void Commit();
-    void crearVotoación(DateTime end, bool status);
+    int CrearVotacion(DateTime end, bool status, string titulo, string descripcion);
     void borrarVotacion(int idVotacion);
     void modificarFecha(int votacionId, DateTime newEnd);
     Rol GetRolEnEvento(int idEvento);
     void AsignarRolEnEvento(string tipoRol, int idEvento);
+    void AsignarRolSinEvento(string tipoRol);
     bool HasVotadoEnEvento(int idEvento);
     (string Username, string Email, string? FotoPerfil) GetPerfil();
     void UpdateEmail(string nuevoEmail);

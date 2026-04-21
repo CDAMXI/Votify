@@ -63,6 +63,8 @@
 @code {
     private VotacionDTO votacionDto = new VotacionDTO
     {
+        Titulo = string.Empty,
+        Descripcion = string.Empty,
         FechaIni = DateTime.Now,
         FechaFin = DateTime.Now.AddDays(1)
     };
@@ -75,20 +77,30 @@
         isLoading = true;
         errorMessage = string.Empty;
 
-        try
-        {
-            var response = await Http.PostAsJsonAsync("/api/votaciones", votacionDto);
+            try
+            {
+                // Enviar solo los campos que el servidor espera (FechaFin y Estado)
+                var response = await Http.PostAsJsonAsync("/api/votaciones", new { FechaFin = votacionDto.FechaFin, Estado = true, Titulo = votacionDto.Titulo, Descripcion = votacionDto.Descripcion });
 
-            if (response.IsSuccessStatusCode)
-            {
-                var votacionId = await response.Content.ReadFromJsonAsync<int>();
-                NavigationManager.NavigateTo($"/votacion/{votacionId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var votacionId = await response.Content.ReadFromJsonAsync<int>();
+                    NavigationManager.NavigateTo($"/votacion/{votacionId}");
+                }
+                else
+                {
+                    // Intentar leer mensaje de error del servidor
+                    try
+                    {
+                        var msg = await response.Content.ReadAsStringAsync();
+                        errorMessage = string.IsNullOrEmpty(msg) ? "No se pudo crear la votación." : msg;
+                    }
+                    catch
+                    {
+                        errorMessage = "No se pudo crear la votación.";
+                    }
+                }
             }
-            else
-            {
-                errorMessage = "No se pudo crear la votación.";
-            }
-        }
         catch
         {
             errorMessage = "Error de conexión con el servidor.";

@@ -3,6 +3,7 @@ using VotifyIU.Services;
 using VotifyIU.Client.Pages;
 using VotifyIU.Components;
 using Votify.BusinessLogic.Service;
+using System.Linq;
 using Votify.Persistence;
 using Npgsql;
 
@@ -76,6 +77,27 @@ app.MapPost("/api/auth/login", (LoginRequest req, IVotifyService service, HttpCo
     catch (ServiceException)
     {
         return Results.Unauthorized();
+    }
+});
+
+// Endpoint para eliminar contenido multimedia de proyectos
+app.MapDelete("/api/projects/{id}/content", (string id, IWebHostEnvironment env) =>
+{
+    var webRoot = env.WebRootPath ?? "wwwroot";
+    var dir = System.IO.Path.Combine(webRoot, "imagenes", "projects");
+    var dest = System.IO.Path.Combine(dir, id + ".png");
+
+    try
+    {
+        if (!System.IO.File.Exists(dest))
+            return Results.NotFound();
+
+        System.IO.File.Delete(dest);
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 });
 
@@ -203,6 +225,79 @@ app.MapPut("/api/perfil/foto", (UpdateFotoRequest req, IVotifyService service, H
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
+// Crear una nueva votación (requiere sesión de EncargadoVotacion)
+app.MapPost("/api/votaciones", (CreateVotacionRequest req, IVotifyService service, HttpContext http) =>
+{
+    var username = http.Session.GetString("username");
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        int id = service.CrearVotacion(req.FechaFin, req.Estado, req.Titulo, req.Descripcion);
+        return Results.Ok(id);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+// Asignar un rol en un evento al usuario actual
+app.MapPost("/api/roles/assign", (AssignRoleRequest req, IVotifyService service, HttpContext http) =>
+{
+    var username = http.Session.GetString("username");
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.AsignarRolEnEvento(req.TipoRol, req.IdEvento);
+        return Results.Ok();
+    }
+    catch (ServiceException ex)
+    {
+        // Si el evento no existe en la base de datos (mock UI), asignamos el rol sin evento
+        if (ex.Message?.Contains("evento no existe", StringComparison.OrdinalIgnoreCase) == true ||
+            ex.Message?.Contains("El evento no existe", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            try
+            {
+                service.AsignarRolSinEvento(req.TipoRol);
+                return Results.Ok();
+            }
+            catch (ServiceException inner) { return Results.BadRequest(inner.Message); }
+        }
+
+        return Results.BadRequest(ex.Message);
+    }
+});
+
+// Endpoint para recibir contenido multimedia de proyectos (PNG) y guardarlo en wwwroot/imagenes/projects/{id}.png
+app.MapPost("/api/projects/{id}/content", async (string id, HttpRequest request, IWebHostEnvironment env) =>
+{
+    if (!request.HasFormContentType)
+        return Results.BadRequest("Expected multipart/form-data");
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.FirstOrDefault();
+    if (file == null) return Results.BadRequest("No file provided");
+
+    if (!string.Equals(file.ContentType, "image/png", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest("Only PNG files are accepted");
+
+    var webRoot = env.WebRootPath ?? "wwwroot";
+    var dir = System.IO.Path.Combine(webRoot, "imagenes", "projects");
+    System.IO.Directory.CreateDirectory(dir);
+    var dest = System.IO.Path.Combine(dir, id + ".png");
+
+    try
+    {
+        await using var fs = new System.IO.FileStream(dest, System.IO.FileMode.Create);
+        await file.CopyToAsync(fs);
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+});
+
 app.Run();
 
 record LoginRequest(string Username, string Password);
@@ -212,3 +307,5 @@ record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
+record CreateVotacionRequest(DateTime FechaFin, bool Estado, string Titulo, string Descripcion);
+record AssignRoleRequest(string TipoRol, int IdEvento);
