@@ -15,8 +15,8 @@
             </div>
 
             <div class="text-center mb-8">
-                <h1 class="text-3xl text-[#1A281B] mb-2">Crear votación</h1>
-                <p class="text-[#6C8A6C]">Configura una nueva votación</p>
+                <h1 class="text-3xl text-[#1A281B] mb-2">Crear Evento</h1>
+                <p class="text-[#6C8A6C]">Configura un nuevo evento</p>
             </div>
 
             @if (!string.IsNullOrEmpty(errorMessage))
@@ -58,7 +58,7 @@
 
                 <button type="submit" disabled="@isLoading"
                         class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium disabled:opacity-60">
-                    @(isLoading ? "Creando votación..." : "Crear votación")
+                    @(isLoading ? "Creando evento..." : "Crear Evento")
                 </button>
 
             </EditForm>
@@ -96,7 +96,7 @@
             {
                 errorMessage = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(errorMessage))
-                    errorMessage = "No se pudo crear la votación.";
+                    errorMessage = "No se pudo crear el evento.";
             }
         }
         catch
