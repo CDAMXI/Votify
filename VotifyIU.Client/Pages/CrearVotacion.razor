@@ -10,8 +10,13 @@
     <div class="w-full max-w-md px-6">
         <div class="bg-white rounded-2xl shadow-2xl p-8">
 
-            <div class="flex justify-center mb-8">
-                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+            <div class="flex items-center mb-8">
+                <a href="/dashboard" class="text-[#6C8A6C] hover:text-[#4C6B4F] transition-colors mr-4">
+                    ← Volver
+                </a>
+                <div class="flex-1 flex justify-center">
+                    <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+                </div>
             </div>
 
             <div class="text-center mb-8">
@@ -47,6 +52,13 @@
                                   class="w-full min-h-[100px] rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]"></textarea>
                         <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@descripcionLength/500</span>
                     </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[#4C6B4F]">Fecha de inicio</label>
+                    <InputDate @bind-Value="votacionDto.FechaIni"
+                               disabled="@isLoading"
+                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                 </div>
 
                 <div class="space-y-2">
