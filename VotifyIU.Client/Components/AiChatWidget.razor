@@ -1,0 +1,185 @@
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (isVisible)
+{
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+
+    @if (isOpen)
+    {
+        <div class="bg-white rounded-2xl shadow-2xl border border-[#B5D6AC] flex flex-col overflow-hidden"
+             style="width:352px;height:484px;">
+
+            <!-- Cabecera -->
+            <div class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] px-4 py-3 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-[#70D939] animate-pulse"></div>
+                    <span class="text-white font-medium text-sm">Asistente Votify</span>
+                </div>
+                <button @onclick="Toggle" class="text-white/60 hover:text-white transition-colors text-lg leading-none">✕</button>
+            </div>
+
+            <!-- Mensajes -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
+                @if (messages.Count == 0)
+                {
+                    <div class="text-center text-[#A6AAA9] text-sm mt-6 space-y-1">
+                        <p class="text-2xl">👋</p>
+                        <p>¡Hola! Soy el asistente de Votify.</p>
+                        <p>¿En qué puedo ayudarte?</p>
+                    </div>
+                }
+                @foreach (var msg in messages)
+                {
+                    <div class="flex @(msg.Role == "user" ? "justify-end" : "justify-start")">
+                        <div class="max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed
+                                    @(msg.Role == "user"
+                                        ? "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-br-sm"
+                                        : "bg-[#E9EFE1] text-[#1A281B] rounded-bl-sm")">
+                            @msg.Content
+                        </div>
+                    </div>
+                }
+                @if (isThinking)
+                {
+                    <div class="flex justify-start">
+                        <div class="bg-[#E9EFE1] px-4 py-2 rounded-xl rounded-bl-sm text-[#6C8A6C] text-sm tracking-widest">
+                            ●●●
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Input -->
+            <div class="border-t border-[#B5D6AC] p-3 flex gap-2 flex-shrink-0">
+                <input @bind="inputText"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown"
+                       placeholder="Escribe tu mensaje..."
+                       disabled="@isThinking"
+                       class="flex-1 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-lg px-3 py-2 focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] disabled:opacity-50" />
+                <button @onclick="SendMessage"
+                        disabled="@(isThinking || string.IsNullOrWhiteSpace(inputText))"
+                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white rounded-lg px-3 text-base font-bold disabled:opacity-40 transition-all">
+                    ↑
+                </button>
+            </div>
+
+        </div>
+    }
+
+    <!-- Botón flotante -->
+    <div class="flex items-center gap-2">
+        @if (!isOpen)
+        {
+            <span class="bg-white text-[#4C6B4F] text-xs font-semibold px-3 py-1.5 rounded-full shadow-md border border-[#B5D6AC] whitespace-nowrap">
+                Asistente IA
+            </span>
+        }
+        <button @onclick="Toggle"
+                class="rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-white text-2xl"
+                style="width:62px;height:62px;">
+            @(isOpen ? "✕" : "💬")
+        </button>
+    </div>
+
+</div>
+}
+
+@code {
+    private bool isOpen = false;
+    private bool isThinking = false;
+    private bool isVisible = false;
+    private string inputText = string.Empty;
+    private List<ChatMessage> messages = new();
+
+    protected override void OnInitialized()
+    {
+        UpdateVisibility();
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        UpdateVisibility();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateVisibility()
+    {
+        var path = new Uri(Nav.Uri).AbsolutePath.ToLower();
+        isVisible = path == "/dashboard";
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+
+    private void Toggle() => isOpen = !isOpen;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(inputText) && !isThinking)
+            await SendMessage();
+    }
+
+    private async Task SendMessage()
+    {
+        var text = inputText.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        messages.Add(new ChatMessage("user", text));
+        inputText = string.Empty;
+        isThinking = true;
+        StateHasChanged();
+        await ScrollToBottom();
+
+        try
+        {
+            var history = messages.SkipLast(1)
+                .Select(m => new ChatTurn(m.Role, m.Content))
+                .ToList();
+
+            var response = await Http.PostAsJsonAsync("/api/ai/chat", new ChatRequest(history, text));
+
+            if (response.IsSuccessStatusCode)
+            {
+                var reply = await response.Content.ReadFromJsonAsync<string>() ?? "Sin respuesta.";
+                messages.Add(new ChatMessage("model", reply));
+            }
+            else
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                messages.Add(new ChatMessage("model", $"Error: {err}"));
+            }
+        }
+        catch
+        {
+            messages.Add(new ChatMessage("model", "Error de conexión con el servidor."));
+        }
+        finally
+        {
+            isThinking = false;
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "var el = document.getElementById('chat-messages'); if(el) el.scrollTop = el.scrollHeight;");
+        }
+        catch { }
+    }
+
+    private record ChatMessage(string Role, string Content);
+    private record ChatRequest(List<ChatTurn> History, string Message);
+    private record ChatTurn(string Role, string Content);
+}

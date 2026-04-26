@@ -35,6 +35,7 @@ builder.Services.AddScoped<VotifyDBContext>(sp =>
 builder.Services.AddScoped<IDAL, EntityFrameworkDAL>();
 builder.Services.AddScoped<IVotifyService, VotifyService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
@@ -260,6 +261,78 @@ app.MapPut("/api/votaciones/{id}", (int id, VotacionDTO req, IVotifyService serv
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
+// ── Endpoint de IA ──────────────────────────────────────────────
+
+app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHttpClientFactory httpFactory, IVotifyService service, HttpContext http) =>
+{
+    var apiKey = config["GeminiApiKey"] ?? "";
+    if (string.IsNullOrEmpty(apiKey)) return Results.Problem("API key no configurada.");
+
+    var geminiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={apiKey}";
+
+    // Contexto de eventos del usuario (si está autenticado)
+    var eventosContexto = "";
+    var username = ObtenerUsernameAutenticado(http);
+    if (username != null)
+    {
+        try
+        {
+            service.RestoreSession(username);
+            var votaciones = service.GetMisVotaciones().ToList();
+            if (votaciones.Any())
+            {
+                var lineas = votaciones.Select(v =>
+                    $"- \"{v.Titulo ?? $"Votación #{v.Id}"}\" " +
+                    $"(ID: {v.Id}, " +
+                    $"del {v.FechaIni:dd/MM/yyyy} al {v.FechaFin:dd/MM/yyyy}, " +
+                    $"estado: {(v.FechaFin >= DateTime.Today ? "activo" : "finalizado")})");
+                eventosContexto = $"\n\nEventos actuales del usuario:\n{string.Join("\n", lineas)}";
+            }
+            else
+            {
+                eventosContexto = "\n\nEl usuario no tiene eventos creados actualmente.";
+            }
+        }
+        catch { }
+    }
+
+    var systemPrompt =
+        "Eres el asistente de Votify, una plataforma para gestionar votaciones en hackathones, ferias de innovación y concursos. " +
+        "Ayuda a los usuarios con dudas sobre cómo votar, crear eventos, gestionar proyectos y usar el sistema. " +
+        "Responde siempre en español, de forma concisa y útil. Si no sabes algo, dilo claramente." +
+        eventosContexto;
+
+    var contents = new List<object>();
+    foreach (var turn in req.History)
+        contents.Add(new { role = turn.Role, parts = new[] { new { text = turn.Content } } });
+    contents.Add(new { role = "user", parts = new[] { new { text = req.Message } } });
+
+    var body = new
+    {
+        system_instruction = new { parts = new[] { new { text = systemPrompt } } },
+        contents
+    };
+
+    var client = httpFactory.CreateClient();
+    var response = await client.PostAsJsonAsync(geminiUrl, body);
+
+    if (!response.IsSuccessStatusCode)
+    {
+        var errorBody = await response.Content.ReadAsStringAsync();
+        return Results.Problem($"Error Gemini {(int)response.StatusCode}: {errorBody}");
+    }
+
+    using var json = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+    var text = json.RootElement
+        .GetProperty("candidates")[0]
+        .GetProperty("content")
+        .GetProperty("parts")[0]
+        .GetProperty("text")
+        .GetString() ?? "Sin respuesta.";
+
+    return Results.Ok(text);
+});
+
 app.Run();
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -285,3 +358,5 @@ record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
+record AiChatRequest(List<AiChatTurn> History, string Message);
+record AiChatTurn(string Role, string Content);
