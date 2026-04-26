@@ -9,6 +9,7 @@
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
+
 </style>
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
@@ -333,6 +334,83 @@
         }
         else if (Rol == "ORGANIZADOR")
         {
+            <!-- Gestión del evento -->
+            <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-xl font-bold text-[#1A281B]">Gestión del evento</h2>
+                    <div class="flex gap-2">
+                        <button @onclick="() => { mostrarEditarEvento = !mostrarEditarEvento; mostrarConfirmEliminarEvento = false; mensajeExitoEvento = null; }"
+                                class="border border-[#6C8A6C] text-[#6C8A6C] px-3 py-1.5 rounded-lg font-medium text-sm hover:bg-[#E9EFE1] transition-colors">
+                            ✏️ Editar
+                        </button>
+                        <button @onclick="() => { mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento; mostrarEditarEvento = false; mensajeExitoEvento = null; }"
+                                class="border border-red-400 text-red-500 px-3 py-1.5 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
+                            🗑 Eliminar
+                        </button>
+                    </div>
+                </div>
+
+                @if (mensajeExitoEvento != null)
+                {
+                    <p class="text-green-600 text-sm font-medium mb-3">✅ @mensajeExitoEvento</p>
+                }
+
+                @if (mostrarConfirmEliminarEvento)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-2">
+                        <p class="text-red-700 font-medium mb-3 text-sm">¿Eliminar este evento? Se borrarán todos los proyectos y votos de forma permanente.</p>
+                        <div class="flex gap-3">
+                            <button @onclick="EliminarEvento" disabled="@eliminandoEvento"
+                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50">
+                                @(eliminandoEvento ? "Eliminando..." : "Sí, eliminar")
+                            </button>
+                            <button @onclick="() => mostrarConfirmEliminarEvento = false"
+                                    class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                @if (mostrarEditarEvento)
+                {
+                    <div class="bg-[#F8FAF7] border border-[#B5D6AC] rounded-xl p-5">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Título *</label>
+                                <input @bind="editTitulo"
+                                       class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm" />
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción</label>
+                                <textarea @bind="editDescripcion"
+                                          class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm min-h-[70px]"></textarea>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Fecha de fin</label>
+                                <input type="datetime-local" @bind="editFechaFin" @bind:format="yyyy-MM-ddTHH:mm"
+                                       class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm" />
+                            </div>
+                            @if (errorEditEvento != null)
+                            {
+                                <p class="text-red-500 text-sm">⚠️ @errorEditEvento</p>
+                            }
+                            <div class="flex gap-3 pt-1">
+                                <button @onclick="GuardarEvento" disabled="@guardandoEvento"
+                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-5 py-2 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-50">
+                                    @(guardandoEvento ? "Guardando..." : "Guardar cambios")
+                                </button>
+                                <button @onclick="() => { mostrarEditarEvento = false; errorEditEvento = null; }"
+                                        class="px-5 py-2 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold text-sm hover:bg-[#E9EFE1]">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">🏆</div>
@@ -350,10 +428,11 @@
                 </div>
             </div>
 
+            <!-- Proyectos -->
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xl font-bold text-[#1A281B]">Proyectos registrados</h2>
-                    <button @onclick="() => mostrarFormProyecto = !mostrarFormProyecto"
+                    <button @onclick="() => { mostrarFormProyecto = !mostrarFormProyecto; editandoProyectoId = null; confirmEliminarProyectoId = null; }"
                             class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity text-sm">
                         + Añadir proyecto
                     </button>
@@ -405,19 +484,112 @@
                 else
                 {
                     <div class="space-y-3">
-                        @foreach (var proj in proyectosOrganizador)
+                        @foreach (var proj in proyectosOrganizador.ToList())
                         {
-                            <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
-                                <div>
-                                    <p class="font-bold text-[#1A281B]">@proj.Nombre</p>
-                                    <p class="text-sm text-[#6C8A6C]">@proj.Competidor</p>
-                                    @if (!string.IsNullOrEmpty(proj.Descripcion))
-                                    {
-                                        <p class="text-xs text-[#A6AAA9] mt-1">@proj.Descripcion</p>
-                                    }
+                            @if (editandoProyectoId == proj.Id)
+                            {
+                                <div class="bg-[#F8FAF7] border border-[#B5D6AC] rounded-xl p-4">
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Nombre *</label>
+                                            <input @bind="editProyectoNombre"
+                                                   class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción</label>
+                                            <textarea @bind="editProyectoDescripcion"
+                                                      class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm min-h-[60px]"></textarea>
+                                        </div>
+                                        <!-- Participantes -->
+                                        <div>
+                                            <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Participantes del equipo</label>
+                                            <div class="flex flex-wrap gap-2 mb-2">
+                                                <span class="inline-flex items-center gap-1 px-3 py-1 bg-[#6C8A6C] text-white rounded-full text-xs font-bold">
+                                                    👑 @editParticipanteLeader
+                                                </span>
+                                                @foreach (var p in editParticipantes)
+                                                {
+                                                    var pu = p;
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-[#E9EFE1] text-[#1A281B] rounded-full text-xs font-medium">
+                                                        @pu
+                                                        <button type="button" @onclick="() => editParticipantes.Remove(pu)"
+                                                                class="ml-1 text-[#6C8A6C] hover:text-red-500 font-bold leading-none">×</button>
+                                                    </span>
+                                                }
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <input type="text" @bind="busquedaParticipante" @bind:event="oninput"
+                                                       placeholder="Username del participante..."
+                                                       @onkeydown="OnParticipanteKeyDown"
+                                                       class="flex-1 px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm" />
+                                                <button type="button" @onclick="AgregarParticipanteManual"
+                                                        class="px-3 py-2 bg-[#6C8A6C] text-white rounded-lg text-sm font-bold hover:bg-[#4C6B4F] transition-colors">
+                                                    + Añadir
+                                                </button>
+                                            </div>
+                                        </div>
+                                        @if (errorEditProyecto != null)
+                                        {
+                                            <p class="text-red-500 text-sm">⚠️ @errorEditProyecto</p>
+                                        }
+                                        <div class="flex gap-3">
+                                            <button @onclick="() => GuardarProyecto(proj)" disabled="@guardandoProyecto"
+                                                    class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 disabled:opacity-50">
+                                                @(guardandoProyecto ? "Guardando..." : "Guardar")
+                                            </button>
+                                            <button @onclick="() => { editandoProyectoId = null; errorEditProyecto = null; }"
+                                                    class="px-4 py-2 border border-[#6C8A6C] text-[#6C8A6C] rounded-lg text-sm hover:bg-[#E9EFE1]">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] text-xs font-bold rounded-full">Inscrito</span>
-                            </div>
+                            }
+                            else if (confirmEliminarProyectoId == proj.Id)
+                            {
+                                <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <p class="text-red-700 font-medium text-sm mb-3">¿Eliminar el proyecto "<strong>@proj.Nombre</strong>" y todos sus votos?</p>
+                                    <div class="flex gap-3">
+                                        <button @onclick="() => EliminarProyecto(proj)" disabled="@eliminandoProyecto"
+                                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50">
+                                            @(eliminandoProyecto ? "Eliminando..." : "Sí, eliminar")
+                                        </button>
+                                        <button @onclick="() => confirmEliminarProyectoId = null"
+                                                class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                                    <div>
+                                        <p class="font-bold text-[#1A281B]">@proj.Nombre</p>
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            <span class="text-xs font-bold text-white bg-[#6C8A6C] px-2 py-0.5 rounded-full">👑 @proj.Competidor</span>
+                                            @foreach (var p in proj.Participantes)
+                                            {
+                                                <span class="text-xs text-[#4C6B4F] bg-[#E9EFE1] px-2 py-0.5 rounded-full">@p</span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(proj.Descripcion))
+                                        {
+                                            <p class="text-xs text-[#A6AAA9] mt-1">@proj.Descripcion</p>
+                                        }
+                                    </div>
+                                    <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+                                        <button @onclick="() => StartEditProyecto(proj)"
+                                                class="border border-[#6C8A6C] text-[#6C8A6C] px-3 py-1.5 rounded-lg text-sm hover:bg-[#E9EFE1] transition-colors">
+                                            ✏️
+                                        </button>
+                                        <button @onclick="() => { confirmEliminarProyectoId = proj.Id; editandoProyectoId = null; }"
+                                                class="border border-red-300 text-red-500 px-3 py-1.5 rounded-lg text-sm hover:bg-red-50 transition-colors">
+                                            🗑
+                                        </button>
+                                    </div>
+                                </div>
+                            }
                         }
                     </div>
                 }
@@ -510,7 +682,7 @@
     private bool yaVotadoEnEvento = false;
     private string? avisoSinDatos = null;
 
-    // Estado del organizador
+    // Estado del organizador — crear proyecto
     private List<ProyectoResultadoDTO> proyectosOrganizador = new();
     private bool mostrarFormProyecto = false;
     private string nuevoNombre = "";
@@ -518,6 +690,31 @@
     private string nuevoCompetidor = "";
     private string? errorProyecto = null;
     private bool creandoProyecto = false;
+
+    // Estado del organizador — editar/eliminar evento
+    private bool mostrarEditarEvento = false;
+    private bool mostrarConfirmEliminarEvento = false;
+    private string editTitulo = "";
+    private string editDescripcion = "";
+    private DateTime editFechaFin = DateTime.Now.AddDays(7);
+    private string? errorEditEvento = null;
+    private bool guardandoEvento = false;
+    private bool eliminandoEvento = false;
+    private string? mensajeExitoEvento = null;
+
+    // Estado del organizador — editar/eliminar proyecto
+    private int? editandoProyectoId = null;
+    private string editProyectoNombre = "";
+    private string editProyectoDescripcion = "";
+    private string? errorEditProyecto = null;
+    private bool guardandoProyecto = false;
+    private int? confirmEliminarProyectoId = null;
+    private bool eliminandoProyecto = false;
+
+    // Participantes adicionales (edición de proyecto)
+    private List<string> editParticipantes = new();
+    private string busquedaParticipante = "";
+    private string editParticipanteLeader = "";
     protected override async Task OnInitializedAsync()
     {
         // 1. Cargar proyectos reales
@@ -546,13 +743,25 @@
             avisoSinDatos = $"No se pudieron cargar los proyectos: {ex.Message}";
         }
 
-        // 1b. Si es organizador, cargar proyectos en su lista propia
+        // 1b. Si es organizador, cargar proyectos y datos del evento
         if (Rol == "ORGANIZADOR")
         {
             try
             {
                 var p = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
                 proyectosOrganizador = p ?? new();
+            }
+            catch { }
+
+            try
+            {
+                var v = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{EventId}");
+                if (v != null)
+                {
+                    editTitulo = v.Titulo;
+                    editDescripcion = v.Descripcion;
+                    editFechaFin = v.FechaFin;
+                }
             }
             catch { }
         }
@@ -783,6 +992,153 @@
         comments = "";
         commentLength = 0;
         await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+    }
+
+    private async Task GuardarEvento()
+    {
+        errorEditEvento = null;
+        mensajeExitoEvento = null;
+        if (string.IsNullOrWhiteSpace(editTitulo))
+        {
+            errorEditEvento = "El título es obligatorio.";
+            return;
+        }
+        guardandoEvento = true;
+        try
+        {
+            var resp = await Http.PutAsJsonAsync($"/api/votaciones/{EventId}", new
+            {
+                Titulo = editTitulo.Trim(),
+                Descripcion = editDescripcion?.Trim() ?? "",
+                FechaFin = editFechaFin
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                mostrarEditarEvento = false;
+                mensajeExitoEvento = "Evento actualizado correctamente.";
+            }
+            else
+            {
+                errorEditEvento = await resp.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorEditEvento = $"Error de conexión: {ex.Message}";
+        }
+        finally { guardandoEvento = false; }
+    }
+
+    private async Task EliminarEvento()
+    {
+        eliminandoEvento = true;
+        try
+        {
+            var resp = await Http.DeleteAsync($"/api/votaciones/{EventId}");
+            if (resp.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorEditEvento = await resp.Content.ReadAsStringAsync();
+                mostrarConfirmEliminarEvento = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorEditEvento = $"Error de conexión: {ex.Message}";
+            mostrarConfirmEliminarEvento = false;
+        }
+        finally { eliminandoEvento = false; }
+    }
+
+    private void AgregarParticipanteManual()
+    {
+        var u = busquedaParticipante.Trim();
+        if (!string.IsNullOrEmpty(u) && u != editParticipanteLeader && !editParticipantes.Contains(u))
+            editParticipantes.Add(u);
+        busquedaParticipante = string.Empty;
+    }
+
+    private void OnParticipanteKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            AgregarParticipanteManual();
+    }
+
+    private void StartEditProyecto(ProyectoResultadoDTO proj)
+    {
+        editandoProyectoId = proj.Id;
+        editProyectoNombre = proj.Nombre;
+        editProyectoDescripcion = proj.Descripcion ?? "";
+        editParticipanteLeader = proj.Competidor;
+        editParticipantes = proj.Participantes?.ToList() ?? new();
+        busquedaParticipante = "";
+        errorEditProyecto = null;
+        confirmEliminarProyectoId = null;
+        mostrarFormProyecto = false;
+    }
+
+    private async Task GuardarProyecto(ProyectoResultadoDTO proj)
+    {
+        errorEditProyecto = null;
+        if (string.IsNullOrWhiteSpace(editProyectoNombre))
+        {
+            errorEditProyecto = "El nombre es obligatorio.";
+            return;
+        }
+        guardandoProyecto = true;
+        try
+        {
+            var resp = await Http.PutAsJsonAsync($"/api/proyectos/{EventId}/{proj.Id}", new
+            {
+                Nombre = editProyectoNombre.Trim(),
+                Descripcion = editProyectoDescripcion?.Trim() ?? "",
+                ParticipantesAdicionales = editParticipantes
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                proj.Nombre = editProyectoNombre.Trim();
+                proj.Descripcion = editProyectoDescripcion?.Trim() ?? "";
+                proj.Participantes = editParticipantes.ToList();
+                editandoProyectoId = null;
+            }
+            else
+            {
+                errorEditProyecto = await resp.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorEditProyecto = $"Error de conexión: {ex.Message}";
+        }
+        finally { guardandoProyecto = false; }
+    }
+
+    private async Task EliminarProyecto(ProyectoResultadoDTO proj)
+    {
+        eliminandoProyecto = true;
+        try
+        {
+            var resp = await Http.DeleteAsync($"/api/proyectos/{EventId}/{proj.Id}");
+            if (resp.IsSuccessStatusCode)
+            {
+                proyectosOrganizador.Remove(proj);
+                confirmEliminarProyectoId = null;
+            }
+            else
+            {
+                errorEditProyecto = await resp.Content.ReadAsStringAsync();
+                confirmEliminarProyectoId = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorEditProyecto = $"Error de conexión: {ex.Message}";
+            confirmEliminarProyectoId = null;
+        }
+        finally { eliminandoProyecto = false; }
     }
 
     private async Task CrearProyecto()

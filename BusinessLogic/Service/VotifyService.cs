@@ -189,6 +189,7 @@ namespace Votify.BusinessLogic.Service
             string nombre = string.IsNullOrWhiteSpace(titulo) ? "Votacion" : titulo.Trim();
             string descripcionNormalizada = descripcion?.Trim() ?? string.Empty;
 
+            // 1. Insertar Evento primero para obtener su ID antes de crear los roles
             Evento evento = new Evento
             {
                 Nombre = nombre,
@@ -199,25 +200,39 @@ namespace Votify.BusinessLogic.Service
                 organizador = usuario!,
                 OrganizadorId = usuario!.Id
             };
+            dal.Insert<Evento>(evento);
+            dal.Commit(); // evento.IdEvento queda asignado por la BD
 
+            // 2. Insertar roles con FK escalar ya conocida para evitar el bug de shadow FK de EF6
             Organizador organizador = new Organizador(fechaInicio, 0)
             {
-                usuario = usuario,
-                evento = evento
+                usuario  = usuario,
+                evento   = evento,
+                UsuarioId = usuario!.Id,
+                EventoId  = evento.IdEvento
             };
 
-            EncargadoVotacion encargado = new EncargadoVotacion(fechaInicio, 0);
-            encargado.usuario = usuario;
-            encargado.evento = evento;
+            EncargadoVotacion encargado = new EncargadoVotacion(fechaInicio, 0)
+            {
+                usuario  = usuario,
+                evento   = evento,
+                UsuarioId = usuario!.Id,
+                EventoId  = evento.IdEvento
+            };
 
-            Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado);
-            votacion.Titulo = nombre;
-            votacion.Descripcion = descripcionNormalizada;
-            votacion.evento = evento;
-
-            dal.Insert<Evento>(evento);
             dal.Insert<Organizador>(organizador);
             dal.Insert<EncargadoVotacion>(encargado);
+            dal.Commit(); // encargado.Id queda asignado por la BD
+
+            // 3. Insertar Votacion con FKs escalares explícitas — evita shadow FK de EF6
+            Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado)
+            {
+                Titulo       = nombre,
+                Descripcion  = descripcionNormalizada,
+                evento       = evento,
+                EventoId     = evento.IdEvento,
+                EncargadoId  = encargado.Id
+            };
             dal.Insert<Votacion>(votacion);
             dal.Commit();
 
@@ -370,6 +385,40 @@ namespace Votify.BusinessLogic.Service
             if (proyecto == null)
                 throw new ServiceException("El proyecto no existe");
             return proyecto;
+        }
+
+        public void ModificarEvento(int idVotacion, string titulo, string descripcion, DateTime fechaFin)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
+                throw new ServiceException("No eres el encargado de esta votación");
+
+            string nombre = string.IsNullOrWhiteSpace(titulo) ? votacion.Titulo : titulo.Trim();
+            string desc = descripcion?.Trim() ?? string.Empty;
+
+            votacion.Titulo = nombre;
+            votacion.Descripcion = desc;
+            votacion.FechaFin = fechaFin;
+
+            Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
+            evento.Nombre = nombre;
+            evento.Descripcion = desc;
+            evento.FechaFin = fechaFin;
+
+            dal.Commit();
+        }
+
+        public void EliminarEvento(int idVotacion)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
+                throw new ServiceException("No eres el encargado de esta votación");
+
+            Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
+            dal.Delete<Evento>(evento);
+            dal.Commit();
         }
 
         private Evento ObtenerEventoDeVotacionOFallar(Votacion votacion)

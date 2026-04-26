@@ -160,16 +160,19 @@ namespace Votify.Persistence
             modelBuilder.Entity<Votacion>().Property(v => v.FechaFin).HasColumnName("fecha_fin");
             modelBuilder.Entity<Votacion>().Property(v => v.Estado).HasColumnName("estado");
 
+            modelBuilder.Entity<Votacion>().Property(v => v.EventoId).HasColumnName("id_evento");
+            modelBuilder.Entity<Votacion>().Property(v => v.EncargadoId).HasColumnName("id_encargado");
+
             modelBuilder.Entity<Votacion>()
                 .HasRequired(v => v.evento)
                 .WithMany(e => e.votaciones)
-                .Map(m => m.MapKey("id_evento"))
+                .HasForeignKey(v => v.EventoId)
                 .WillCascadeOnDelete(true);
 
             modelBuilder.Entity<Votacion>()
                 .HasRequired(v => v.Encargado)
                 .WithMany(e => e.votaciones)
-                .Map(m => m.MapKey("id_encargado"))
+                .HasForeignKey(v => v.EncargadoId)
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Votacion>().Ignore(v => v.competidores);
@@ -187,17 +190,20 @@ namespace Votify.Persistence
             modelBuilder.Entity<Proyecto>().Property(p => p.Id).HasColumnName("id_proyecto");
             modelBuilder.Entity<Proyecto>().Property(p => p.Nombre).HasColumnName("nombre").IsRequired();
             modelBuilder.Entity<Proyecto>().Property(p => p.Descripcion).HasColumnName("descripcion");
+            modelBuilder.Entity<Proyecto>().Property(p => p.ParticipantesAdicionales).HasColumnName("participantes_adicionales");
+            modelBuilder.Entity<Proyecto>().Property(p => p.EventoId).HasColumnName("id_evento");
+            modelBuilder.Entity<Proyecto>().Property(p => p.CompetidorId).HasColumnName("id_competidor");
 
             modelBuilder.Entity<Proyecto>()
                 .HasRequired(p => p.evento)
                 .WithMany(e => e.proyectos)
-                .Map(m => m.MapKey("id_evento"))
+                .HasForeignKey(p => p.EventoId)
                 .WillCascadeOnDelete(true);
 
             modelBuilder.Entity<Proyecto>()
                 .HasRequired(p => p.competidor)
                 .WithMany()
-                .Map(m => m.MapKey("id_competidor"))
+                .HasForeignKey(p => p.CompetidorId)
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Proyecto>().Ignore(p => p.Materiales);

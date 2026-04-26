@@ -14,6 +14,8 @@ namespace Votify.Entities
         public DateTime FechaIni { get; set; }
         public DateTime FechaFin { get; set; }
         public bool Estado { get; set; }
+        public int EventoId { get; set; }
+        public int EncargadoId { get; set; }
 
         //Relaciones
         public virtual ICollection<Competidor> competidores { get; set; }

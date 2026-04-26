@@ -296,10 +296,24 @@ app.MapPut("/api/votaciones/{id}", (int id, VotacionDTO req, IVotifyService serv
     try
     {
         service.RestoreSession(username);
-        service.ModificarFechaVotacion(id, req.FechaFin);
+        service.ModificarEvento(id, req.Titulo, req.Descripcion, req.FechaFin);
         return Results.Ok();
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapDelete("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.EliminarEvento(id);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
 // ── Endpoint guardar voto ────────────────────────────────────────
@@ -366,13 +380,16 @@ app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest
             dal.Commit(); // commit para que EF asigne el Id
         }
 
-        // 5. Crear el proyecto
+        // 5. Crear el proyecto con FKs escalares explícitas (evita shadow FK bug de EF6)
         var proyecto = new Proyecto
         {
-            Nombre      = req.Nombre.Trim(),
-            Descripcion = req.Descripcion?.Trim() ?? "",
-            competidor  = competidorRol,
-            evento      = evento
+            Nombre                  = req.Nombre.Trim(),
+            Descripcion             = req.Descripcion?.Trim() ?? "",
+            competidor              = competidorRol,
+            evento                  = evento,
+            CompetidorId            = competidorRol.Id,
+            EventoId                = evento.IdEvento,
+            ParticipantesAdicionales = ""
         };
         dal.Insert<Proyecto>(proyecto);
         dal.Commit();
@@ -392,6 +409,81 @@ app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest
     {
         return Results.Problem(ex.Message);
     }
+});
+
+app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, ModificarProyectoRequest req, IDAL dal, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        var proyecto = dal.GetById<Proyecto>(idProyecto);
+        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+        var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+        if (usuarioAuth == null) return Results.Unauthorized();
+
+        var evento = proyecto.evento;
+        if (evento == null) return Results.NotFound("Evento no encontrado");
+
+        bool esOrganizador =
+            dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any() ||
+            dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any();
+        if (!esOrganizador) return Results.Forbid();
+
+        proyecto.Nombre = req.Nombre.Trim();
+        proyecto.Descripcion = req.Descripcion?.Trim() ?? string.Empty;
+
+        // Guardar participantes adicionales (excluyendo el competidor líder para evitar duplicados)
+        if (req.ParticipantesAdicionales != null)
+        {
+            string leadUsername = proyecto.competidor?.usuario?.Username ?? "";
+            var adicionales = req.ParticipantesAdicionales
+                .Select(u => u.Trim())
+                .Where(u => !string.IsNullOrEmpty(u) && u != leadUsername)
+                .Distinct()
+                .ToList();
+            proyecto.ParticipantesAdicionales = string.Join(",", adicionales);
+        }
+
+        dal.Commit();
+
+        return Results.Ok();
+    }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+
+app.MapDelete("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, IDAL dal, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        var proyecto = dal.GetById<Proyecto>(idProyecto);
+        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+        var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+        if (usuarioAuth == null) return Results.Unauthorized();
+
+        var evento = proyecto.evento;
+        if (evento == null) return Results.NotFound("Evento no encontrado");
+
+        bool esOrganizador =
+            dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any() ||
+            dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any();
+        if (!esOrganizador) return Results.Forbid();
+
+        // Eliminar votos del proyecto (por si el cascade de BD no es suficiente con EF)
+        var votos = dal.GetWhere<Voto>(v => v.ProyectoId == idProyecto).ToList();
+        foreach (var voto in votos) dal.Delete<Voto>(voto);
+
+        dal.Delete<Proyecto>(proyecto);
+        dal.Commit();
+
+        return Results.Ok();
+    }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
 // ── Endpoint de resultados reales ───────────────────────────────
@@ -422,12 +514,17 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL dal, HttpContex
         var resultados = proyectos.Select(p =>
         {
             var votosProyecto = votosPorProyecto.TryGetValue(p.Id, out var vp) ? vp : new();
+            var participantesAdicionales = string.IsNullOrWhiteSpace(p.ParticipantesAdicionales)
+                ? new List<string>()
+                : p.ParticipantesAdicionales.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(u => u.Trim()).Where(u => !string.IsNullOrEmpty(u)).ToList();
             return new ProyectoResultadoDTO
             {
                 Id = p.Id,
                 Nombre = p.Nombre ?? $"Proyecto #{p.Id}",
                 Descripcion = p.Descripcion ?? "",
                 Competidor = p.competidor?.usuario?.Username ?? "",
+                Participantes = participantesAdicionales,
                 Media = votosProyecto.Any() ? Math.Round(votosProyecto.Average(v => v.Valor), 2) : 0,
                 NumVotos = votosProyecto.Count
             };
@@ -652,3 +749,4 @@ record AiChatRequest(List<AiChatTurn> History, string Message);
 record AiChatTurn(string Role, string Content);
 record GuardarVotoRequest(int VotacionId, int ProyectoId, double Puntuacion, string? Comentario);
 record CrearProyectoRequest(string Nombre, string? Descripcion, string UsernameCompetidor);
+record ModificarProyectoRequest(string Nombre, string? Descripcion, List<string>? ParticipantesAdicionales);
