@@ -50,7 +50,8 @@
                 </div>
 
                 <div class="text-right">
-                    <a href="/recuperar-password" class="text-sm text-[#6C8A6C] hover:text-[#4C6B4F] transition-colors">
+                    <a href="@(isLoading ? null : "/recuperar-password")"
+                       class="text-sm text-[#6C8A6C] transition-colors @(isLoading ? "pointer-events-none opacity-40 cursor-default" : "hover:text-[#70D939]")">
                         ¿Olvidaste tu contraseña?
                     </a>
                 </div>
@@ -64,7 +65,8 @@
             <div class="mt-6 text-center">
                 <p class="text-[#4C6B4F]">
                     ¿No tienes cuenta?
-                    <a href="/register" class="text-[#6C8A6C] hover:text-[#70D939] font-medium transition-colors">
+                    <a href="@(isLoading ? null : "/register")"
+                       class="font-medium transition-colors @(isLoading ? "text-[#A6AAA9] pointer-events-none opacity-40 cursor-default" : "text-[#6C8A6C] hover:text-[#70D939]")">
                         Regístrate aquí
                     </a>
                 </p>
