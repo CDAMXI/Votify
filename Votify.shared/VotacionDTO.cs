@@ -12,5 +12,6 @@ namespace Votify.shared
         public string Descripcion { get; set; } = string.Empty;
         public DateTime FechaIni {  get; set; }
         public DateTime FechaFin { get; set; }
+        public bool Estado { get; set; }
     }
 }

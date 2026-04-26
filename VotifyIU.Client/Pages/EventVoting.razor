@@ -548,16 +548,46 @@
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-xl font-bold text-[#1A281B]">Control de votación</h2>
-                    <span class="px-4 py-2 bg-[#6C8A6C] text-white text-sm font-bold rounded-full">● Votación abierta</span>
+                    <span class="px-4 py-2 @(votacionPausada ? "bg-orange-400" : "bg-[#6C8A6C]") text-white text-sm font-bold rounded-full">
+                        @(votacionPausada ? "⏸ Pausada" : "● Votación abierta")
+                    </span>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mb-6">
-                    <button class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-opacity">
-                        ⏸ Pausar votación
+                    <button @onclick="TogglePausa" disabled="@gestionando"
+                            class="@(votacionPausada
+                                            ? "bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors disabled:opacity-50"
+                                            : "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50")">
+                        @(gestionando ? "..." : votacionPausada ? "▶ Reanudar votación" : "⏸ Pausar votación")
                     </button>
-                    <button class="bg-red-50 border-2 border-red-300 text-red-500 py-4 rounded-xl font-bold hover:bg-red-100 transition-colors">
+                    <button @onclick="MostrarConfirmCierre" disabled="@gestionando"
+                            class="bg-red-50 border-2 border-red-300 text-red-500 py-4 rounded-xl font-bold hover:bg-red-100 transition-colors disabled:opacity-50">
                         ⏹ Cerrar votación
                     </button>
                 </div>
+
+                @if (confirmarCierre)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                        <p class="text-red-700 font-medium mb-3 text-sm">¿Cerrar definitivamente? Esta acción no se puede deshacer.</p>
+                        <div class="flex gap-3">
+                            <button @onclick="CerrarVotacion" disabled="@gestionando"
+                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50">
+                                @(gestionando ? "Cerrando..." : "Sí, cerrar")
+                            </button>
+                            <button @onclick="OcultarConfirmCierre"
+                                    class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                @if (mensajeGestion != null)
+                {
+                    <div class="mb-4 p-3 @(errorGestion ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700") rounded-xl text-sm text-center">
+                        @mensajeGestion
+                    </div>
+                }
                 <div class="bg-[#E9EFE1] rounded-xl p-5 mb-4">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-medium text-[#4C6B4F]">Progreso general</span>
@@ -652,11 +682,21 @@
     private bool guardandoProyecto = false;
     private int? confirmEliminarProyectoId = null;
     private bool eliminandoProyecto = false;
+    // Estado encargado
+    private bool votacionPausada = false;
+    private bool gestionando = false;
+    private bool confirmarCierre = false;
+    private string? mensajeGestion = null;
+    private bool errorGestion = false;
+
+    private void MostrarConfirmCierre() => confirmarCierre = true;
+    private void OcultarConfirmCierre() => confirmarCierre = false;
 
     // Participantes adicionales (edición de proyecto)
     private List<string> editParticipantes = new();
     private string busquedaParticipante = "";
     private string editParticipanteLeader = "";
+
     protected override async Task OnInitializedAsync()
     {
         // 1. Cargar proyectos reales
@@ -723,6 +763,63 @@
         // 3. Comprobar si ya alcanzó el límite de votos (para JURADO)
         yaVotadoEnEvento = votesSubmitted >= 3;
     }
+    private async Task TogglePausa()
+    {
+        gestionando = true;
+        mensajeGestion = null;
+        try
+        {
+            var dto = new VotacionDTO { Estado = !votacionPausada, FechaFin = DateTime.Now.AddDays(30) };
+            var resp = await Http.PutAsJsonAsync($"/api/votaciones/{EventId}", dto);
+            if (resp.IsSuccessStatusCode)
+            {
+                votacionPausada = !votacionPausada;
+                mensajeGestion = votacionPausada ? "Votación pausada." : "Votación reanudada.";
+                errorGestion = false;
+            }
+            else
+            {
+                mensajeGestion = await resp.Content.ReadAsStringAsync();
+                errorGestion = true;
+            }
+        }
+        catch
+        {
+            mensajeGestion = "Error de conexión.";
+            errorGestion = true;
+        }
+        finally { gestionando = false; }
+    }
+
+    private async Task CerrarVotacion()
+    {
+        gestionando = true;
+        mensajeGestion = null;
+        confirmarCierre = false;
+        try
+        {
+            var resp = await Http.PostAsync($"/api/votaciones/{EventId}/cerrar", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                mensajeGestion = "Votación cerrada definitivamente.";
+                errorGestion = false;
+                await Task.Delay(1500);
+                NavigationManager.NavigateTo("/dashboard");
+            }
+            else
+            {
+                mensajeGestion = await resp.Content.ReadAsStringAsync();
+                errorGestion = true;
+            }
+        }
+        catch
+        {
+            mensajeGestion = "Error de conexión.";
+            errorGestion = true;
+        }
+        finally { gestionando = false; }
+    }
+    
     private void ToggleEditMode(string criterionId)
     {
         if (editingCriteria.Contains(criterionId))

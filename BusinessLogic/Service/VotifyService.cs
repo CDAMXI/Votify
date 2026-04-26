@@ -306,6 +306,29 @@ namespace Votify.BusinessLogic.Service
             dal.Insert<Rol>(nuevoRol);
             dal.Commit();
         }
+        //metodo para modificar votacion (solo encargados)
+        public void ModificarVotacion (int idVotacion, DateTime nuevaFechaFin, bool estado) {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
+                throw new ServiceException("No eres el encargado de esta votación");
+            if (nuevaFechaFin <= DateTime.Now)
+                throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
+            votacion.FechaFin = nuevaFechaFin;
+            votacion.Estado = estado;
+            dal.Commit();
+        }
+        //metodo para cerrar votacion (solo encargados)
+        public void CerrarVotacion(int idVotacion)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
+                throw new ServiceException("No eres el encargado de esta votación");
+            votacion.Estado = false;
+            votacion.FechaFin = DateTime.Now;
+            dal.Commit();
+        }
 
         // ── Helpers privados ────────────────────────────────────────────────
 

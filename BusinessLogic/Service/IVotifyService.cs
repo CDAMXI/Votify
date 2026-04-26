@@ -31,8 +31,11 @@ public interface IVotifyService
     Votacion GetVotacion(int idVotacion);
     IEnumerable<Votacion> GetMisVotaciones();
     void EliminarEvento(int idVotacion);
+    void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado);
+    void CerrarVotacion(int idVotacion);
 
     // Roles
     Rol GetRolEnEvento(int idEvento);
     void AsignarRolEnEvento(string tipoRol, int idEvento);
+    
 }

@@ -283,7 +283,8 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
             Titulo = votacion.Titulo,
             Descripcion = votacion.Descripcion,
             FechaIni = votacion.FechaIni,
-            FechaFin = votacion.FechaFin
+            FechaFin = votacion.FechaFin,
+            Estado = votacion.Estado
         });
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -303,6 +304,33 @@ app.MapDelete("/api/votaciones/{id}", (int id, IVotifyService service, HttpConte
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
+app.MapPut("/api/votaciones/{id}", (int id, VotacionDTO req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.ModificarVotacion(id, req.FechaFin, req.Estado);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+app.MapPost("/api/votaciones/{id}/cerrar", (int id, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.CerrarVotacion(id);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
 // ── Endpoint guardar voto ────────────────────────────────────────
 
 app.MapPost("/api/votos/guardar", (GuardarVotoRequest req, IVotifyService service, HttpContext http) =>

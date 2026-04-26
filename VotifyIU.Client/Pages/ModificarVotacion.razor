@@ -14,7 +14,7 @@
 
             <div class="text-center mb-8">
                 <h1 class="text-3xl text-[#1A281B] mb-2">Modificar votación</h1>
-                <p class="text-[#6C8A6C]">Actualiza la fecha de cierre</p>
+                <p class="text-[#6C8A6C]">@votacionDto.Titulo</p>
             </div>
 
             @if (!string.IsNullOrEmpty(errorMessage))
@@ -24,28 +24,104 @@
                 </div>
             }
 
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded-xl text-sm text-center">
+                    @successMessage
+                </div>
+            }
+
             @if (isLoadingData)
             {
                 <p class="text-center text-[#6C8A6C]">Cargando votación...</p>
             }
+            else if (votacionCerrada)
+            {
+                <div class="p-4 bg-gray-100 text-gray-600 rounded-xl text-center text-sm">
+                    Esta votación está cerrada definitivamente y no puede modificarse.
+                </div>
+                <button @onclick='() => NavigationManager.NavigateTo("/dashboard")'
+                        class="mt-6 w-full bg-[#6C8A6C] text-white py-3 rounded-xl font-medium">
+                    Volver al dashboard
+                </button>
+            }
             else
             {
-                <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit" class="space-y-6">
+                <EditForm Model="@votacionDto" OnValidSubmit="HandleGuardarFecha" class="space-y-6">
 
+                    <!-- Estado actual -->
+                    <div class="flex items-center justify-between p-3 bg-[#E9EFE1] rounded-xl">
+                        <span class="text-sm text-[#4C6B4F] font-medium">Estado actual</span>
+                        <span class="text-sm font-semibold @(votacionDto.Estado ? "text-green-600" : "text-orange-500")">
+                            @(votacionDto.Estado ? "Activa" : "Pausada")
+                        </span>
+                    </div>
+
+                    <!-- Fecha de fin -->
                     <div class="space-y-2">
                         <label class="text-[#4C6B4F]">Fecha de fin</label>
                         <InputDate @bind-Value="votacionDto.FechaFin"
                                    disabled="@isSaving"
-                                   min="@DateTime.Today.ToString("yyyy-MM-dd")"
                                    class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                     </div>
 
+                    <!-- Botón guardar fecha -->
                     <button type="submit" disabled="@isSaving"
-                            class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium disabled:opacity-60">
-                        @(isSaving ? "Guardando cambios..." : "Guardar cambios")
+                            class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg font-medium disabled:opacity-60">
+                        @(isSaving ? "Guardando..." : "Guardar nueva fecha")
                     </button>
 
                 </EditForm>
+
+                <!-- Separador -->
+                <div class="my-6 border-t border-[#B5D6AC]"></div>
+
+                <!-- Pausar / Reanudar -->
+                <button @onclick="HandleTogglePausa" disabled="@isSaving"
+                        class="w-full py-3 rounded-xl font-medium transition-all duration-300 border-2 disabled:opacity-60
+                                   @(votacionDto.Estado
+                                                           ? "border-orange-400 text-orange-500 hover:bg-orange-50"
+                                                           : "border-green-500 text-green-600 hover:bg-green-50")">
+                    @if (isSaving)
+                    {
+                        <span>Procesando...</span>
+                    }
+                    else if (votacionDto.Estado)
+                    {
+                        <span>⏸ Pausar votación</span>
+                    }
+                    else
+                    {
+                        <span>▶ Reanudar votación</span>
+                    }
+                </button>
+
+                <!-- Cerrar definitivamente -->
+                @if (!confirmarCierre)
+                {
+                    <button @onclick="MostrarConfirmacion" disabled="@isSaving"
+                            class="mt-3 w-full py-3 rounded-xl font-medium border-2 border-red-400 text-red-500 hover:bg-red-50 transition-all duration-300 disabled:opacity-60">
+                        🔒 Cerrar votación definitivamente
+                    </button>
+                }
+                else
+                {
+                    <div class="mt-3 p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
+                        <p class="text-sm text-red-700 text-center font-medium">
+                            ¿Seguro? Esta acción no se puede deshacer.
+                        </p>
+                        <div class="flex gap-2">
+                            <button @onclick="OcultarConfirmacion"
+                                    class="flex-1 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button @onclick="HandleCerrarDefinitivamente" disabled="@isSaving"
+                                    class="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm hover:bg-red-600 disabled:opacity-60">
+                                Sí, cerrar
+                            </button>
+                        </div>
+                    </div>
+                }
             }
 
         </div>
@@ -56,20 +132,24 @@
     [Parameter]
     public int VotacionId { get; set; }
 
-    private VotacionDTO votacionDto = new() { FechaFin = DateTime.Today };
+    private VotacionDTO votacionDto = new() { FechaFin = DateTime.Today, Estado = true };
     private bool isLoadingData = true;
     private bool isSaving = false;
+    private bool confirmarCierre = false;
+    private bool votacionCerrada = false;
     private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{VotacionId}");
-
             if (votacion != null)
             {
                 votacionDto = votacion;
+                // Si está cerrada (Estado=false y FechaFin en el pasado), bloquear edición
+                votacionCerrada = !votacionDto.Estado && votacionDto.FechaFin <= DateTime.Now;
             }
             else
             {
@@ -86,26 +166,60 @@
         }
     }
 
-    private async Task HandleSubmit()
+    private async Task HandleGuardarFecha()
     {
-        isSaving = true;
-        errorMessage = string.Empty;
-
-        try
+        await EjecutarAccion(async () =>
         {
-            var response = await Http.PutAsJsonAsync(
-                $"/api/votaciones/{VotacionId}",
-                votacionDto
-            );
+            var response = await Http.PutAsJsonAsync($"/api/votaciones/{VotacionId}", votacionDto);
+            if (response.IsSuccessStatusCode)
+                successMessage = "Fecha actualizada correctamente.";
+            else
+                errorMessage = await response.Content.ReadAsStringAsync();
+        });
+    }
 
+    private async Task HandleTogglePausa()
+    {
+        votacionDto.Estado = !votacionDto.Estado;
+        await EjecutarAccion(async () =>
+        {
+            var response = await Http.PutAsJsonAsync($"/api/votaciones/{VotacionId}", votacionDto);
+            if (response.IsSuccessStatusCode)
+                successMessage = votacionDto.Estado ? "Votación reanudada." : "Votación pausada.";
+            else
+            {
+                votacionDto.Estado = !votacionDto.Estado; // revertir
+                errorMessage = await response.Content.ReadAsStringAsync();
+            }
+        });
+    }
+
+    private async Task HandleCerrarDefinitivamente()
+    {
+        await EjecutarAccion(async () =>
+        {
+            var response = await Http.PostAsync($"/api/votaciones/{VotacionId}/cerrar", null);
             if (response.IsSuccessStatusCode)
             {
-                NavigationManager.NavigateTo($"/votacion/{VotacionId}");
+                votacionCerrada = true;
+                successMessage = "La votación ha sido cerrada definitivamente.";
             }
             else
             {
-                errorMessage = "No se pudo actualizar la votación.";
+                errorMessage = await response.Content.ReadAsStringAsync();
             }
+        });
+        confirmarCierre = false;
+    }
+
+    private async Task EjecutarAccion(Func<Task> accion)
+    {
+        isSaving = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        try
+        {
+            await accion();
         }
         catch
         {
@@ -115,5 +229,13 @@
         {
             isSaving = false;
         }
+    }
+    private void MostrarConfirmacion()
+    {
+        confirmarCierre = true;
+    }
+    private void OcultarConfirmacion()
+    {
+        confirmarCierre = false;
     }
 }
