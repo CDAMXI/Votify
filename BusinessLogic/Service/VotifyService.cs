@@ -121,13 +121,13 @@ namespace Votify.BusinessLogic.Service
             dal.Commit();
         }
 
-        public void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion, string? comentario)
+        public void GuardarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario)
         {
             RequireUsuarioLogueado();
             ValidarLongitudComentario(comentario);
 
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            Proyecto proyecto = ObtenerProyectoOFallar(idCompetidor);
+            Proyecto proyecto = ObtenerProyectoOFallar(idProyecto);
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
 
             // Buscar el rol del usuario para este evento consultando cada subtype
@@ -261,16 +261,6 @@ namespace Votify.BusinessLogic.Service
                       .ToList();
         }
 
-        public void BorrarVotacion(int idVotacion)
-        {
-            Votacion votacion = dal.GetById<Votacion>(idVotacion);
-            if (votacion.Encargado != rol)
-                throw new ServiceException("No eres el encargado de esta votación");
-
-            dal.Delete<Votacion>(votacion);
-            dal.Commit();
-        }
-
         public Votacion GetVotacion(int idVotacion)
         {
             Votacion votacion = dal.GetById<Votacion>(idVotacion);
@@ -279,18 +269,6 @@ namespace Votify.BusinessLogic.Service
             return votacion;
         }
 
-        public void ModificarFechaVotacion(int idVotacion, DateTime nuevaFechaFin)
-        {
-            RequireUsuarioLogueado();
-            Votacion votacion = dal.GetById<Votacion>(idVotacion);
-            if (votacion == null)
-                throw new ServiceException("La votación no existe");
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
-
-            votacion.FechaFin = nuevaFechaFin;
-            dal.Commit();
-        }
 
         public Rol GetRolEnEvento(int idEvento)
         {
@@ -301,10 +279,16 @@ namespace Votify.BusinessLogic.Service
         public bool HasVotadoEnEvento(int idEvento)
         {
             RequireUsuarioLogueado();
-            return dal.GetWhere<Voto>(v =>
-                v.votante.usuario.Id == usuario!.Id &&
-                v.votacion.evento.IdEvento == idEvento
-            ).Any();
+            Rol? rol = BuscarRolEnEvento(idEvento);
+            if (rol == null) return false;
+
+            int rolId = rol.Id;
+            var votacionIds = dal.GetWhere<Votacion>(v => v.EventoId == idEvento)
+                .Select(v => v.Id)
+                .ToList();
+
+            return votacionIds.Any(vid =>
+                dal.GetWhere<Voto>(v => v.VotanteId == rolId && v.VotacionId == vid).Any());
         }
 
         public void AsignarRolEnEvento(string tipoRol, int idEvento)
@@ -337,38 +321,10 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException(MensajeNoUsuarioLogueado);
         }
 
-        private void RequireRolActivo()
-        {
-            if (rol == null)
-                throw new ServiceException("No hay ningún rol activo");
-        }
-
-        private void ValidarPermisosVoto()
-        {
-            if (rol is Organizador || rol is EncargadoVotacion)
-                throw new ServiceException("El rol actual no puede votar");
-        }
-
         private void ValidarLongitudComentario(string? comentario)
         {
             if (comentario != null && comentario.Length > MaxLongitudComentario)
                 throw new ServiceException($"El comentario no puede superar los {MaxLongitudComentario} caracteres");
-        }
-
-        private void ValidarCompetidorPuedeVotar(Evento evento)
-        {
-            if (rol is Competidor && !evento.PermiteCompetidoresVotar)
-                throw new ServiceException("Los competidores no pueden votar en este evento");
-        }
-
-        private void ValidarVotoUnico(Votacion votacion, Proyecto proyecto)
-        {
-            bool yaVotó = dal.GetWhere<Voto>(v =>
-                v.votante == rol && v.votacion == votacion && v.proyecto == proyecto
-            ).Any();
-
-            if (yaVotó)
-                throw new ServiceException("Ya has votado en este proyecto para esta votación");
         }
 
         private Votacion ObtenerVotacionOFallar(int idVotacion)
@@ -385,28 +341,6 @@ namespace Votify.BusinessLogic.Service
             if (proyecto == null)
                 throw new ServiceException("El proyecto no existe");
             return proyecto;
-        }
-
-        public void ModificarEvento(int idVotacion, string titulo, string descripcion, DateTime fechaFin)
-        {
-            RequireUsuarioLogueado();
-            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
-
-            string nombre = string.IsNullOrWhiteSpace(titulo) ? votacion.Titulo : titulo.Trim();
-            string desc = descripcion?.Trim() ?? string.Empty;
-
-            votacion.Titulo = nombre;
-            votacion.Descripcion = desc;
-            votacion.FechaFin = fechaFin;
-
-            Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
-            evento.Nombre = nombre;
-            evento.Descripcion = desc;
-            evento.FechaFin = fechaFin;
-
-            dal.Commit();
         }
 
         public void EliminarEvento(int idVotacion)

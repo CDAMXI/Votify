@@ -289,19 +289,6 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
-app.MapPut("/api/votaciones/{id}", (int id, VotacionDTO req, IVotifyService service, HttpContext http) =>
-{
-    string? username = ObtenerUsernameAutenticado(http);
-    if (username == null) return Results.Unauthorized();
-    try
-    {
-        service.RestoreSession(username);
-        service.ModificarEvento(id, req.Titulo, req.Descripcion, req.FechaFin);
-        return Results.Ok();
-    }
-    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
-});
-
 app.MapDelete("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
@@ -352,10 +339,7 @@ app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest
         var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
         if (usuarioAuth == null) return Results.Unauthorized();
 
-        bool esOrganizador =
-            dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any() ||
-            dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any();
-        if (!esOrganizador)
+        if (!EsOrganizadorDelEvento(dal, usuarioAuth.Id, evento.IdEvento))
             return Results.Forbid();
 
         // 3. Buscar el usuario competidor
@@ -426,10 +410,7 @@ app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idPr
         var evento = proyecto.evento;
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
-        bool esOrganizador =
-            dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any() ||
-            dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any();
-        if (!esOrganizador) return Results.Forbid();
+        if (!EsOrganizadorDelEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
 
         proyecto.Nombre = req.Nombre.Trim();
         proyecto.Descripcion = req.Descripcion?.Trim() ?? string.Empty;
@@ -469,10 +450,7 @@ app.MapDelete("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int i
         var evento = proyecto.evento;
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
-        bool esOrganizador =
-            dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any() ||
-            dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioAuth.Id && r.EventoId == evento.IdEvento).Any();
-        if (!esOrganizador) return Results.Forbid();
+        if (!EsOrganizadorDelEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
 
         // Eliminar votos del proyecto (por si el cascade de BD no es suficiente con EF)
         var votos = dal.GetWhere<Voto>(v => v.ProyectoId == idProyecto).ToList();
@@ -726,6 +704,10 @@ app.Run();
 
 static string? ObtenerUsernameAutenticado(HttpContext http)
     => http.Session.GetString(SessionConfig.UsernameKey);
+
+static bool EsOrganizadorDelEvento(IDAL dal, int usuarioId, int eventoId)
+    => dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any()
+    || dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any();
 
 // ── Configuración de sesión ──────────────────────────────────────
 

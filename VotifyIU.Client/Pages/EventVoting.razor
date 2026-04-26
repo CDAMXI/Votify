@@ -334,81 +334,29 @@
         }
         else if (Rol == "ORGANIZADOR")
         {
-            <!-- Gestión del evento -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-xl font-bold text-[#1A281B]">Gestión del evento</h2>
-                    <div class="flex gap-2">
-                        <button @onclick="() => { mostrarEditarEvento = !mostrarEditarEvento; mostrarConfirmEliminarEvento = false; mensajeExitoEvento = null; }"
-                                class="border border-[#6C8A6C] text-[#6C8A6C] px-3 py-1.5 rounded-lg font-medium text-sm hover:bg-[#E9EFE1] transition-colors">
-                            ✏️ Editar
+            <!-- Eliminar evento -->
+            <div class="flex justify-end mb-4">
+                <button @onclick="() => mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento"
+                        class="border border-red-400 text-red-500 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
+                    🗑 Eliminar evento
+                </button>
+            </div>
+            @if (mostrarConfirmEliminarEvento)
+            {
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                    <p class="text-red-700 font-medium mb-3 text-sm">¿Eliminar este evento? Se borrarán todos los proyectos y votos de forma permanente.</p>
+                    <div class="flex gap-3">
+                        <button @onclick="EliminarEvento" disabled="@eliminandoEvento"
+                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50">
+                            @(eliminandoEvento ? "Eliminando..." : "Sí, eliminar")
                         </button>
-                        <button @onclick="() => { mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento; mostrarEditarEvento = false; mensajeExitoEvento = null; }"
-                                class="border border-red-400 text-red-500 px-3 py-1.5 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
-                            🗑 Eliminar
+                        <button @onclick="() => mostrarConfirmEliminarEvento = false"
+                                class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                            Cancelar
                         </button>
                     </div>
                 </div>
-
-                @if (mensajeExitoEvento != null)
-                {
-                    <p class="text-green-600 text-sm font-medium mb-3">✅ @mensajeExitoEvento</p>
-                }
-
-                @if (mostrarConfirmEliminarEvento)
-                {
-                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-2">
-                        <p class="text-red-700 font-medium mb-3 text-sm">¿Eliminar este evento? Se borrarán todos los proyectos y votos de forma permanente.</p>
-                        <div class="flex gap-3">
-                            <button @onclick="EliminarEvento" disabled="@eliminandoEvento"
-                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50">
-                                @(eliminandoEvento ? "Eliminando..." : "Sí, eliminar")
-                            </button>
-                            <button @onclick="() => mostrarConfirmEliminarEvento = false"
-                                    class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                }
-
-                @if (mostrarEditarEvento)
-                {
-                    <div class="bg-[#F8FAF7] border border-[#B5D6AC] rounded-xl p-5">
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Título *</label>
-                                <input @bind="editTitulo"
-                                       class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm" />
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción</label>
-                                <textarea @bind="editDescripcion"
-                                          class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm min-h-[70px]"></textarea>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Fecha de fin</label>
-                                <input type="datetime-local" @bind="editFechaFin" @bind:format="yyyy-MM-ddTHH:mm"
-                                       class="w-full px-3 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] text-sm" />
-                            </div>
-                            @if (errorEditEvento != null)
-                            {
-                                <p class="text-red-500 text-sm">⚠️ @errorEditEvento</p>
-                            }
-                            <div class="flex gap-3 pt-1">
-                                <button @onclick="GuardarEvento" disabled="@guardandoEvento"
-                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-5 py-2 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-50">
-                                    @(guardandoEvento ? "Guardando..." : "Guardar cambios")
-                                </button>
-                                <button @onclick="() => { mostrarEditarEvento = false; errorEditEvento = null; }"
-                                        class="px-5 py-2 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold text-sm hover:bg-[#E9EFE1]">
-                                    Cancelar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
+            }
 
             <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -691,16 +639,10 @@
     private string? errorProyecto = null;
     private bool creandoProyecto = false;
 
-    // Estado del organizador — editar/eliminar evento
-    private bool mostrarEditarEvento = false;
+    // Estado del organizador — eliminar evento
     private bool mostrarConfirmEliminarEvento = false;
-    private string editTitulo = "";
-    private string editDescripcion = "";
-    private DateTime editFechaFin = DateTime.Now.AddDays(7);
-    private string? errorEditEvento = null;
-    private bool guardandoEvento = false;
     private bool eliminandoEvento = false;
-    private string? mensajeExitoEvento = null;
+    private string? errorEliminarEvento = null;
 
     // Estado del organizador — editar/eliminar proyecto
     private int? editandoProyectoId = null;
@@ -753,18 +695,7 @@
             }
             catch { }
 
-            try
-            {
-                var v = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{EventId}");
-                if (v != null)
-                {
-                    editTitulo = v.Titulo;
-                    editDescripcion = v.Descripcion;
-                    editFechaFin = v.FechaFin;
-                }
             }
-            catch { }
-        }
 
         // 2. Cargar votos ya emitidos por este usuario en esta votación
         try
@@ -994,41 +925,6 @@
         await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
     }
 
-    private async Task GuardarEvento()
-    {
-        errorEditEvento = null;
-        mensajeExitoEvento = null;
-        if (string.IsNullOrWhiteSpace(editTitulo))
-        {
-            errorEditEvento = "El título es obligatorio.";
-            return;
-        }
-        guardandoEvento = true;
-        try
-        {
-            var resp = await Http.PutAsJsonAsync($"/api/votaciones/{EventId}", new
-            {
-                Titulo = editTitulo.Trim(),
-                Descripcion = editDescripcion?.Trim() ?? "",
-                FechaFin = editFechaFin
-            });
-            if (resp.IsSuccessStatusCode)
-            {
-                mostrarEditarEvento = false;
-                mensajeExitoEvento = "Evento actualizado correctamente.";
-            }
-            else
-            {
-                errorEditEvento = await resp.Content.ReadAsStringAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            errorEditEvento = $"Error de conexión: {ex.Message}";
-        }
-        finally { guardandoEvento = false; }
-    }
-
     private async Task EliminarEvento()
     {
         eliminandoEvento = true;
@@ -1041,13 +937,13 @@
             }
             else
             {
-                errorEditEvento = await resp.Content.ReadAsStringAsync();
+                errorEliminarEvento = await resp.Content.ReadAsStringAsync();
                 mostrarConfirmEliminarEvento = false;
             }
         }
         catch (Exception ex)
         {
-            errorEditEvento = $"Error de conexión: {ex.Message}";
+            errorEliminarEvento = $"Error de conexión: {ex.Message}";
             mostrarConfirmEliminarEvento = false;
         }
         finally { eliminandoEvento = false; }

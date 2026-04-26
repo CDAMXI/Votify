@@ -22,7 +22,7 @@ public interface IVotifyService
     void ResetPassword(string token, string nuevaPassword);
 
     // Votos
-    void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion, string? comentario);
+    void GuardarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario);
     bool HasVotadoEnEvento(int idEvento);
     void Commit();
 
@@ -30,9 +30,6 @@ public interface IVotifyService
     int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa);
     Votacion GetVotacion(int idVotacion);
     IEnumerable<Votacion> GetMisVotaciones();
-    void BorrarVotacion(int idVotacion);
-    void ModificarFechaVotacion(int idVotacion, DateTime nuevaFechaFin);
-    void ModificarEvento(int idVotacion, string titulo, string descripcion, DateTime fechaFin);
     void EliminarEvento(int idVotacion);
 
     // Roles
