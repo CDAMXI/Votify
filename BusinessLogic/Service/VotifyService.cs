@@ -124,26 +124,56 @@ namespace Votify.BusinessLogic.Service
         public void GuardarVoto(int idVotacion, int idCompetidor, double puntuacion, string? comentario)
         {
             RequireUsuarioLogueado();
-            RequireRolActivo();
-            ValidarPermisosVoto();
             ValidarLongitudComentario(comentario);
 
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
             Proyecto proyecto = ObtenerProyectoOFallar(idCompetidor);
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
 
-            ValidarCompetidorPuedeVotar(evento);
-            ValidarVotoUnico(votacion, proyecto);
+            // Buscar el rol del usuario para este evento consultando cada subtype
+            // individualmente — evita el JOIN multi-tabla TPT de EF6+Npgsql
+            int eventoId = evento.IdEvento;
+            Rol? rolEvento = BuscarRolEnEvento(eventoId);
+            if (rolEvento == null)
+                throw new ServiceException("No tienes un rol asignado en este evento");
+
+            if (rolEvento is Organizador || rolEvento is EncargadoVotacion)
+                throw new ServiceException("El rol actual no puede votar");
+
+            if (rolEvento is Competidor comp && !evento.PermiteCompetidoresVotar)
+                throw new ServiceException("Los competidores no pueden votar en este evento");
+
+            // Usar IDs directamente para evitar el bug de JOINs de EF6+Npgsql
+            bool yaVoto = dal.GetWhere<Voto>(v =>
+                v.VotanteId == rolEvento.Id &&
+                v.VotacionId == votacion.Id &&
+                v.ProyectoId == proyecto.Id
+            ).Any();
+            if (yaVoto)
+                throw new ServiceException("Ya has votado en este proyecto para esta votación");
 
             Voto voto = new Voto(puntuacion, comentario ?? string.Empty, DateTime.Now)
             {
                 votacion = votacion,
                 proyecto = proyecto,
-                votante = rol
+                votante = rolEvento
             };
 
             dal.Insert<Voto>(voto);
             dal.Commit();
+        }
+
+        // Consulta cada tabla concreta de rol por separado para evitar el
+        // JOIN multi-tabla que genera EF6 al usar la clase base abstracta Rol
+        private Rol? BuscarRolEnEvento(int eventoId)
+        {
+            int uid = usuario!.Id;
+            return
+                (Rol?)dal.GetWhere<Jurado>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)dal.GetWhere<Publico>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)dal.GetWhere<Competidor>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)dal.GetWhere<Organizador>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault();
         }
 
         public void Commit() => dal.Commit();

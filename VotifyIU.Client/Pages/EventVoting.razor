@@ -28,7 +28,18 @@
         </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (Rol == "JURADO")
+        @if (avisoSinDatos != null && (Rol == "JURADO" || Rol == "PUBLICO"))
+        {
+            <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <div class="text-5xl mb-4">📋</div>
+                <p class="text-xl font-bold text-[#1A281B] mb-2">Sin proyectos disponibles</p>
+                <p class="text-[#6C8A6C]">@avisoSinDatos</p>
+                <a href="/dashboard" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
+                    Volver al Dashboard
+                </a>
+            </div>
+        }
+        else if (Rol == "JURADO")
         {
             @if (yaVotadoEnEvento)
             {
@@ -322,60 +333,94 @@
         }
         else if (Rol == "ORGANIZADOR")
         {
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">👥</div>
-                    <div>
-                        <p class="text-xs text-[#6C8A6C] font-medium">Participantes</p>
-                        <p class="text-2xl font-bold text-[#1A281B]">250</p>
-                    </div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">🏆</div>
                     <div>
-                        <p class="text-xs text-[#6C8A6C] font-medium">Proyectos</p>
-                        <p class="text-2xl font-bold text-[#1A281B]">@mockProjects.Count</p>
+                        <p class="text-xs text-[#6C8A6C] font-medium">Proyectos registrados</p>
+                        <p class="text-2xl font-bold text-[#1A281B]">@proyectosOrganizador.Count</p>
                     </div>
                 </div>
                 <div class="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">⚖️</div>
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">👥</div>
                     <div>
-                        <p class="text-xs text-[#6C8A6C] font-medium">Jurados</p>
-                        <p class="text-2xl font-bold text-[#1A281B]">18</p>
+                        <p class="text-xs text-[#6C8A6C] font-medium">Competidores</p>
+                        <p class="text-2xl font-bold text-[#1A281B]">@proyectosOrganizador.Select(p => p.Competidor).Distinct().Count()</p>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
-                <h2 class="text-xl font-bold text-[#1A281B] mb-4">Proyectos inscritos</h2>
-                <div class="space-y-3">
-                    @foreach (var proj in mockProjects)
-                    {
-                        <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
-                            <div>
-                                <p class="font-bold text-[#1A281B]">@proj.Name</p>
-                                <p class="text-sm text-[#6C8A6C]">@proj.Team · @proj.Category</p>
-                            </div>
-                            <span class="px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] text-xs font-bold rounded-full">Inscrito</span>
-                        </div>
-                    }
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-[#1A281B]">Proyectos registrados</h2>
+                    <button @onclick="() => mostrarFormProyecto = !mostrarFormProyecto"
+                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity text-sm">
+                        + Añadir proyecto
+                    </button>
                 </div>
-            </div>
 
-            <div class="bg-white rounded-2xl shadow-xl p-8">
-                <h2 class="text-xl font-bold text-[#1A281B] mb-4">Criterios de evaluación</h2>
-                <div class="space-y-3">
-                    @foreach (var criterion in mockCriteria)
-                    {
-                        <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                @if (mostrarFormProyecto)
+                {
+                    <div class="bg-[#F8FAF7] border border-[#B5D6AC] rounded-xl p-6 mb-4">
+                        <h3 class="text-base font-bold text-[#1A281B] mb-4">Nuevo proyecto</h3>
+                        <div class="space-y-3">
                             <div>
-                                <p class="font-bold text-[#1A281B]">@criterion.Name</p>
-                                <p class="text-sm text-[#6C8A6C]">@criterion.Description</p>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Nombre del proyecto *</label>
+                                <input @bind="nuevoNombre" placeholder="Ej: EcoTrack"
+                                       class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B]" />
                             </div>
-                            <span class="text-lg font-bold text-[#4C6B4F]">@criterion.Weight%</span>
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción</label>
+                                <textarea @bind="nuevaDescripcion" placeholder="Breve descripción del proyecto..."
+                                          class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] min-h-[80px]"></textarea>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Username del competidor *</label>
+                                <input @bind="nuevoCompetidor" placeholder="Nombre de usuario del competidor registrado"
+                                       class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B]" />
+                                <p class="text-xs text-[#A6AAA9] mt-1">El competidor debe tener una cuenta en Votify.</p>
+                            </div>
+                            @if (errorProyecto != null)
+                            {
+                                <p class="text-red-500 text-sm font-medium">⚠️ @errorProyecto</p>
+                            }
+                            <div class="flex gap-3 pt-1">
+                                <button @onclick="CrearProyecto" disabled="@creandoProyecto"
+                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+                                    @(creandoProyecto ? "Guardando..." : "Guardar proyecto")
+                                </button>
+                                <button @onclick="() => { mostrarFormProyecto = false; errorProyecto = null; }"
+                                        class="px-6 py-2 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
-                    }
-                </div>
+                    </div>
+                }
+
+                @if (proyectosOrganizador.Count == 0)
+                {
+                    <p class="text-center text-[#A6AAA9] py-8">No hay proyectos todavía. Añade el primero.</p>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var proj in proyectosOrganizador)
+                        {
+                            <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
+                                <div>
+                                    <p class="font-bold text-[#1A281B]">@proj.Nombre</p>
+                                    <p class="text-sm text-[#6C8A6C]">@proj.Competidor</p>
+                                    @if (!string.IsNullOrEmpty(proj.Descripcion))
+                                    {
+                                        <p class="text-xs text-[#A6AAA9] mt-1">@proj.Descripcion</p>
+                                    }
+                                </div>
+                                <span class="px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] text-xs font-bold rounded-full">Inscrito</span>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         }
         else if (Rol == "ENCARGADO")
@@ -426,6 +471,12 @@
                 </div>
             </div>
         }
+        @if (errorVoto != null)
+        {
+            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 max-w-md text-center text-sm font-medium">
+                ⚠️ @errorVoto
+            </div>
+        }
     </main>
 </div>
 @code {
@@ -433,6 +484,7 @@
     [Parameter]
     [SupplyParameterFromQuery]
     public string? Rol { get; set; }
+    private string? errorVoto = null;
     private HashSet<string> editingCriteria = new();
     private int currentProjectIndex = 0;
     private int commentLength = 0;
@@ -456,18 +508,80 @@
         new Criterion { Id = "4", Name = "Presentación", Weight = 25, Description = "Claridad y calidad de la exposición." }
     };
     private bool yaVotadoEnEvento = false;
+    private string? avisoSinDatos = null;
+
+    // Estado del organizador
+    private List<ProyectoResultadoDTO> proyectosOrganizador = new();
+    private bool mostrarFormProyecto = false;
+    private string nuevoNombre = "";
+    private string nuevaDescripcion = "";
+    private string nuevoCompetidor = "";
+    private string? errorProyecto = null;
+    private bool creandoProyecto = false;
     protected override async Task OnInitializedAsync()
     {
+        // 1. Cargar proyectos reales
         try
         {
-            yaVotadoEnEvento = await Http.GetFromJsonAsync<bool>($"/api/votos/hasVotado/{EventId}");
+            var reales = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
+            if (reales != null && reales.Count > 0)
+            {
+                mockProjects = reales.Select(p => new Project
+                {
+                    Id = p.Id.ToString(),
+                    DbId = p.Id,
+                    Name = p.Nombre,
+                    Team = p.Competidor,
+                    Category = "",
+                    Description = p.Descripcion
+                }).ToList();
+            }
+            else
+            {
+                avisoSinDatos = "Esta votación no tiene proyectos registrados en la base de datos. El organizador debe añadirlos antes de que se pueda votar.";
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            yaVotadoEnEvento = false;
+            avisoSinDatos = $"No se pudieron cargar los proyectos: {ex.Message}";
         }
-        // Inicializar contador de votaciones locales (si ya hay elementos e    n votedProjects)
+
+        // 1b. Si es organizador, cargar proyectos en su lista propia
+        if (Rol == "ORGANIZADOR")
+        {
+            try
+            {
+                var p = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
+                proyectosOrganizador = p ?? new();
+            }
+            catch { }
+        }
+
+        // 2. Cargar votos ya emitidos por este usuario en esta votación
+        try
+        {
+            var votados = await Http.GetFromJsonAsync<List<int>>($"/api/votos/misVotos/{EventId}");
+            if (votados != null)
+            {
+                foreach (var dbId in votados)
+                {
+                    var proj = mockProjects.FirstOrDefault(p => p.DbId == dbId);
+                    if (proj != null)
+                    {
+                        votedProjects.Add(proj.Id);
+                        // Para PUBLICO: marcar también por índice
+                        int idx = mockProjects.IndexOf(proj);
+                        if (idx >= 0) publicosVotados.Add(idx);
+                    }
+                }
+            }
+        }
+        catch { /* si falla, el usuario puede re-votar; el servidor rechazará duplicados */ }
+
         votesSubmitted = votedProjects.Count;
+
+        // 3. Comprobar si ya alcanzó el límite de votos (para JURADO)
+        yaVotadoEnEvento = votesSubmitted >= 3;
     }
     private void ToggleEditMode(string criterionId)
     {
@@ -501,6 +615,13 @@
         }
         return total.ToString("F1");
     }
+    private double CalculateTotalScoreDouble()
+    {
+        double total = 0;
+        foreach (var c in mockCriteria)
+            total += (GetScore(c.Id) * c.Weight) / 100;
+        return Math.Round(total, 2);
+    }
     private double GetProgress() => (votedProjects.Count / (double)mockProjects.Count) * 100;
     private int NonVotedCount => mockProjects.Count(p => !votedProjects.Contains(p.Id));
     private int NonVotedRemainingExcludingCurrent => mockProjects.Count(p => !votedProjects.Contains(p.Id) && p.Id != mockProjects[currentProjectIndex].Id);
@@ -510,12 +631,41 @@
         // Limitar a 3 votaciones por evento
         if (votesSubmitted >= 3)
         {
-            // opcional: mostrar mensaje o redirigir al dashboard
             NavigationManager.NavigateTo("/dashboard");
-            return; 
+            return;
         }
 
-        votedProjects.Add(mockProjects[currentProjectIndex].Id);
+        // Persistir el voto en la base de datos
+        var currentProject = mockProjects[currentProjectIndex];
+        errorVoto = null;
+        if (!int.TryParse(EventId, out int votacionId))
+        {
+            errorVoto = "ID de votación inválido.";
+            return;
+        }
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("/api/votos/guardar", new
+            {
+                VotacionId = votacionId,
+                ProyectoId = currentProject.DbId,
+                Puntuacion = CalculateTotalScoreDouble(),
+                Comentario = string.IsNullOrWhiteSpace(comments) ? (string?)null : comments
+            });
+            if (!resp.IsSuccessStatusCode)
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                errorVoto = $"Error: {msg}";
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorVoto = $"Error de conexión: {ex.Message}";
+            return;
+        }
+
+        votedProjects.Add(currentProject.Id);
         votesSubmitted++;
 
         if (votesSubmitted >= 3)
@@ -598,6 +748,36 @@
 
     private async Task SubmitVotoPublico()
     {
+        // Persistir el voto en la base de datos
+        var proj = mockProjects[publicoProyectoIndex];
+        errorVoto = null;
+        if (!int.TryParse(EventId, out int votacionId))
+        {
+            errorVoto = "ID de votación inválido.";
+            return;
+        }
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("/api/votos/guardar", new
+            {
+                VotacionId = votacionId,
+                ProyectoId = proj.DbId,
+                Puntuacion = CalculateTotalScoreDouble(),
+                Comentario = string.IsNullOrWhiteSpace(comments) ? (string?)null : comments
+            });
+            if (!resp.IsSuccessStatusCode)
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                errorVoto = $"Error: {msg}";
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorVoto = $"Error de conexión: {ex.Message}";
+            return;
+        }
+
         publicosVotados.Add(publicoProyectoIndex);
         publicoMostrarVotacion = false;
         comments = "";
@@ -605,8 +785,57 @@
         await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
     }
 
-    public class Project { 
+    private async Task CrearProyecto()
+    {
+        errorProyecto = null;
+        if (string.IsNullOrWhiteSpace(nuevoNombre))
+        {
+            errorProyecto = "El nombre del proyecto es obligatorio.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(nuevoCompetidor))
+        {
+            errorProyecto = "El username del competidor es obligatorio.";
+            return;
+        }
+
+        creandoProyecto = true;
+        try
+        {
+            var resp = await Http.PostAsJsonAsync($"/api/proyectos/{EventId}", new
+            {
+                Nombre = nuevoNombre.Trim(),
+                Descripcion = nuevaDescripcion.Trim(),
+                UsernameCompetidor = nuevoCompetidor.Trim()
+            });
+
+            if (resp.IsSuccessStatusCode)
+            {
+                var creado = await resp.Content.ReadFromJsonAsync<ProyectoResultadoDTO>();
+                if (creado != null) proyectosOrganizador.Add(creado);
+                nuevoNombre = "";
+                nuevaDescripcion = "";
+                nuevoCompetidor = "";
+                mostrarFormProyecto = false;
+            }
+            else
+            {
+                errorProyecto = await resp.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorProyecto = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            creandoProyecto = false;
+        }
+    }
+
+    public class Project {
         public string Id { get; set; }
+        public int DbId { get; set; }
         public string Name { get; set; }
         public string Team { get; set; }
         public string Category { get; set; }

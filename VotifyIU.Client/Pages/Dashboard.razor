@@ -115,10 +115,16 @@
                                 </button>
                             } else if(rolActual == "ORGANIZADOR" || rolActual == "ENCARGADO")
                             {
-                                <button @onclick="() => NavigateToResults(ev.Id)"
-                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
-                                    Gestionar
-                                </button>
+                                <div class="flex gap-2">
+                                    <button @onclick="() => NavigateToEvent(ev.Id)"
+                                            class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                        Gestionar
+                                    </button>
+                                    <button @onclick="() => NavigateToResults(ev.Id)"
+                                            class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
+                                        Resultados
+                                    </button>
+                                </div>
                             }
                         }
                         else if (ev.Status == "upcoming")
@@ -159,7 +165,7 @@
             var votaciones = await Http.GetFromJsonAsync<List<VotacionDTO>>("/api/votaciones");
             if (votaciones != null)
             {
-                mockEvents = votaciones.Select(v => new EventModel
+                mockEvents = votaciones.OrderBy(v => v.FechaFin).Select(v => new EventModel
                 {
                     Id = v.Id.ToString(),
                     Name = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,

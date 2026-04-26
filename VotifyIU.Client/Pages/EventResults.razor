@@ -3,6 +3,7 @@
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
+@inject HttpClient Http
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
@@ -20,127 +21,294 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (Rol == "JURADO" || Rol == "ORGANIZADOR" || Rol == "ENCARGADO")
-{
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🏆</div>
-                <div>
-                    <p class="text-sm text-[#6C8A6C]">Proyectos Evaluados</p>
-                    <p class="text-2xl font-bold text-[#1A281B]">45</p>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">👥</div>
-                <div>
-                    <p class="text-sm text-[#6C8A6C]">Evaluadores</p>
-                    <p class="text-2xl font-bold text-[#1A281B]">18</p>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">📈</div>
-                <div>
-                    <p class="text-sm text-[#6C8A6C]">Promedio General</p>
-                    <p class="text-2xl font-bold text-[#1A281B]">8.1</p>
-                </div>
-            </div>
-        </div>
 
-        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-            <h2 class="text-2xl font-bold text-[#1A281B] mb-6 flex items-center gap-2">
-                🥇 Proyectos Ganadores
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                @foreach (var (project, index) in mockResults.Take(3).Select((p, i) => (p, i)))
-                {
-                    <div class="relative @(index == 0 ? "md:order-2" : index == 1 ? "md:order-1" : "md:order-3")">
-                        <div class="rounded-xl p-6 bg-gradient-to-br @GetRankColor(project.Rank) text-white shadow-lg">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm text-xl">
-                                    @(project.Rank == 1 ? "🥇" : project.Rank == 2 ? "🥈" : "🥉")
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm opacity-90 font-medium">Posición</div>
-                                    <div class="text-4xl font-black">#@project.Rank</div>
-                                </div>
-                            </div>
-                            <h3 class="text-xl font-bold mb-1">@project.Name</h3>
-                            <p class="text-sm opacity-90 mb-4">@project.Team</p>
-                            <div class="flex items-center justify-between pt-4 border-t border-white/20 font-bold">
-                                <span class="text-sm">Puntuación</span>
-                                <span class="text-2xl">@project.TotalScore</span>
-                            </div>
+        @if (Rol == "ENCARGADO" || Rol == "ORGANIZADOR")
+        {
+            <div class="flex gap-2 mb-6">
+                <button @onclick='() => tabActiva = "resultados"'
+                        class="px-5 py-2 rounded-xl font-medium text-sm transition-all @(tabActiva == "resultados" ? "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white shadow-md" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")">
+                    📊 Resultados
+                </button>
+                <button @onclick="CargarMonitor"
+                        class="px-5 py-2 rounded-xl font-medium text-sm transition-all @(tabActiva == "monitor" ? "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white shadow-md" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")">
+                    🔍 Monitor
+                </button>
+            </div>
+        }
+
+        @if (tabActiva == "monitor" && (Rol == "ENCARGADO" || Rol == "ORGANIZADOR"))
+        {
+            @if (monitor == null)
+            {
+                <div class="text-center py-12 text-[#6C8A6C]">Cargando datos del monitor...</div>
+            }
+            else
+            {
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">🗳️</div>
+                        <div>
+                            <p class="text-sm text-[#6C8A6C]">Votos emitidos</p>
+                            <p class="text-2xl font-bold text-[#1A281B]">
+                                @monitor.VotosEmitidos
+                                @if (monitor.TotalVotantes > 0)
+                                {
+                                    <span class="text-sm font-normal text-[#A6AAA9]"> / @monitor.TotalVotantes votantes</span>
+                                }
+                            </p>
                         </div>
                     </div>
-                }
-            </div>
-        </div>
-
-        <div class="space-y-4">
-            <h2 class="text-2xl font-bold text-[#1A281B] mb-4">Ranking Completo</h2>
-            @foreach (var project in mockResults)
-            {
-                <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30">
-                    <div class="flex flex-col md:flex-row items-start gap-6">
-                        <div class="w-16 h-16 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white flex-shrink-0 font-bold text-2xl shadow-md">
-                            #@project.Rank
+                    <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">📈</div>
+                        <div>
+                            <p class="text-sm text-[#6C8A6C]">Promedio general</p>
+                            <p class="text-2xl font-bold text-[#1A281B]">@monitor.PromedioGeneral <span class="text-sm font-normal text-[#A6AAA9]">/ 10</span></p>
                         </div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white text-xl">🏗️</div>
+                        <div>
+                            <p class="text-sm text-[#6C8A6C]">Proyectos con votos</p>
+                            <p class="text-2xl font-bold text-[#1A281B]">@monitor.Proyectos.Count</p>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="flex-1 w-full">
-                            <div class="flex flex-col md:flex-row justify-between mb-4">
-                                <div>
-                                    <h3 class="text-xl font-bold text-[#1A281B]">@project.Name</h3>
-                                    <p class="text-[#6C8A6C]">@project.Team</p>
-                                    <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-xs font-bold mt-2">
-                                        @project.Category
-                                    </span>
-                                </div>
-                                <div class="text-right mt-2 md:mt-0">
-                                    <div class="text-4xl font-black text-[#6C8A6C]">@project.TotalScore</div>
-                                    <div class="text-sm text-[#A6AAA9]">@project.Votes votos</div>
-                                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Puntuación media por proyecto -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                        <h2 class="text-lg font-bold text-[#1A281B] mb-4">🏆 Puntuación media por proyecto</h2>
+                        @if (!monitor.Proyectos.Any())
+                        {
+                            <p class="text-[#A6AAA9] text-sm">Sin votos aún.</p>
+                        }
+                        else
+                        {
+                            <div class="space-y-3">
+                                @foreach (var (proy, i) in monitor.Proyectos.Select((p, i) => (p, i)))
+                                {
+                                    var pct = (int)Math.Round(proy.Media * 10);
+                                    <div>
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="font-medium text-[#1A281B]">@($"#{i+1}") @proy.Nombre</span>
+                                            <span class="font-bold text-[#6C8A6C]">@proy.Media / 10 <span class="text-[#A6AAA9] font-normal">(@proy.NumVotos v.)</span></span>
+                                        </div>
+                                        <div class="w-full bg-[#E9EFE1] rounded-full h-2">
+                                            <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-2 rounded-full transition-all"
+                                                 style="width:@pct%"></div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
+                        }
+                    </div>
 
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 bg-[#F8FAF7] p-4 rounded-lg">
-                                <div class="text-center">
-                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Innovación</div>
-                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Innovation</div>
-                                </div>
-                                <div class="text-center border-l border-[#B5D6AC]/30">
-                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Técnica</div>
-                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Technical</div>
-                                </div>
-                                <div class="text-center border-l border-[#B5D6AC]/30">
-                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Impacto</div>
-                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Impact</div>
-                                </div>
-                                <div class="text-center border-l border-[#B5D6AC]/30">
-                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Presentación</div>
-                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Presentation</div>
-                                </div>
-                                <div class="text-center border-l border-[#B5D6AC]/30">
-                                    <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Diseño</div>
-                                    <div class="font-bold text-[#1A281B]">@project.CriteriaScores.Design</div>
-                                </div>
+                    <!-- Quién ha votado / no ha votado -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                        <h2 class="text-lg font-bold text-[#1A281B] mb-4">👥 Estado de votantes</h2>
+                        @if (!monitor.Votantes.Any())
+                        {
+                            <p class="text-[#A6AAA9] text-sm">No hay jurados ni público registrados.</p>
+                        }
+                        else
+                        {
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                @foreach (var v in monitor.Votantes.OrderBy(v => v.HaVotado ? 1 : 0))
+                                {
+                                    <div class="flex items-center justify-between px-3 py-2 rounded-lg @(v.HaVotado ? "bg-[#E9EFE1]" : "bg-red-50")">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs px-2 py-0.5 rounded-full font-medium @(v.Tipo == "Jurado" ? "bg-[#B5D6AC] text-[#1A281B]" : "bg-blue-100 text-blue-700")">
+                                                @v.Tipo
+                                            </span>
+                                            <span class="text-sm font-medium text-[#1A281B]">@v.Nombre</span>
+                                        </div>
+                                        <span class="text-sm font-bold @(v.HaVotado ? "text-[#6C8A6C]" : "text-red-400")">
+                                            @(v.HaVotado ? "✓ Votó" : "✗ Pendiente")
+                                        </span>
+                                    </div>
+                                }
                             </div>
+                        }
+                    </div>
+                </div>
 
-                            @if (project.Comments.Any())
+                <!-- Historial de votos -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-lg font-bold text-[#1A281B] mb-4">📋 Historial de votos</h2>
+                    @if (!monitor.Historial.Any())
+                    {
+                        <p class="text-[#A6AAA9] text-sm">Sin votos registrados.</p>
+                    }
+                    else
+                    {
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-[#6C8A6C] border-b border-[#B5D6AC]">
+                                        <th class="pb-2 pr-4">Fecha</th>
+                                        <th class="pb-2 pr-4">Votante</th>
+                                        <th class="pb-2 pr-4">Proyecto</th>
+                                        <th class="pb-2 pr-4 text-right">Valor</th>
+                                        <th class="pb-2">Comentario</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#E9EFE1]">
+                                    @foreach (var h in monitor.Historial)
+                                    {
+                                        <tr class="hover:bg-[#F8FAF7]">
+                                            <td class="py-2 pr-4 text-[#A6AAA9] whitespace-nowrap">@h.Fecha.ToString("dd/MM HH:mm")</td>
+                                            <td class="py-2 pr-4 font-medium text-[#1A281B]">@h.Votante</td>
+                                            <td class="py-2 pr-4 text-[#4C6B4F]">@h.Proyecto</td>
+                                            <td class="py-2 pr-4 text-right font-bold text-[#6C8A6C]">@h.Valor</td>
+                                            <td class="py-2 text-[#A6AAA9] italic max-w-xs truncate">@(h.Comentario ?? "—")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (Rol == "JURADO" || Rol == "ORGANIZADOR" || Rol == "ENCARGADO")
+        {
+        @if (Rol == "ORGANIZADOR" || Rol == "ENCARGADO")
+        {
+            @if (cargandoResultados)
+            {
+                <div class="text-center py-12 text-[#6C8A6C]">Cargando resultados...</div>
+            }
+            else if (!resultadosReales.Any())
+            {
+                <div class="bg-white rounded-2xl shadow-lg p-8 text-center text-[#A6AAA9]">
+                    <p class="text-4xl mb-3">📭</p>
+                    <p class="text-lg font-medium">No hay proyectos registrados en este evento.</p>
+                </div>
+            }
+            else
+            {
+                var promedio = resultadosReales.Where(r => r.NumVotos > 0).Any()
+                    ? Math.Round(resultadosReales.Where(r => r.NumVotos > 0).Average(r => r.Media), 2) : 0.0;
+
+                <!-- KPIs reales -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🏆</div>
+                        <div>
+                            <p class="text-sm text-[#6C8A6C]">Proyectos</p>
+                            <p class="text-2xl font-bold text-[#1A281B]">@resultadosReales.Count</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🗳️</div>
+                        <div>
+                            <p class="text-sm text-[#6C8A6C]">Votos totales</p>
+                            <p class="text-2xl font-bold text-[#1A281B]">@resultadosReales.Sum(r => r.NumVotos)</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">📈</div>
+                        <div>
+                            <p class="text-sm text-[#6C8A6C]">Promedio general</p>
+                            <p class="text-2xl font-bold text-[#1A281B]">@promedio</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 3 -->
+                @if (resultadosReales.Count >= 3)
+                {
+                    <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                        <h2 class="text-2xl font-bold text-[#1A281B] mb-6 flex items-center gap-2">🥇 Proyectos Ganadores</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            @foreach (var (p, idx) in resultadosReales.Take(3).Select((p, i) => (p, i)))
                             {
-                                <div class="bg-[#EFEFEE] rounded-lg p-4">
-                                    <p class="text-xs font-bold text-[#4C6B4F] mb-2 uppercase tracking-wider">Feedback Destacado:</p>
-                                    <ul class="space-y-1">
-                                        @foreach (var comment in project.Comments)
+                                <div class="relative @(idx == 0 ? "md:order-2" : idx == 1 ? "md:order-1" : "md:order-3")">
+                                    <div class="rounded-xl p-6 bg-gradient-to-br @GetRankColor(p.Rank) text-white shadow-lg">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div class="text-2xl">@(p.Rank == 1 ? "🥇" : p.Rank == 2 ? "🥈" : "🥉")</div>
+                                            <div class="text-4xl font-black">#@p.Rank</div>
+                                        </div>
+                                        <h3 class="text-xl font-bold mb-1">@p.Nombre</h3>
+                                        @if (!string.IsNullOrEmpty(p.Competidor))
                                         {
-                                            <li class="text-sm text-[#6C8A6C]">" @comment "</li>
+                                            <p class="text-sm opacity-90 mb-3">@p.Competidor</p>
                                         }
-                                    </ul>
+                                        <div class="flex items-center justify-between pt-4 border-t border-white/20 font-bold">
+                                            <span class="text-sm">Puntuación media</span>
+                                            <span class="text-2xl">@p.Media</span>
+                                        </div>
+                                    </div>
                                 </div>
                             }
                         </div>
                     </div>
+                }
+
+                <!-- Ranking completo -->
+                <div class="space-y-4">
+                    <h2 class="text-2xl font-bold text-[#1A281B] mb-4">Ranking Completo</h2>
+                    @foreach (var p in resultadosReales)
+                    {
+                        <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30">
+                            <div class="flex items-center gap-6">
+                                <div class="w-14 h-14 rounded-full bg-gradient-to-br @GetRankColor(p.Rank) flex items-center justify-center text-white flex-shrink-0 font-bold text-xl shadow-md">
+                                    #@p.Rank
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold text-[#1A281B]">@p.Nombre</h3>
+                                    @if (!string.IsNullOrEmpty(p.Competidor))
+                                    {
+                                        <p class="text-sm text-[#6C8A6C]">@p.Competidor</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(p.Descripcion))
+                                    {
+                                        <p class="text-sm text-[#A6AAA9] mt-1 line-clamp-2">@p.Descripcion</p>
+                                    }
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <div class="text-4xl font-black text-[#6C8A6C]">@p.Media</div>
+                                    <div class="text-sm text-[#A6AAA9]">@p.NumVotos votos</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
-        </div>
+        }
+        else
+        {
+            <!-- Vista JURADO (mock) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                @foreach (var project in mockResults.Take(3))
+                {
+                    <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30 flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white font-bold text-xl shadow-md">#@project.Rank</div>
+                        <div>
+                            <h3 class="font-bold text-[#1A281B]">@project.Name</h3>
+                            <p class="text-[#6C8A6C] text-sm">@project.Team</p>
+                            <p class="text-2xl font-black text-[#6C8A6C]">@project.TotalScore</p>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="space-y-4">
+                @foreach (var project in mockResults)
+                {
+                    <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30">
+                        <div class="flex items-center gap-6">
+                            <div class="w-14 h-14 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white font-bold text-xl shadow-md">#@project.Rank</div>
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-[#1A281B]">@project.Name</h3>
+                                <p class="text-[#6C8A6C]">@project.Team · @project.Category</p>
+                            </div>
+                            <div class="text-4xl font-black text-[#6C8A6C]">@project.TotalScore</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
         }
         else if (Rol == "PUBLICO")
         {
@@ -241,6 +409,43 @@
     [Parameter]
     [SupplyParameterFromQuery]
     public string? Rol { get; set; }
+
+    private string tabActiva = "resultados";
+    private MonitorVotacionDTO? monitor = null;
+    private List<ProyectoResultadoDTO> resultadosReales = new();
+    private bool cargandoResultados = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Rol == "ENCARGADO" || Rol == "ORGANIZADOR")
+        {
+            try
+            {
+                var r = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
+                resultadosReales = r ?? new();
+            }
+            catch { }
+            finally { cargandoResultados = false; }
+        }
+        else
+        {
+            cargandoResultados = false;
+        }
+    }
+
+    private async Task CargarMonitor()
+    {
+        tabActiva = "monitor";
+        if (monitor != null) return; // ya cargado
+        try
+        {
+            monitor = await Http.GetFromJsonAsync<MonitorVotacionDTO>($"/api/monitor/{EventId}");
+        }
+        catch
+        {
+            monitor = new MonitorVotacionDTO(); // vacío si falla
+        }
+    }
 
     private static readonly Dictionary<string, string> nombresEventos = new()
     {
