@@ -4,7 +4,6 @@
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
-@inject IJSRuntime JS
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
@@ -14,17 +13,6 @@
                     <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
                 </div>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <label class="text-xs font-medium text-[#6C8A6C]">Rol:</label>
-                        <select value="@rolActual" @onchange="OnRolChanged"
-                                class="text-sm bg-[#E9EFE1] border border-[#B5D6AC] text-[#1A281B] rounded-lg px-3 py-2 focus:outline-none focus:border-[#6C8A6C] cursor-pointer">
-                            <option value="PUBLICO">Público</option>
-                            <option value="COMPETIDOR">Competidor</option>
-                            <option value="JURADO">Jurado</option>
-                            <option value="ORGANIZADOR">Organizador</option>
-                            <option value="ENCARGADO">Encargado Votación</option>
-                        </select>
-                    </div>
                     <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
                         Cerrar Sesión
                     </a>
@@ -63,28 +51,19 @@
                             </span>
                             @if (ev.Status == "active")
                             {
-                                if(rolActual == "JURADO" || rolActual == "PUBLICO")
-                                {
-                                    <div class="flex items-center gap-1 text-[#6C8A6C]">
-                                        <span class="text-xs font-medium">● Votación abierta</span>
-                                    </div>
-                                }
-                                else if (rolActual == "COMPETIDOR")
-                                {
-                                    <div class="flex items-center gap-1 text-[#6C8A6C]">
-                                        <span class="text-xs font-medium">● En evaluación</span>
-                                    </div>
-                                } else if(rolActual == "ORGANIZADOR" || rolActual == "ENCARGADO")
-                                {
-                                    <div class="flex items-center gap-1 text-[#6C8A6C]">
-                                        <span class="text-xs font-medium">● Gestionar</span>
-                                    </div>
-                                }
+                                <div class="flex items-center gap-1 text-[#6C8A6C]">
+                                    <span class="text-xs font-medium">@GetRoleHint(ev.RolActual)</span>
+                                </div>
                             }
                         </div>
 
                         <h3 class="text-xl font-bold text-[#1A281B] mb-2">@ev.Name</h3>
                         <p class="text-[#6C8A6C] text-sm mb-4 line-clamp-2 h-10 overflow-hidden">@ev.Description</p>
+                        <div class="mb-4">
+                            <span class="inline-block w-fit px-3 py-1 rounded-full text-xs font-bold @(string.IsNullOrWhiteSpace(ev.RolActual) ? "bg-[#EFEFEE] text-[#6C8A6C]" : "bg-[#E9EFE1] text-[#4C6B4F]")">
+                                @(string.IsNullOrWhiteSpace(ev.RolActual) ? "Sin rol asignado" : $"Mi rol: {FormatearRol(ev.RolActual)}")
+                            </span>
+                        </div>
 
                         <div class="space-y-2 mb-6 text-sm text-[#4C6B4F]">
                             <div class="flex items-center gap-2">
@@ -101,30 +80,25 @@
                         <div class="mt-auto">
                         @if (ev.Status == "active")
                         {
-                            if(rolActual == "JURADO" || rolActual == "PUBLICO")
-                            {
-                                <button @onclick="() => NavigateToEvent(ev.Id)"
-                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
-                                    Votar Ahora
-                                </button>
-                            } else if(rolActual == "COMPETIDOR")
-                            {
-                                <button @onclick="() => NavigateToEvent(ev.Id)"
-                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
-                                    Ver Mi Evaluación
-                                </button>
-                            } else if(rolActual == "ORGANIZADOR" || rolActual == "ENCARGADO")
+                            if(ev.RolActual == "ORGANIZADOR" || ev.RolActual == "ENCARGADO")
                             {
                                 <div class="flex gap-2">
                                     <button @onclick="() => NavigateToEvent(ev.Id)"
                                             class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
-                                        Gestionar
+                                        @(ev.RolActual == "ENCARGADO" ? "Controlar" : "Gestionar")
                                     </button>
                                     <button @onclick="() => NavigateToResults(ev.Id)"
                                             class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
                                         Resultados
                                     </button>
                                 </div>
+                            }
+                            else
+                            {
+                                <button @onclick="() => NavigateToEvent(ev.Id)"
+                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                    @GetPrimaryActionText(ev.RolActual)
+                                </button>
                             }
                         }
                         else if (ev.Status == "upcoming")
@@ -148,7 +122,6 @@
 </div>
 
 @code {
-    private string rolActual = "JURADO";
     private string? fotoPerfil;
 
     protected override async Task OnInitializedAsync()
@@ -173,30 +146,12 @@
                     Date = v.FechaFin.ToString("dd/MM/yyyy"),
                     Status = v.FechaFin >= DateTime.Today ? "active" : "finished",
                     Participants = 0,
-                    Projects = 0
+                    Projects = 0,
+                    RolActual = v.RolActual
                 }).ToList();
             }
         }
         catch { }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            var saved = await JS.InvokeAsync<string?>("sessionStorage.getItem", "votify_rol");
-            if (!string.IsNullOrEmpty(saved))
-            {
-                rolActual = saved;
-                StateHasChanged();
-            }
-        }
-    }
-
-    private async Task OnRolChanged(ChangeEventArgs e)
-    {
-        rolActual = e.Value?.ToString() ?? "JURADO";
-        await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", rolActual);
     }
 
     private class PerfilDTO
@@ -206,13 +161,12 @@
 
     private void NavigateToEvent(string id)
     {
-        NavigationManager.NavigateTo($"/event-voting/{id}?rol={rolActual}");
+        NavigationManager.NavigateTo($"/event-access/{id}?dest=voting");
     }
 
     private void NavigateToResults(string id)
     {
-        // Reemplaza "/event-results/" con la ruta real de tu página de resultados
-        NavigationManager.NavigateTo($"/event-results/{id}?rol={rolActual}");
+        NavigationManager.NavigateTo($"/event-access/{id}?dest=results");
     }
 
     private string GetStatusColor(string status) => status switch
@@ -236,6 +190,34 @@
         NavigationManager.NavigateTo("/crear-votacion");
     }
 
+    private static string GetPrimaryActionText(string? rolActual) => rolActual switch
+    {
+        "COMPETIDOR" => "Ver mi participación",
+        "JURADO" => "Entrar a votar",
+        "PUBLICO" => "Entrar al evento",
+        _ => "Acceder al evento"
+    };
+
+    private static string GetRoleHint(string? rolActual) => rolActual switch
+    {
+        "ORGANIZADOR" => "● Gestión del evento",
+        "ENCARGADO" => "● Control de votación",
+        "COMPETIDOR" => "● Participando en el evento",
+        "JURADO" => "● Listo para votar",
+        "PUBLICO" => "● Acceso público",
+        _ => "● Elige tu rol al entrar"
+    };
+
+    private static string FormatearRol(string? rolActual) => rolActual switch
+    {
+        "ORGANIZADOR" => "Organizador",
+        "ENCARGADO" => "Encargado",
+        "COMPETIDOR" => "Competidor",
+        "JURADO" => "Jurado",
+        "PUBLICO" => "Público",
+        _ => "Sin rol"
+    };
+
     private List<EventModel> mockEvents = new();
 
     public class EventModel
@@ -247,5 +229,6 @@
         public int Participants { get; set; }
         public string Status { get; set; } = ""; // active, upcoming, finished
         public int Projects { get; set; }
+        public string? RolActual { get; set; }
     }
 }

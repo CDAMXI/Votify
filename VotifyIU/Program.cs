@@ -245,30 +245,33 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
-app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
+app.MapGet("/api/votaciones", (IDAL dal, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
     try
     {
-        service.RestoreSession(username);
-        var votaciones = service.GetMisVotaciones().Select(v => new VotacionDTO
+        var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+        if (usuario == null) return Results.Unauthorized();
+
+        var votaciones = dal.GetAll<Votacion>().ToList().OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
         {
             Id = v.Id,
-            IdEvento = v.evento?.IdEvento ?? 0,
+            IdEvento = v.EventoId,
             Descripcion = v.Descripcion,
             Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
             FechaIni = v.FechaIni,
-            FechaFin = v.FechaFin
+            FechaFin = v.FechaFin,
+            Estado = v.Estado,
+            RolActual = ObtenerTipoRolUsuarioEnEvento(dal, usuario.Id, v.EventoId)
         }).ToList();
 
         return Results.Ok(votaciones);
     }
-    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
-app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>
+app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, IDAL dal, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
@@ -276,16 +279,51 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
     {
         service.RestoreSession(username);
         var votacion = service.GetVotacion(id);
+        var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
         return Results.Ok(new VotacionDTO
         {
             Id = votacion.Id,
-            IdEvento = votacion.evento.IdEvento,
+            IdEvento = votacion.EventoId,
             Titulo = votacion.Titulo,
             Descripcion = votacion.Descripcion,
             FechaIni = votacion.FechaIni,
             FechaFin = votacion.FechaFin,
-            Estado = votacion.Estado
+            Estado = votacion.Estado,
+            RolActual = usuario == null ? null : ObtenerTipoRolUsuarioEnEvento(dal, usuario.Id, votacion.EventoId)
         });
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+
+app.MapGet("/api/votaciones/{id}/rol", (int id, IDAL dal, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+    if (usuario == null) return Results.Unauthorized();
+
+    var votacion = dal.GetById<Votacion>(id);
+    if (votacion == null) return Results.NotFound("La votación no existe");
+
+    var rol = ObtenerRolUsuarioEnEvento(dal, usuario.Id, votacion.EventoId);
+    return Results.Ok(new RolEventoResponse(votacion.EventoId, rol?.TipoRol));
+});
+
+app.MapPost("/api/votaciones/{id}/rol", (int id, AsignarRolEventoRequest req, IVotifyService service, IDAL dal, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+
+        var votacion = dal.GetById<Votacion>(id);
+        if (votacion == null) return Results.NotFound("La votación no existe");
+
+        service.AsignarRolEnEvento(req.TipoRol, votacion.EventoId);
+        return Results.Ok(new RolEventoResponse(votacion.EventoId, req.TipoRol.Trim().ToUpperInvariant()));
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
@@ -363,11 +401,11 @@ app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest
         var evento = votacion.evento;
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
-        // 2. Verificar que quien llama es organizador u encargado del evento
+        // 2. Verificar que quien llama es organizador del evento
         var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
         if (usuarioAuth == null) return Results.Unauthorized();
 
-        if (!EsOrganizadorDelEvento(dal, usuarioAuth.Id, evento.IdEvento))
+        if (!EsOrganizadorEnEvento(dal, usuarioAuth.Id, evento.IdEvento))
             return Results.Forbid();
 
         // 3. Buscar el usuario competidor
@@ -438,7 +476,7 @@ app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idPr
         var evento = proyecto.evento;
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
-        if (!EsOrganizadorDelEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
+        if (!EsOrganizadorEnEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
 
         proyecto.Nombre = req.Nombre.Trim();
         proyecto.Descripcion = req.Descripcion?.Trim() ?? string.Empty;
@@ -478,7 +516,7 @@ app.MapDelete("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int i
         var evento = proyecto.evento;
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
-        if (!EsOrganizadorDelEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
+        if (!EsOrganizadorEnEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
 
         // Eliminar votos del proyecto (por si el cascade de BD no es suficiente con EF)
         var votos = dal.GetWhere<Voto>(v => v.ProyectoId == idProyecto).ToList();
@@ -739,9 +777,21 @@ app.Run();
 static string? ObtenerUsernameAutenticado(HttpContext http)
     => http.Session.GetString(SessionConfig.UsernameKey);
 
-static bool EsOrganizadorDelEvento(IDAL dal, int usuarioId, int eventoId)
-    => dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any()
-    || dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any();
+static bool EsOrganizadorEnEvento(IDAL dal, int usuarioId, int eventoId)
+    => dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any();
+
+static bool EsEncargadoEnEvento(IDAL dal, int usuarioId, int eventoId)
+    => dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any();
+
+static Rol? ObtenerRolUsuarioEnEvento(IDAL dal, int usuarioId, int eventoId)
+    => (Rol?)dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
+    ?? (Rol?)dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
+    ?? (Rol?)dal.GetWhere<Jurado>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
+    ?? (Rol?)dal.GetWhere<Competidor>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
+    ?? (Rol?)dal.GetWhere<Publico>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault();
+
+static string? ObtenerTipoRolUsuarioEnEvento(IDAL dal, int usuarioId, int eventoId)
+    => ObtenerRolUsuarioEnEvento(dal, usuarioId, eventoId)?.TipoRol;
 
 // ── Configuración de sesión ──────────────────────────────────────
 
@@ -761,6 +811,8 @@ record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
+record AsignarRolEventoRequest(string TipoRol);
+record RolEventoResponse(int IdEvento, string? Rol);
 record AiChatRequest(List<AiChatTurn> History, string Message);
 record AiChatTurn(string Role, string Content);
 record GuardarVotoRequest(int VotacionId, int ProyectoId, double Puntuacion, string? Comentario);

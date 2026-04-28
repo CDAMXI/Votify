@@ -273,7 +273,7 @@ namespace Votify.BusinessLogic.Service
         public Rol GetRolEnEvento(int idEvento)
         {
             RequireUsuarioLogueado();
-            return usuario!.roles?.FirstOrDefault(r => r.evento?.IdEvento == idEvento);
+            return BuscarRolEnEvento(idEvento);
         }
 
         public bool HasVotadoEnEvento(int idEvento)
@@ -295,16 +295,27 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
 
+            tipoRol = (tipoRol ?? string.Empty).Trim().ToUpperInvariant();
+            if (tipoRol != "PUBLICO" && tipoRol != "JURADO" && tipoRol != "COMPETIDOR" && tipoRol != "ENCARGADO")
+                throw new ServiceException("Solo puedes unirte al evento como público, jurado, competidor o encargado");
+
             Evento evento = dal.GetById<Evento>(idEvento);
             if (evento == null)
                 throw new ServiceException("El evento no existe");
 
+            if (BuscarRolEnEvento(idEvento) != null)
+                throw new ServiceException("Ya tienes un rol asignado en este evento");
+
             Rol nuevoRol = RolFactory.Create(tipoRol, DateTime.Now, 0);
+            nuevoRol.usuario = usuario!;
             nuevoRol.evento = evento;
+            nuevoRol.UsuarioId = usuario!.Id;
+            nuevoRol.EventoId = evento.IdEvento;
             usuario!.roles ??= new List<Rol>();
             usuario.roles.Add(nuevoRol);
             dal.Insert<Rol>(nuevoRol);
             dal.Commit();
+            rol = nuevoRol;
         }
         //metodo para modificar votacion (solo encargados)
         public void ModificarVotacion (int idVotacion, DateTime nuevaFechaFin, bool estado) {
@@ -370,8 +381,8 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
+            if (!UsuarioEsOrganizadorEnEvento(votacion.EventoId))
+                throw new ServiceException("No eres el organizador de este evento");
 
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
             dal.Delete<Evento>(evento);
@@ -384,5 +395,8 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException("La votación no está asociada a ningún evento");
             return votacion.evento;
         }
+
+        private bool UsuarioEsOrganizadorEnEvento(int eventoId)
+            => dal.GetWhere<Organizador>(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
     }
 }

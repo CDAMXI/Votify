@@ -790,6 +790,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (string.IsNullOrWhiteSpace(Rol))
+        {
+            NavigationManager.NavigateTo($"/event-access/{EventId}?dest=voting");
+            return;
+        }
+
         // 1. Cargar proyectos reales
         try
         {

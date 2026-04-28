@@ -417,6 +417,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (string.IsNullOrWhiteSpace(Rol))
+        {
+            NavigationManager.NavigateTo($"/event-access/{EventId}?dest=results");
+            return;
+        }
+
         if (Rol == "ENCARGADO" || Rol == "ORGANIZADOR")
         {
             try

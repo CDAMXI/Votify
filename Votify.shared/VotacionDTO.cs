@@ -13,5 +13,6 @@ namespace Votify.shared
         public DateTime FechaIni {  get; set; }
         public DateTime FechaFin { get; set; }
         public bool Estado { get; set; }
+        public string? RolActual { get; set; }
     }
 }

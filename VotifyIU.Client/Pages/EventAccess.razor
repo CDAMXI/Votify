@@ -1,0 +1,191 @@
+@page "/event-access/{EventId}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using Votify.shared
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center gap-4">
+                <a href="/dashboard" class="flex items-center text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-md transition-colors text-sm">
+                    <span class="mr-2">←</span> Volver
+                </a>
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        @if (cargando)
+        {
+            <div class="bg-white rounded-2xl shadow-xl p-10 text-center">
+                <p class="text-xl font-bold text-[#1A281B] mb-2">Preparando acceso al evento</p>
+                <p class="text-[#6C8A6C]">Estamos comprobando si ya tienes un rol asignado.</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(error))
+        {
+            <div class="bg-white rounded-2xl shadow-xl p-10 text-center">
+                <p class="text-xl font-bold text-[#1A281B] mb-2">No se pudo acceder al evento</p>
+                <p class="text-[#6C8A6C] mb-6">@error</p>
+                <div class="flex justify-center gap-3">
+                    <button @onclick="CargarEstado"
+                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                        Reintentar
+                    </button>
+                    <a href="/dashboard"
+                       class="border-2 border-[#6C8A6C] text-[#6C8A6C] px-6 py-3 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                        Volver
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl shadow-xl p-10">
+                <p class="text-sm font-bold uppercase tracking-wide text-[#6C8A6C] mb-3">Acceso al evento</p>
+                <h1 class="text-3xl font-bold text-[#1A281B] mb-3">@TituloEvento</h1>
+                <p class="text-[#4C6B4F] mb-8">
+                    Elige cómo quieres participar en este evento. Este rol se guardará solo para este evento, así que puedes ser competidor en uno y jurado o público en otro.
+                </p>
+
+                <div class="grid gap-4 md:grid-cols-3">
+                    @foreach (var opcion in opcionesRol)
+                    {
+                        <button @onclick="() => SeleccionarRol(opcion.Tipo)"
+                                disabled="@asignando"
+                                class="text-left rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6 hover:border-[#6C8A6C] hover:bg-[#E9EFE1] transition-colors disabled:opacity-60">
+                            <p class="text-lg font-bold text-[#1A281B] mb-2">@opcion.Titulo</p>
+                            <p class="text-sm text-[#6C8A6C]">@opcion.Descripcion</p>
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(errorAsignacion))
+                {
+                    <div class="mt-6 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+                        @errorAsignacion
+                    </div>
+                }
+
+                <p class="mt-6 text-xs text-[#6C8A6C]">
+                    Si ya tienes un rol asignado por la organización, entrarás directamente sin volver a elegir.
+                </p>
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    [Parameter] public string? EventId { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Dest { get; set; }
+
+    private bool cargando = true;
+    private bool asignando = false;
+    private string? error;
+    private string? errorAsignacion;
+    private VotacionDTO? votacion;
+
+    private readonly List<OpcionRol> opcionesRol = new()
+    {
+        new() { Tipo = "PUBLICO", Titulo = "Público", Descripcion = "Puedes recorrer el evento y votar como asistente." },
+        new() { Tipo = "JURADO", Titulo = "Jurado", Descripcion = "Evaluarás proyectos y emitirás tus votaciones." },
+        new() { Tipo = "COMPETIDOR", Titulo = "Competidor", Descripcion = "Participas con un proyecto dentro del evento." },
+        new() { Tipo = "ENCARGADO", Titulo = "Encargado de votación", Descripcion = "Controlas la votación del evento sin asumir el rol de organizador." }
+    };
+
+    private string TituloEvento => string.IsNullOrWhiteSpace(votacion?.Titulo) ? "Evento" : votacion!.Titulo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarEstado();
+    }
+
+    private async Task CargarEstado()
+    {
+        cargando = true;
+        error = null;
+        errorAsignacion = null;
+
+        if (!int.TryParse(EventId, out var idVotacion))
+        {
+            error = "El identificador del evento no es válido.";
+            cargando = false;
+            return;
+        }
+
+        try
+        {
+            votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{idVotacion}");
+            var rol = await Http.GetFromJsonAsync<RolEventoInfo>($"/api/votaciones/{idVotacion}/rol");
+
+            if (!string.IsNullOrWhiteSpace(rol?.Rol))
+            {
+                IrADestino(rol.Rol);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"No pudimos comprobar tu acceso ahora mismo: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task SeleccionarRol(string tipoRol)
+    {
+        errorAsignacion = null;
+        asignando = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"/api/votaciones/{EventId}/rol", new { TipoRol = tipoRol });
+            if (!response.IsSuccessStatusCode)
+            {
+                errorAsignacion = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorAsignacion))
+                    errorAsignacion = "No se pudo asignar el rol en este evento.";
+                return;
+            }
+
+            IrADestino(tipoRol);
+        }
+        catch (Exception ex)
+        {
+            errorAsignacion = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            asignando = false;
+        }
+    }
+
+    private void IrADestino(string rol)
+    {
+        var destino = string.Equals(Dest, "results", StringComparison.OrdinalIgnoreCase)
+            ? "event-results"
+            : "event-voting";
+
+        NavigationManager.NavigateTo($"/{destino}/{EventId}?rol={Uri.EscapeDataString(rol)}");
+    }
+
+    private sealed class RolEventoInfo
+    {
+        public int IdEvento { get; set; }
+        public string? Rol { get; set; }
+    }
+
+    private sealed class OpcionRol
+    {
+        public string Tipo { get; set; } = string.Empty;
+        public string Titulo { get; set; } = string.Empty;
+        public string Descripcion { get; set; } = string.Empty;
+    }
+}
