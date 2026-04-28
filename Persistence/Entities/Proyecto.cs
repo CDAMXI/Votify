@@ -15,7 +15,7 @@ namespace Votify.Entities
         public string ParticipantesAdicionales { get; set; } = "";
         public int EventoId { get; set; }
         public int CompetidorId { get; set; }
-
+        public string? FotoProyecto { get; set; }
         [NotMapped]
         public ICollection<string> Materiales { get; set; }
 

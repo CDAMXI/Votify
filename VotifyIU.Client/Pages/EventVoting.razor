@@ -2,9 +2,11 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @using System.Linq
+@using Microsoft.AspNetCore.Components.Forms
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IJSRuntime JS
 <style>
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -40,6 +42,8 @@
                 </a>
             </div>
         }
+
+    
         else if (Rol == "JURADO")
         {
             @if (yaVotadoEnEvento)
@@ -75,7 +79,10 @@
                     <div class="mb-6">
                         <div class="flex items-start justify-between mb-4">
                             <div>
-                                <h2 class="text-3xl font-bold text-[#1A281B] mb-2">@project.Name</h2>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-3xl font-bold text-[#1A281B] mb-2">@project.Name</h2>
+                                    <button @onclick="() => ViewProjectMedia(project)" class="px-3 py-1 bg-[#6C8A6C] text-white rounded-md text-sm">Ver contenido</button>
+                                </div>
                                 <p class="text-[#6C8A6C] mb-1">Equipo: @project.Team</p>
                                 <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-sm">
                                     @project.Category
@@ -211,7 +218,10 @@
                             var idx = i;
                             <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
                                 <div>
-                                    <p class="font-bold text-[#1A281B]">@proj.Name</p>
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-bold text-[#1A281B]">@proj.Name</p>
+                                        <button @onclick="() => ViewProjectMedia(proj)" class="px-2 py-1 bg-[#6C8A6C] text-white rounded text-xs">Ver</button>
+                                    </div>
                                     <p class="text-sm text-[#6C8A6C]">@proj.Team · @proj.Category</p>
                                     <p class="text-sm text-[#4C6B4F] mt-1">@proj.Description</p>
                                 </div>
@@ -243,7 +253,10 @@
                             class="mb-4 text-[#6C8A6C] hover:underline flex items-center gap-1">
                         ← Volver a la lista
                     </button>
-                    <h2 class="text-3xl font-bold text-[#1A281B] mb-2">@proj.Name</h2>
+                    <div class="flex items-center gap-3 mb-2">
+                        <h2 class="text-3xl font-bold text-[#1A281B]">@proj.Name</h2>
+                        <button @onclick="() => ViewProjectMedia(proj)" class="px-3 py-1 bg-[#6C8A6C] text-white rounded-md text-sm">Ver contenido</button>
+                    </div>
                     <p class="text-[#6C8A6C] mb-1">Equipo: @proj.Team</p>
                     <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-sm mb-4">@proj.Category</span>
                     <p class="text-[#4C6B4F] mb-6">@proj.Description</p>
@@ -318,11 +331,46 @@
                 <p class="text-[#6C8A6C] mb-6">Los jurados están revisando tu trabajo ahora mismo. Los resultados estarán disponibles al terminar la votación.</p>
                 <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left">
                     <h3 class="text-lg font-bold text-[#1A281B] mb-3">Tu proyecto</h3>
-                    @{var myProj = mockProjects[0];}
-                    <p class="text-xl font-bold text-[#4C6B4F]">@myProj.Name</p>
-                    <p class="text-sm text-[#6C8A6C]">Equipo: @myProj.Team</p>
-                    <span class="inline-block mt-2 px-3 py-1 bg-white text-[#4C6B4F] rounded-full text-xs font-bold">@myProj.Category</span>
-                    <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@myProj.Description</p>
+                    @{var myProj = mockProjects.Count > 0 ? mockProjects[0] : null;}
+                    @if (myProj == null)
+                    {
+                        <p class="text-sm text-[#A6AAA9]">No hay proyecto asociado.</p>
+                    }
+                    else
+                    {
+                        <p class="text-xl font-bold text-[#4C6B4F]">@myProj.Name</p>
+                        <p class="text-sm text-[#6C8A6C]">Equipo: @myProj.Team</p>
+                        <span class="inline-block mt-2 px-3 py-1 bg-white text-[#4C6B4F] rounded-full text-xs font-bold">@myProj.Category</span>
+                        <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@myProj.Description</p>
+
+                        <div class="mt-4">
+                            <h4 class="text-sm font-bold text-[#1A281B] mb-2">Contenido del proyecto</h4>
+                            @if (cargandoImagen)
+                            {
+                                <p class="text-sm text-[#6C8A6C]">Cargando...</p>
+                            }
+                            else if (!hasProjectImage)
+                            {
+                                <div class="p-4 bg-white rounded-lg border border-[#B5D6AC] text-sm text-[#6C8A6C]">No hay contenido subido.</div>
+                            }
+                            else
+                            {
+                                <div class="p-4 bg-white rounded-lg border border-[#B5D6AC]">
+                                    <img src="@imagenDataUrl" alt="Contenido" class="max-h-48 mx-auto" />
+                                </div>
+                            }
+
+                            <div class="mt-3 flex gap-2 items-center">
+                            <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold cursor-pointer">
+                                    Subir Contenido
+                                    <InputFile OnChange="OnInputFileChange" accept="image/*" style="display:none" />
+                                </label>
+                                <div class="flex-1"></div>
+                                <button @onclick="() => MostrarImagenModal()" class="px-4 py-2 bg-[#6C8A6C] text-white rounded-xl font-bold">Visualizar Contenido</button>
+                                <button @onclick="() => confirmEliminarImagen = true" class="px-4 py-2 bg-red-500 text-white rounded-xl font-bold">Eliminar Contenido</button>
+                            </div>
+                        </div>
+                    }
                 </div>
                 <div class="flex items-center justify-center gap-3 text-[#6C8A6C]">
                     <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0s"></div>
@@ -621,6 +669,49 @@
                 </div>
             </div>
         }
+        @if (mostrandoImagenModal)
+        {
+            <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-xl p-6 max-w-xl w-full">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold">Contenido del proyecto</h3>
+                        <button @onclick="CerrarImagenModal" class="text-gray-500">✕</button>
+                    </div>
+                    @if (cargandoImagen)
+                    {
+                        <p class="text-sm text-[#6C8A6C]">Cargando...</p>
+                    }
+                    else if (!hasProjectImage)
+                    {
+                        <div class="p-4 bg-[#F8FAF7] rounded-lg text-sm text-[#6C8A6C]">No hay contenido para este proyecto.</div>
+                    }
+                    else
+                    {
+                        <img src="@imagenDataUrl" alt="Contenido" class="w-full h-auto rounded" />
+                    }
+                    @if (!string.IsNullOrEmpty(errorImagen))
+                    {
+                        <p class="text-sm text-red-500 mt-3">@errorImagen</p>
+                    }
+                    <div class="mt-4 flex justify-end gap-2">
+                        @if (hasProjectImage)
+                        {
+                            @if (confirmEliminarImagen)
+                            {
+                                <button @onclick="ConfirmarEliminarImagenAsync" class="px-4 py-2 bg-red-500 text-white rounded">Sí, eliminar</button>
+                                <button @onclick="() => confirmEliminarImagen = false" class="px-4 py-2 border rounded">Cancelar</button>
+                            }
+                            else
+                            {
+                                <button @onclick="() => confirmEliminarImagen = true" class="px-4 py-2 bg-red-500 text-white rounded">Eliminar</button>
+                            }
+                        }
+                        <button @onclick="CerrarImagenModal" class="px-4 py-2 border rounded">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        }
+
         @if (errorVoto != null)
         {
             <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 max-w-md text-center text-sm font-medium">
@@ -762,6 +853,169 @@
 
         // 3. Comprobar si ya alcanzó el límite de votos (para JURADO)
         yaVotadoEnEvento = votesSubmitted >= 3;
+
+        // Si es competidor, intentar cargar la imagen asociada a su proyecto
+        if (Rol == "COMPETIDOR")
+        {
+            await TryLoadMyProjectImage();
+        }
+    }
+
+    // Imagen del proyecto (competidor)
+    private bool hasProjectImage = false;
+    private string? imagenDataUrl = null;
+    private bool cargandoImagen = false;
+    private bool confirmEliminarImagen = false;
+    private bool mostrandoImagenModal = false;
+    private string? errorImagen = null;
+    private readonly long maxImageSize = 5 * 1024 * 1024; // 5 MB
+
+    private async Task TryLoadMyProjectImage()
+    {
+        var proj = mockProjects.Count > 0 ? mockProjects[0] : null;
+        if (proj == null || proj.DbId == 0) return;
+        cargandoImagen = true;
+        try
+        {
+            var resp = await Http.GetAsync($"/api/proyectos/{EventId}/{proj.DbId}/imagen");
+            if (resp.IsSuccessStatusCode)
+            {
+                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                if (bytes != null && bytes.Length > 0)
+                {
+                    imagenDataUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                    hasProjectImage = true;
+                }
+                else
+                {
+                    hasProjectImage = false;
+                    imagenDataUrl = null;
+                }
+            }
+            else
+            {
+                hasProjectImage = false;
+                imagenDataUrl = null;
+            }
+        }
+        catch { hasProjectImage = false; imagenDataUrl = null; }
+        finally { cargandoImagen = false; StateHasChanged(); }
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        errorImagen = string.Empty;
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            var proj = mockProjects.Count > 0 ? mockProjects[0] : null;
+            if (proj == null || proj.DbId == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "No hay proyecto válido para subir la imagen.");
+                return;
+            }
+
+            if (hasProjectImage)
+            {
+                var confirmar = await JS.InvokeAsync<bool>("confirm", "Ya existe una imagen. ¿Deseas reemplazarla?");
+                if (!confirmar) return;
+            }
+
+            var resized = await file.RequestImageFileAsync("image/jpeg", 300, 300);
+            var buffer = new byte[resized.Size];
+            await resized.OpenReadStream(maxAllowedSize: 1024 * 1024).ReadAsync(buffer);
+            var base64 = $"data:image/jpeg;base64,{Convert.ToBase64String(buffer)}";
+
+            var res = await Http.PutAsJsonAsync($"/api/proyectos/{EventId}/{proj.DbId}/foto", new { Base64Foto = base64 });
+            if (res.IsSuccessStatusCode)
+            {
+                imagenDataUrl = base64;
+                hasProjectImage = true;
+                errorImagen = null;
+            }
+            else
+            {
+                errorImagen = await res.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorImagen = $"Error al procesar la imagen: {ex.Message}";
+        }
+        finally { StateHasChanged(); }
+    }
+
+    private async Task UploadImageAsync(Project proj, IBrowserFile file)
+    {
+        cargandoImagen = true;
+        errorImagen = null;
+        try
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(maxImageSize).CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            using var content = new MultipartFormDataContent();
+            var streamContent = new ByteArrayContent(bytes);
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(streamContent, "file", file.Name);
+
+            var resp = await Http.PostAsync($"/api/proyectos/{EventId}/{proj.DbId}/imagen", content);
+            if (resp.IsSuccessStatusCode)
+            {
+                imagenDataUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                hasProjectImage = true;
+            }
+            else
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                errorImagen = $"Error al subir: {msg}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorImagen = $"Error de conexión: {ex.Message}";
+        }
+        finally { cargandoImagen = false; StateHasChanged(); }
+    }
+
+    private void MostrarImagenModal()
+    {
+        mostrandoImagenModal = true;
+    }
+
+    private void CerrarImagenModal()
+    {
+        mostrandoImagenModal = false;
+        confirmEliminarImagen = false;
+    }
+
+    private async Task ConfirmarEliminarImagenAsync()
+    {
+        var proj = mockProjects.Count > 0 ? mockProjects[0] : null;
+        if (proj == null || proj.DbId == 0) return;
+        confirmEliminarImagen = false;
+        cargandoImagen = true;
+        try
+        {
+            var resp = await Http.PutAsJsonAsync($"/api/proyectos/{EventId}/{proj.DbId}/foto", new { Base64Foto = "" });
+            if (resp.IsSuccessStatusCode)
+            {
+                hasProjectImage = false;
+                imagenDataUrl = null;
+            }
+            else
+            {
+                errorImagen = await resp.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorImagen = $"Error de conexión: {ex.Message}";
+        }
+        finally { cargandoImagen = false; StateHasChanged(); }
     }
     private async Task TogglePausa()
     {
@@ -1182,6 +1436,57 @@
         }
     }
 
+    private async Task ViewProjectMedia(Project proj)
+    {
+        // Reset state
+        imagenDataUrl = null;
+        hasProjectImage = false;
+        errorImagen = null;
+        cargandoImagen = true;
+        mostrandoImagenModal = false;
+        StateHasChanged();
+
+        try
+        {
+            var resp = await Http.GetAsync($"/api/proyectos/{EventId}/{proj.DbId}/imagen");
+            if (resp.IsSuccessStatusCode)
+            {
+                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                if (bytes != null && bytes.Length > 0)
+                {
+                    imagenDataUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                    hasProjectImage = true;
+                }
+                else
+                {
+                    hasProjectImage = false;
+                    errorImagen = "El participante no ha subido ningún contenido.";
+                }
+            }
+            else if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                hasProjectImage = false;
+                errorImagen = "El participante no ha subido ningún contenido.";
+            }
+            else
+            {
+                hasProjectImage = false;
+                errorImagen = await resp.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            hasProjectImage = false;
+            errorImagen = $"Error al obtener contenido: {ex.Message}";
+        }
+        finally
+        {
+            cargandoImagen = false;
+            mostrandoImagenModal = true;
+            StateHasChanged();
+        }
+    }
+
     public class Project {
         public string Id { get; set; }
         public int DbId { get; set; }
@@ -1189,6 +1494,10 @@
         public string Team { get; set; }
         public string Category { get; set; }
         public string Description { get; set; }
+        // URL o data-url de la imagen del proyecto (si se dispone)
+        public string? ImageUrl { get; set; }
+        // Indica si el proyecto tiene imagen subida
+        public bool HasImage { get; set; }
     }
     public class Criterion { 
         public string Id { get; set; }
