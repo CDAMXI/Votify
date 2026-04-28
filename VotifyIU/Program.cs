@@ -239,7 +239,7 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     try
     {
         service.RestoreSession(username);
-        int idVotacion = service.CrearVotacion(req.Titulo, req.Descripcion, req.FechaFin, true);
+        int idVotacion = service.CrearVotacion(req.Titulo, req.Descripcion, req.FechaFin, true, req.PermiteCompetidoresVotar);
         return Results.Ok(idVotacion);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }

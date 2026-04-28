@@ -14,5 +14,13 @@ namespace Votify.shared
         public DateTime FechaFin { get; set; }
         public bool Estado { get; set; }
         public string? RolActual { get; set; }
+
+        // Campos de configuración del evento
+        public bool PermiteCompetidoresVotar { get; set; } = false;
+        public string CodigoEncargado { get; set; } = string.Empty;
+        public string CodigoJurado { get; set; } = string.Empty;
+        public int PesoJurado { get; set; } = 70;
+        public int PesoPublico { get; set; } = 30;
+        public List<CategoriaBaremoDTO> Categorias { get; set; } = new();
     }
 }

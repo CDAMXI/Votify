@@ -31,7 +31,13 @@
         </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (avisoSinDatos != null && (Rol == "JURADO" || Rol == "PUBLICO"))
+        @if (cargando)
+        {
+            <div class="flex justify-center items-center py-24">
+                <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }
+        else if (avisoSinDatos != null && (Rol == "JURADO" || Rol == "PUBLICO"))
         {
             <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
                 <div class="text-5xl mb-4">📋</div>
@@ -347,7 +353,9 @@
                             <h4 class="text-sm font-bold text-[#1A281B] mb-2">Contenido del proyecto</h4>
                             @if (cargandoImagen)
                             {
-                                <p class="text-sm text-[#6C8A6C]">Cargando...</p>
+                                <div class="flex justify-center items-center py-6">
+                                    <div class="w-8 h-8 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                                </div>
                             }
                             else if (!hasProjectImage)
                             {
@@ -679,7 +687,9 @@
                     </div>
                     @if (cargandoImagen)
                     {
-                        <p class="text-sm text-[#6C8A6C]">Cargando...</p>
+                        <div class="flex justify-center items-center py-8">
+                            <div class="w-8 h-8 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
                     }
                     else if (!hasProjectImage)
                     {
@@ -748,6 +758,7 @@
         new Criterion { Id = "3", Name = "Impacto", Weight = 25, Description = "Valor generado para usuarios o sociedad." },
         new Criterion { Id = "4", Name = "Presentación", Weight = 25, Description = "Claridad y calidad de la exposición." }
     };
+    private bool cargando = true;
     private bool yaVotadoEnEvento = false;
     private string? avisoSinDatos = null;
 
@@ -865,6 +876,8 @@
         {
             await TryLoadMyProjectImage();
         }
+
+        cargando = false;
     }
 
     // Imagen del proyecto (competidor)

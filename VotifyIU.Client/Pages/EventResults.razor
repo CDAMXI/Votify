@@ -40,7 +40,9 @@
         {
             @if (monitor == null)
             {
-                <div class="text-center py-12 text-[#6C8A6C]">Cargando datos del monitor...</div>
+                <div class="flex justify-center items-center py-24">
+                    <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                </div>
             }
             else
             {
@@ -177,7 +179,9 @@
         {
             @if (cargandoResultados)
             {
-                <div class="text-center py-12 text-[#6C8A6C]">Cargando resultados...</div>
+                <div class="flex justify-center items-center py-24">
+                    <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                </div>
             }
             else if (!resultadosReales.Any())
             {
