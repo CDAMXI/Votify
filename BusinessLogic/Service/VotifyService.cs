@@ -178,7 +178,7 @@ namespace Votify.BusinessLogic.Service
 
         public void Commit() => dal.Commit();
 
-        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa)
+        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false)
         {
             RequireUsuarioLogueado();
 
@@ -196,7 +196,7 @@ namespace Votify.BusinessLogic.Service
                 Descripcion = descripcionNormalizada,
                 FechaIni = fechaInicio,
                 FechaFin = fechaFin,
-                PermiteCompetidoresVotar = false,
+                PermiteCompetidoresVotar = permiteCompetidoresVotar,
                 organizador = usuario!,
                 OrganizadorId = usuario!.Id
             };
