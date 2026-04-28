@@ -711,8 +711,14 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
 
     if (!response.IsSuccessStatusCode)
     {
-        var errorBody = await response.Content.ReadAsStringAsync();
-        return Results.Problem($"Error Gemini {(int)response.StatusCode}: {errorBody}");
+        string userMessage = (int)response.StatusCode switch
+        {
+            503 => "El asistente está muy ocupado ahora mismo. Espera unos segundos e inténtalo de nuevo.",
+            429 => "Se han enviado demasiadas solicitudes. Espera un momento antes de continuar.",
+            401 or 403 => "Error de autenticación con el servicio de IA.",
+            _ => "El asistente no está disponible en este momento. Inténtalo más tarde."
+        };
+        return Results.Problem(userMessage, statusCode: (int)response.StatusCode);
     }
 
     using var json = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());

@@ -811,9 +811,9 @@
                 avisoSinDatos = "Esta votación no tiene proyectos registrados en la base de datos. El organizador debe añadirlos antes de que se pueda votar.";
             }
         }
-        catch (Exception ex)
+        catch
         {
-            avisoSinDatos = $"No se pudieron cargar los proyectos: {ex.Message}";
+            avisoSinDatos = "No se pudieron cargar los proyectos. Inténtalo de nuevo más tarde.";
         }
 
         // 1b. Si es organizador, cargar proyectos y datos del evento

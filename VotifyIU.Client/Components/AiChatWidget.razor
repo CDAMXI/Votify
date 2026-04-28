@@ -153,8 +153,14 @@
             }
             else
             {
-                var err = await response.Content.ReadAsStringAsync();
-                messages.Add(new ChatMessage("model", $"Error: {err}"));
+                string fallback = "El asistente no está disponible en este momento. Inténtalo de nuevo.";
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                    fallback = doc.RootElement.GetProperty("detail").GetString() ?? fallback;
+                }
+                catch { }
+                messages.Add(new ChatMessage("model", fallback));
             }
         }
         catch
