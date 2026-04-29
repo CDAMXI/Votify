@@ -807,9 +807,9 @@
             return;
         }
 
-        // 1. Cargar proyectos reales
         try
         {
+            // 1. Cargar proyectos reales
             var reales = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
             if (reales != null && reales.Count > 0)
             {
@@ -822,32 +822,17 @@
                     Category = "",
                     Description = p.Descripcion
                 }).ToList();
+
+                // Si es organizador, sincronizar lista de gestión
+                if (Rol == "ORGANIZADOR")
+                    proyectosOrganizador = reales;
             }
             else
             {
                 avisoSinDatos = "Esta votación no tiene proyectos registrados en la base de datos. El organizador debe añadirlos antes de que se pueda votar.";
             }
-        }
-        catch
-        {
-            avisoSinDatos = "No se pudieron cargar los proyectos. Inténtalo de nuevo más tarde.";
-        }
 
-        // 1b. Si es organizador, cargar proyectos y datos del evento
-        if (Rol == "ORGANIZADOR")
-        {
-            try
-            {
-                var p = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
-                proyectosOrganizador = p ?? new();
-            }
-            catch { }
-
-            }
-
-        // 2. Cargar votos ya emitidos por este usuario en esta votación
-        try
-        {
+            // 2. Cargar votos ya emitidos por este usuario en esta votación
             var votados = await Http.GetFromJsonAsync<List<int>>($"/api/votos/misVotos/{EventId}");
             if (votados != null)
             {
@@ -857,27 +842,30 @@
                     if (proj != null)
                     {
                         votedProjects.Add(proj.Id);
-                        // Para PUBLICO: marcar también por índice
                         int idx = mockProjects.IndexOf(proj);
                         if (idx >= 0) publicosVotados.Add(idx);
                     }
                 }
             }
+
+            votesSubmitted = votedProjects.Count;
+
+            // 3. Comprobar si ya alcanzó el límite de votos (para JURADO)
+            yaVotadoEnEvento = votesSubmitted >= 3;
+
+            // Si es competidor, intentar cargar la imagen asociada a su proyecto
+            if (Rol == "COMPETIDOR")
+                await TryLoadMyProjectImage();
         }
-        catch { /* si falla, el usuario puede re-votar; el servidor rechazará duplicados */ }
-
-        votesSubmitted = votedProjects.Count;
-
-        // 3. Comprobar si ya alcanzó el límite de votos (para JURADO)
-        yaVotadoEnEvento = votesSubmitted >= 3;
-
-        // Si es competidor, intentar cargar la imagen asociada a su proyecto
-        if (Rol == "COMPETIDOR")
+        catch
         {
-            await TryLoadMyProjectImage();
+            if (string.IsNullOrEmpty(avisoSinDatos))
+                avisoSinDatos = "No se pudieron cargar los datos del evento. Inténtalo de nuevo más tarde.";
         }
-
-        cargando = false;
+        finally
+        {
+            cargando = false;
+        }
     }
 
     // Imagen del proyecto (competidor)

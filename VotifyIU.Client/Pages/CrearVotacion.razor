@@ -111,7 +111,7 @@
                                disabled="@isLoading"
                                class="flex-1 h-10 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                         <input type="number" @bind="nuevaCategoriaBaremo"
-                               min="0" max="100" placeholder="Peso %"
+                               min="0" placeholder="Baremo"
                                disabled="@isLoading"
                                class="w-24 h-10 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                         <button type="button" @onclick="AgregarCategoria"
@@ -131,19 +131,16 @@
                             {
                                 <span class="flex items-center gap-1 bg-[#E9EFE1] border border-[#B5D6AC] text-[#1A281B] text-xs font-medium px-3 py-1 rounded-full">
                                     @cat.Nombre
-                                    <span class="text-[#6C8A6C] font-bold">@cat.Peso%</span>
+                                    <span class="text-[#6C8A6C] font-bold">baremo @cat.Peso</span>
                                     <button type="button" @onclick="() => EliminarCategoria(cat)"
                                             class="ml-1 text-[#A6AAA9] hover:text-red-500 font-bold leading-none">×</button>
                                 </span>
                             }
                         </div>
-                        <p class="text-xs @(SumaPesos == 100 ? "text-[#6C8A6C]" : "text-amber-600")">
-                            Total baremos: @SumaPesos% @(SumaPesos == 100 ? "✓" : "(debe sumar 100%)")
-                        </p>
                     }
                     else
                     {
-                        <p class="text-xs text-[#A6AAA9]">Sin categorías todavía. Escribe el nombre, el peso en % y pulsa + o Enter.</p>
+                        <p class="text-xs text-[#A6AAA9]">Sin categorías todavía. Escribe el nombre, el baremo y pulsa + o Enter.</p>
                     }
                 </div>
 
@@ -156,14 +153,14 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="text-sm font-medium text-[#4C6B4F]">Peso voto jurado (%)</label>
-                        <input type="number" @bind="votacionDto.PesoJurado" @bind:event="oninput"
+                        <input type="number" @bind="votacionDto.PesoJurado"
                                min="0" max="100"
                                disabled="@isLoading"
                                class="w-full h-10 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                     </div>
                     <div class="space-y-1">
                         <label class="text-sm font-medium text-[#4C6B4F]">Peso voto público (%)</label>
-                        <input type="number" @bind="votacionDto.PesoPublico" @bind:event="oninput"
+                        <input type="number" @bind="votacionDto.PesoPublico"
                                min="0" max="100"
                                disabled="@isLoading"
                                class="w-full h-10 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
@@ -238,7 +235,6 @@
     private int nuevaCategoriaBaremo = 0;
     private string? errorCategoria = null;
 
-    private int SumaPesos => votacionDto.Categorias.Sum(c => c.Peso);
 
     private void OnDescripcionInput(ChangeEventArgs e)
     {
@@ -294,12 +290,6 @@
         if (votacionDto.PesoJurado + votacionDto.PesoPublico != 100)
         {
             errorMessage = $"Los pesos de jurado y público deben sumar 100% (actualmente {votacionDto.PesoJurado + votacionDto.PesoPublico}%).";
-            return;
-        }
-
-        if (votacionDto.Categorias.Any() && SumaPesos != 100)
-        {
-            errorMessage = $"Los baremos de las categorías deben sumar 100% (actualmente {SumaPesos}%).";
             return;
         }
 

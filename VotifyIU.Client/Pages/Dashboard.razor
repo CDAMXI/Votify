@@ -40,6 +40,22 @@
             </button>
         </div>
 
+        @if (cargando)
+        {
+            <div class="flex justify-center items-center py-24">
+                <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }
+        else if (!mockEvents.Any())
+        {
+            <div class="bg-white rounded-2xl shadow p-10 text-center text-[#6C8A6C]">
+                <p class="text-lg font-medium">No hay eventos disponibles.</p>
+                <p class="text-sm mt-1">Crea uno con el botón de arriba.</p>
+            </div>
+        }
+        else
+        {
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach (var ev in mockEvents)
             {
@@ -118,11 +134,13 @@
                 </div>
             }
         </div>
+        } @* fin else *@
     </main>
 </div>
 
 @code {
     private string? fotoPerfil;
+    private bool cargando = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -152,6 +170,10 @@
             }
         }
         catch { }
+        finally
+        {
+            cargando = false;
+        }
     }
 
     private class PerfilDTO
