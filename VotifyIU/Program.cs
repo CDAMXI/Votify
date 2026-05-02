@@ -2,7 +2,6 @@ using System.Data.Common;
 using Votify.Entities;
 using Votify.shared;
 using VotifyIU.Services;
-using VotifyIU.Client.Pages;
 using VotifyIU.Components;
 using Votify.BusinessLogic.Service;
 using Votify.Persistence;
@@ -33,7 +32,9 @@ builder.Services.AddScoped<VotifyDBContext>(sp =>
         ?? throw new InvalidOperationException("Connection string 'VotifyDbConnection' not found.");
     return new VotifyDBContext(connStr);
 });
-builder.Services.AddScoped<IDAL, EntityFrameworkDAL>();
+
+// Registro del Patrón Repositorio Genérico
+builder.Services.AddScoped(typeof(IDAL<>), typeof(EntityFrameworkDAL<>));
 builder.Services.AddScoped<IVotifyService, VotifyService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
@@ -55,8 +56,7 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(VotifyIU.Client._Imports).Assembly);
+    .AddInteractiveWebAssemblyRenderMode();
 
 // ── Endpoints de autenticación ──────────────────────────────────
 
@@ -140,38 +140,15 @@ app.MapGet("/api/votos/hasVotado/{idEvento}", (int idEvento, IVotifyService serv
     catch (ServiceException) { return Results.Ok(false); }
 });
 
-// Devuelve los IDs de proyectos que el usuario ya votó en esta votación
-app.MapGet("/api/votos/misVotos/{idVotacion}", (int idVotacion, IDAL dal, HttpContext http) =>
+app.MapGet("/api/votos/misVotos/{idVotacion}", (int idVotacion, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Ok(new List<int>());
 
     try
     {
-        var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
-        if (usuario == null) return Results.Ok(new List<int>());
-
-        var votacion = dal.GetById<Votacion>(idVotacion);
-        if (votacion?.evento == null) return Results.Ok(new List<int>());
-
-        int idEvento = votacion.evento.IdEvento;
-        int uid = usuario.Id;
-
-        // Buscar el rol consultando cada subtype por separado (evita JOIN TPT)
-        int rolId =
-            dal.GetWhere<Jurado>(r => r.UsuarioId == uid && r.EventoId == idEvento).FirstOrDefault()?.Id ??
-            dal.GetWhere<Publico>(r => r.UsuarioId == uid && r.EventoId == idEvento).FirstOrDefault()?.Id ??
-            dal.GetWhere<Competidor>(r => r.UsuarioId == uid && r.EventoId == idEvento).FirstOrDefault()?.Id ??
-            0;
-
-        if (rolId == 0) return Results.Ok(new List<int>());
-
-        var proyectosVotados = dal.GetWhere<Voto>(v =>
-                v.VotanteId == rolId && v.VotacionId == idVotacion)
-            .Select(v => v.ProyectoId)
-            .ToList();
-
-        return Results.Ok(proyectosVotados);
+        service.RestoreSession(username);
+        return Results.Ok(service.GetMisVotos(idVotacion));
     }
     catch
     {
@@ -232,6 +209,9 @@ app.MapPut("/api/perfil/foto", (UpdateFotoRequest req, IVotifyService service, H
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
+
+// ── Endpoints de votaciones ─────────────────────────────────────
+
 app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
@@ -245,16 +225,16 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
-app.MapGet("/api/votaciones", (IDAL dal, HttpContext http) =>
+app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
     try
     {
-        var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
-        if (usuario == null) return Results.Unauthorized();
+        service.RestoreSession(username);
+        var usuarioActual = service.GetUsuarioActual();
 
-        var votaciones = dal.GetAll<Votacion>().ToList().OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
+        var votaciones = service.GetAllVotaciones().OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
         {
             Id = v.Id,
             IdEvento = v.EventoId,
@@ -263,7 +243,7 @@ app.MapGet("/api/votaciones", (IDAL dal, HttpContext http) =>
             FechaIni = v.FechaIni,
             FechaFin = v.FechaFin,
             Estado = v.Estado,
-            RolActual = ObtenerTipoRolUsuarioEnEvento(dal, usuario.Id, v.EventoId)
+            RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
         }).ToList();
 
         return Results.Ok(votaciones);
@@ -271,7 +251,7 @@ app.MapGet("/api/votaciones", (IDAL dal, HttpContext http) =>
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
-app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, IDAL dal, HttpContext http) =>
+app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
@@ -279,7 +259,7 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, IDAL dal, Ht
     {
         service.RestoreSession(username);
         var votacion = service.GetVotacion(id);
-        var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+        var usuarioActual = service.GetUsuarioActual();
         return Results.Ok(new VotacionDTO
         {
             Id = votacion.Id,
@@ -289,28 +269,27 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, IDAL dal, Ht
             FechaIni = votacion.FechaIni,
             FechaFin = votacion.FechaFin,
             Estado = votacion.Estado,
-            RolActual = usuario == null ? null : ObtenerTipoRolUsuarioEnEvento(dal, usuario.Id, votacion.EventoId)
+            RolActual = usuarioActual == null ? null : service.GetTipoRolDeUsuario(usuarioActual.Id, votacion.EventoId)
         });
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
-app.MapGet("/api/votaciones/{id}/rol", (int id, IDAL dal, HttpContext http) =>
+app.MapGet("/api/votaciones/{id}/rol", (int id, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
-
-    var usuario = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
-    if (usuario == null) return Results.Unauthorized();
-
-    var votacion = dal.GetById<Votacion>(id);
-    if (votacion == null) return Results.NotFound("La votación no existe");
-
-    var rol = ObtenerRolUsuarioEnEvento(dal, usuario.Id, votacion.EventoId);
-    return Results.Ok(new RolEventoResponse(votacion.EventoId, rol?.TipoRol));
+    try
+    {
+        service.RestoreSession(username);
+        var votacion = service.GetVotacion(id);
+        var rol = service.GetTipoRolEnEvento(votacion.EventoId);
+        return Results.Ok(new RolEventoResponse(votacion.EventoId, rol));
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
-app.MapPost("/api/votaciones/{id}/rol", (int id, AsignarRolEventoRequest req, IVotifyService service, IDAL dal, HttpContext http) =>
+app.MapPost("/api/votaciones/{id}/rol", (int id, AsignarRolEventoRequest req, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
@@ -318,10 +297,7 @@ app.MapPost("/api/votaciones/{id}/rol", (int id, AsignarRolEventoRequest req, IV
     try
     {
         service.RestoreSession(username);
-
-        var votacion = dal.GetById<Votacion>(id);
-        if (votacion == null) return Results.NotFound("La votación no existe");
-
+        var votacion = service.GetVotacion(id);
         service.AsignarRolEnEvento(req.TipoRol, votacion.EventoId);
         return Results.Ok(new RolEventoResponse(votacion.EventoId, req.TipoRol.Trim().ToUpperInvariant()));
     }
@@ -369,6 +345,7 @@ app.MapPost("/api/votaciones/{id}/cerrar", (int id, IVotifyService service, Http
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
+
 // ── Endpoint guardar voto ────────────────────────────────────────
 
 app.MapPost("/api/votos/guardar", (GuardarVotoRequest req, IVotifyService service, HttpContext http) =>
@@ -387,174 +364,78 @@ app.MapPost("/api/votos/guardar", (GuardarVotoRequest req, IVotifyService servic
 
 // ── Endpoint de proyectos ───────────────────────────────────────
 
-app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest req, IDAL dal, HttpContext http) =>
+app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest req, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
 
     try
     {
-        // 1. Cargar votación y su evento
-        var votacion = dal.GetById<Votacion>(idVotacion);
-        if (votacion == null) return Results.NotFound("Votación no encontrada");
-
-        var evento = votacion.evento;
-        if (evento == null) return Results.NotFound("Evento no encontrado");
-
-        // 2. Verificar que quien llama es organizador del evento
-        var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
-        if (usuarioAuth == null) return Results.Unauthorized();
-
-        if (!EsOrganizadorEnEvento(dal, usuarioAuth.Id, evento.IdEvento))
-            return Results.Forbid();
-
-        // 3. Buscar el usuario competidor
-        var competidorUser = dal.GetWhere<Usuario>(u => u.Username == req.UsernameCompetidor).FirstOrDefault();
-        if (competidorUser == null)
-            return Results.BadRequest($"No existe ningún usuario con el nombre '{req.UsernameCompetidor}'");
-
-        // 4. Buscar o crear el rol Competidor para ese usuario en este evento
-        var competidorRol = dal.GetWhere<Competidor>(c =>
-            c.UsuarioId == competidorUser.Id && c.EventoId == evento.IdEvento).FirstOrDefault();
-
-        if (competidorRol == null)
-        {
-            competidorRol = new Competidor(DateTime.Now, 0)
-            {
-                usuario   = competidorUser,
-                evento    = evento,
-                UsuarioId = competidorUser.Id,
-                EventoId  = evento.IdEvento
-            };
-            dal.Insert<Competidor>(competidorRol);
-            dal.Commit(); // commit para que EF asigne el Id
-        }
-
-        // 5. Crear el proyecto con FKs escalares explícitas (evita shadow FK bug de EF6)
-        var proyecto = new Proyecto
-        {
-            Nombre                  = req.Nombre.Trim(),
-            Descripcion             = req.Descripcion?.Trim() ?? "",
-            competidor              = competidorRol,
-            evento                  = evento,
-            CompetidorId            = competidorRol.Id,
-            EventoId                = evento.IdEvento,
-            ParticipantesAdicionales = ""
-        };
-        dal.Insert<Proyecto>(proyecto);
-        dal.Commit();
+        service.RestoreSession(username);
+        var proyecto = service.CrearProyecto(idVotacion, req.Nombre, req.Descripcion, req.UsernameCompetidor);
 
         return Results.Ok(new ProyectoResultadoDTO
         {
-            Id          = proyecto.Id,
-            Nombre      = proyecto.Nombre,
+            Id = proyecto.Id,
+            Nombre = proyecto.Nombre,
             Descripcion = proyecto.Descripcion,
-            Competidor  = competidorUser.Username,
-            Media       = 0,
-            NumVotos    = 0,
-            Rank        = 0
+            Competidor = proyecto.competidor?.usuario?.Username ?? req.UsernameCompetidor,
+            Media = 0,
+            NumVotos = 0,
+            Rank = 0
         });
     }
-    catch (Exception ex)
-    {
-        return Results.Problem(ex.Message);
-    }
-});
-
-app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, ModificarProyectoRequest req, IDAL dal, HttpContext http) =>
-{
-    string? username = ObtenerUsernameAutenticado(http);
-    if (username == null) return Results.Unauthorized();
-    try
-    {
-        var proyecto = dal.GetById<Proyecto>(idProyecto);
-        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
-
-        var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
-        if (usuarioAuth == null) return Results.Unauthorized();
-
-        var evento = proyecto.evento;
-        if (evento == null) return Results.NotFound("Evento no encontrado");
-
-        if (!EsOrganizadorEnEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
-
-        proyecto.Nombre = req.Nombre.Trim();
-        proyecto.Descripcion = req.Descripcion?.Trim() ?? string.Empty;
-
-        // Guardar participantes adicionales (excluyendo el competidor líder para evitar duplicados)
-        if (req.ParticipantesAdicionales != null)
-        {
-            string leadUsername = proyecto.competidor?.usuario?.Username ?? "";
-            var adicionales = req.ParticipantesAdicionales
-                .Select(u => u.Trim())
-                .Where(u => !string.IsNullOrEmpty(u) && u != leadUsername)
-                .Distinct()
-                .ToList();
-            proyecto.ParticipantesAdicionales = string.Join(",", adicionales);
-        }
-
-        dal.Commit();
-
-        return Results.Ok();
-    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
-
-app.MapDelete("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, IDAL dal, HttpContext http) =>
+app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, ModificarProyectoRequest req, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
     try
     {
-        var proyecto = dal.GetById<Proyecto>(idProyecto);
-        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
-
-        var usuarioAuth = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
-        if (usuarioAuth == null) return Results.Unauthorized();
-
-        var evento = proyecto.evento;
-        if (evento == null) return Results.NotFound("Evento no encontrado");
-
-        if (!EsOrganizadorEnEvento(dal, usuarioAuth.Id, evento.IdEvento)) return Results.Forbid();
-
-        // Eliminar votos del proyecto (por si el cascade de BD no es suficiente con EF)
-        var votos = dal.GetWhere<Voto>(v => v.ProyectoId == idProyecto).ToList();
-        foreach (var voto in votos) dal.Delete<Voto>(voto);
-
-        dal.Delete<Proyecto>(proyecto);
-        dal.Commit();
-
+        service.RestoreSession(username);
+        service.ModificarProyecto(idProyecto, req.Nombre, req.Descripcion, req.ParticipantesAdicionales);
         return Results.Ok();
     }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+app.MapDelete("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.EliminarProyecto(idProyecto);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
 // ── Endpoint de resultados reales ───────────────────────────────
 
-app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL dal, HttpContext http) =>
+app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
 
     try
     {
-        // Cargar votación y su evento (lazy loading de 2 tablas: seguro)
-        var votacion = dal.GetById<Votacion>(idVotacion);
+        var votacion = votacionRepo.GetById(idVotacion);
         if (votacion == null) return Results.NotFound("Votación no encontrada");
 
         var evento = votacion.evento;
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
-        // Cargar proyectos del evento (lazy loading desde evento)
         var proyectos = evento.proyectos?.ToList() ?? new List<Proyecto>();
+        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
+        var votosPorProyecto = votos.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
 
-        // Cargar votos de esta votación en memoria (consulta simple sin JOINs)
-        var votos = dal.GetWhere<Voto>(v => v.VotacionId == idVotacion).ToList();
-        var votosPorProyecto = votos.GroupBy(v => v.ProyectoId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Construir resultados
         var resultados = proyectos.Select(p =>
         {
             var votosProyecto = votosPorProyecto.TryGetValue(p.Id, out var vp) ? vp : new();
@@ -587,46 +468,36 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL dal, HttpContex
 
 // ── Endpoint de monitoreo ───────────────────────────────────────
 
-app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL dal, HttpContext http) =>
+app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, IDAL<Rol> rolRepo, IDAL<Usuario> usuarioRepo, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
 
     try
     {
-        // 1. Votos de esta votación (consulta simple por FK, sin JOINs problemáticos)
-        var votos = dal.GetWhere<Voto>(v => v.VotacionId == idVotacion).ToList();
-
-        // 2. IDs únicos de votantes y proyectos
+        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
         var votanteIds = votos.Select(v => v.VotanteId).Distinct().ToHashSet();
 
-        // 3. Cargar Roles y Usuarios por separado en memoria para evitar JOIN de 3 tablas
-        var rolesVotantes = dal.GetAll<Rol>().ToList()
-            .Where(r => votanteIds.Contains(r.Id)).ToList();
-
+        var rolesVotantes = rolRepo.GetAll().ToList().Where(r => votanteIds.Contains(r.Id)).ToList();
         var userIds = rolesVotantes.Select(r => r.UsuarioId).Distinct().ToHashSet();
-        var usuarios = dal.GetAll<Usuario>().ToList()
-            .Where(u => userIds.Contains(u.Id)).ToList();
+        var usuarios = usuarioRepo.GetAll().ToList().Where(u => userIds.Contains(u.Id)).ToList();
 
         var usernamePorRolId = rolesVotantes.ToDictionary(
             r => r.Id,
             r => usuarios.FirstOrDefault(u => u.Id == r.UsuarioId)?.Username ?? $"Votante #{r.Id}"
         );
 
-        // 4. Cargar Jurados y Públicos de la votación para quién no ha votado
-        var votacion = dal.GetById<Votacion>(idVotacion);
-
+        var votacion = votacionRepo.GetById(idVotacion);
         var todosVotantes = new List<VotanteEstadoDTO>();
         try
         {
             var jurados = votacion?.jurados?.ToList() ?? new();
             var publicos = votacion?.publicos?.ToList() ?? new();
 
-            // Cargar usernames de jurados/públicos
             var allRolIds = jurados.Select(j => j.Id).Concat(publicos.Select(p => p.Id)).ToHashSet();
-            var allRoles = dal.GetAll<Rol>().ToList().Where(r => allRolIds.Contains(r.Id)).ToList();
+            var allRoles = rolRepo.GetAll().ToList().Where(r => allRolIds.Contains(r.Id)).ToList();
             var allUserIds = allRoles.Select(r => r.UsuarioId).Distinct().ToHashSet();
-            var allUsers = dal.GetAll<Usuario>().ToList().Where(u => allUserIds.Contains(u.Id)).ToList();
+            var allUsers = usuarioRepo.GetAll().ToList().Where(u => allUserIds.Contains(u.Id)).ToList();
             var nameMap = allRoles.ToDictionary(r => r.Id,
                 r => allUsers.FirstOrDefault(u => u.Id == r.UsuarioId)?.Username ?? $"#{r.Id}");
 
@@ -646,9 +517,8 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL dal, HttpContext h
                     HaVotado = votanteIds.Contains(p.Id)
                 });
         }
-        catch { /* Si falla la carga relacional, continuamos sin la lista de votantes */ }
+        catch { /* Ignorado por seguridad de la relación */ }
 
-        // 5. Stats por proyecto (lazy loading proyecto.Nombre por lotes)
         var proyectoStats = votos
             .GroupBy(v => v.ProyectoId)
             .Select(g => new ProyectoMonitorDTO
@@ -660,13 +530,11 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL dal, HttpContext h
             .OrderByDescending(p => p.Media)
             .ToList();
 
-        // 6. Historial cronológico
         var historial = votos
             .OrderByDescending(v => v.Fecha)
             .Select(v => new VotoHistorialDTO
             {
-                Votante = usernamePorRolId.TryGetValue(v.VotanteId, out var name)
-                    ? name : $"Votante #{v.VotanteId}",
+                Votante = usernamePorRolId.TryGetValue(v.VotanteId, out var name) ? name : $"Votante #{v.VotanteId}",
                 Proyecto = v.proyecto?.Nombre ?? $"Proyecto #{v.ProyectoId}",
                 Valor = v.Valor,
                 Comentario = string.IsNullOrWhiteSpace(v.Comentario) ? null : v.Comentario,
@@ -701,7 +569,6 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
 
     var geminiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={apiKey}";
 
-    // Contexto de eventos del usuario (si está autenticado)
     var eventosContexto = "";
     var username = ObtenerUsernameAutenticado(http);
     if (username != null)
@@ -772,26 +639,10 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
 
 app.Run();
 
-// ── Helpers ─────────────────────────────────────────────────────
+// ── Helpers de Sesión ───────────────────────────────────────────
 
 static string? ObtenerUsernameAutenticado(HttpContext http)
     => http.Session.GetString(SessionConfig.UsernameKey);
-
-static bool EsOrganizadorEnEvento(IDAL dal, int usuarioId, int eventoId)
-    => dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any();
-
-static bool EsEncargadoEnEvento(IDAL dal, int usuarioId, int eventoId)
-    => dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).Any();
-
-static Rol? ObtenerRolUsuarioEnEvento(IDAL dal, int usuarioId, int eventoId)
-    => (Rol?)dal.GetWhere<Organizador>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
-    ?? (Rol?)dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
-    ?? (Rol?)dal.GetWhere<Jurado>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
-    ?? (Rol?)dal.GetWhere<Competidor>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault()
-    ?? (Rol?)dal.GetWhere<Publico>(r => r.UsuarioId == usuarioId && r.EventoId == eventoId).FirstOrDefault();
-
-static string? ObtenerTipoRolUsuarioEnEvento(IDAL dal, int usuarioId, int eventoId)
-    => ObtenerRolUsuarioEnEvento(dal, usuarioId, eventoId)?.TipoRol;
 
 // ── Configuración de sesión ──────────────────────────────────────
 

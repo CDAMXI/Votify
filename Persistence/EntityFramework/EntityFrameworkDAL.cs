@@ -3,79 +3,84 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
-using Votify.Entities;
-using Votify.Persistence;
+using Votify.Entities; 
+using Votify.Persistence; 
 
 namespace Votify.Persistence
 {
-    public class EntityFrameworkDAL : IDAL
+    // La clase ahora implementa la interfaz tipada IDAL<T>
+    public class EntityFrameworkDAL<T> : IDAL<T> where T : class
     {
-        private readonly VotifyDBContext dbContext;
+        private readonly VotifyDBContext dbContext; 
+        private readonly DbSet<T> _dbSet; 
 
-        public EntityFrameworkDAL(VotifyDBContext dbContext)
+        public EntityFrameworkDAL(VotifyDBContext dbContext) 
         {
-            this.dbContext = dbContext;
+            this.dbContext = dbContext; 
+            this._dbSet = dbContext.Set<T>(); 
         }
 
-        public void Insert<T>(T entity) where T : class
+        public void Insert(T entity)
         {
-            dbContext.Set<T>().Add(entity);
+            _dbSet.Add(entity); 
         }
 
-        public void Delete<T>(T entity) where T : class
+        public void Delete(T entity)
         {
-            dbContext.Set<T>().Remove(entity);
+            _dbSet.Remove(entity); 
         }
 
-        public IEnumerable<T> GetAll<T>() where T : class
+        public IEnumerable<T> GetAll()
         {
-            return dbContext.Set<T>();
+            return _dbSet; 
         }
 
-        public T GetById<T>(IComparable id) where T : class
+        public T GetById(IComparable id)
         {
-            return dbContext.Set<T>().Find(id);
+            return _dbSet.Find(id); 
         }
 
-        public bool Exists<T>(IComparable id) where T : class
+        public bool Exists(IComparable id)
         {
-            return dbContext.Set<T>().Find(id) != null;
+            return _dbSet.Find(id) != null; 
         }
 
-        public void Clear<T>() where T : class
+        public void Clear()
         {
-            dbContext.Set<T>().RemoveRange(dbContext.Set<T>());
+            _dbSet.RemoveRange(_dbSet); 
         }
 
-        public IEnumerable<T> GetWhere<T>(Expression<Func<T, bool>> predicate) where T : class
+        public IEnumerable<T> GetWhere(Expression<Func<T, bool>> predicate)
         {
-            return dbContext.Set<T>().Where(predicate).ToList();
+            return _dbSet.Where(predicate).ToList(); 
         }
+
 
         public void Commit()
         {
-            dbContext.SaveChanges();
+            dbContext.SaveChanges(); 
         }
 
         public void Rollback()
         {
-            dbContext.Rollback();
+            dbContext.Rollback(); 
         }
 
         public void RemoveAllData()
         {
-            dbContext.RemoveAllData();
+            dbContext.RemoveAllData(); 
         }
 
-        DbContextTransaction _transaction;
+        private DbContextTransaction _transaction; 
+
         public void BeginTransaction()
         {
-            _transaction = dbContext.Database.BeginTransaction();
+            _transaction = dbContext.Database.BeginTransaction(); 
         }
 
         public void CommitTransaction()
         {
-            _transaction.Commit();
+            _transaction.Commit(); 
         }
 
         public void RollbackTransaction()
