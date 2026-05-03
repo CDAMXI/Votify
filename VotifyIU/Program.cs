@@ -163,6 +163,38 @@ app.MapGet("/api/votos/misVotos/{idVotacion}", (int idVotacion, IVotifyService s
     }
 });
 
+app.MapGet("/api/proyectos/{idVotacion}/mis-comentarios", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        var votacion = votacionRepo.GetById(idVotacion);
+        if (votacion == null) return Results.NotFound("Votación no encontrada");
+
+        var proyecto = votacion.evento?.proyectos?
+            .FirstOrDefault(p => p.competidor?.usuario?.Username == username);
+
+        if (proyecto == null)
+            return Results.Ok(new List<string>());
+
+        var comentarios = votoRepo.GetWhere(v =>
+                v.VotacionId == idVotacion &&
+                v.ProyectoId == proyecto.Id &&
+                !string.IsNullOrWhiteSpace(v.Comentario))
+            .OrderByDescending(v => v.Fecha)
+            .Select(v => v.Comentario.Trim())
+            .ToList();
+
+        return Results.Ok(comentarios);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
 // ── Endpoints de perfil ─────────────────────────────────────────
 
 app.MapGet("/api/perfil", (IVotifyService service, HttpContext http) =>

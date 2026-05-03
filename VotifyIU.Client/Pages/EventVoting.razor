@@ -165,155 +165,6 @@
                     <div class="mb-6">
                         <label for="comments" class="text-[#1A281B] font-bold mb-2 block">Comentarios (opcional)</label>
                         <div class="relative">
-                            <textarea id="comments"
-                            value="@comments"
-                            @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
-                            maxlength="500"
-                            placeholder="Comparte tus observaciones sobre el proyecto..."
-                            class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] outline-none transition-all"></textarea>
-                            <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-4">
-                        @if (votedProjects.Contains(project.Id))
-                        {
-                            <span class="flex-1 text-center text-sm text-[#A6AAA9] py-4 font-medium">✓ Ya evaluado</span>
-                            @if (currentProjectIndex < mockProjects.Count - 1)
-                            {
-                                <button @onclick="NavigateNext"
-                                class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                                    Siguiente Proyecto
-                                </button>
-                            }
-                        }
-                        else
-                        {
-                        <button @onclick="SubmitVote"
-                            class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                                @(((votesSubmitted + 1) >= 3 || IsLastProject) ? "Votar (Finalizar votación)" : (currentProjectIndex < mockProjects.Count - 1 ? "Siguiente Proyecto" : "Finalizar Votación"))
-                            </button>
-                        }
-                        @if (currentProjectIndex > 0)
-                        {
-                            <button @onclick="PreviousProject"
-                            class="px-8 border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
-                                Anterior
-                            </button>
-                        }
-                        @if (!votedProjects.Contains(project.Id))
-                        {
-                            <button @onclick="SkipNext"
-                                class="px-6 border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
-                                @(IsLastProject ? "Saltar Proyecto (Finalizar votación)" : "Saltar Proyecto")
-                            </button>
-                        }
-                    </div>
-                </div>
-            }
-        }
-        else if (Rol == "PUBLICO")
-        {
-            @if (!publicoMostrarVotacion)
-            {
-                <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
-                    <h2 class="text-xl font-bold text-[#1A281B] mb-4">Proyectos del evento</h2>
-                    <div class="space-y-3">
-                        @for (int i = 0; i < mockProjects.Count; i++)
-                        {
-                            var proj = mockProjects[i];
-                            var idx = i;
-                            <div class="flex items-center justify-between p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <p class="font-bold text-[#1A281B]">@proj.Name</p>
-                                        <button @onclick="() => ViewProjectMedia(proj)" class="px-2 py-1 bg-[#6C8A6C] text-white rounded text-xs">Ver</button>
-                                    </div>
-                                    <p class="text-sm text-[#6C8A6C]">@proj.Team · @proj.Category</p>
-                                    <p class="text-sm text-[#4C6B4F] mt-1">@proj.Description</p>
-                                </div>
-                                @if (publicosVotados.Contains(idx))
-                                {
-                                    <span class="ml-4 px-4 py-2 rounded-xl text-sm font-bold bg-[#E9EFE1] text-[#6C8A6C]">✓ Votado</span>
-                                }
-                                else if (publicosVotados.Count >= 3)
-                                {
-                                    <span class="ml-4 px-4 py-2 rounded-xl text-sm font-bold bg-[#EFEFEE] text-[#A6AAA9]">Límite alcanzado</span>
-                                }
-                                else
-                                {
-                                    <button @onclick="() => { publicoProyectoIndex = idx; currentProjectIndex = idx; publicoMostrarVotacion = true; }"
-                                            class="ml-4 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity">
-                                        Votar
-                                    </button>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-            else
-            {
-                var proj = mockProjects[publicoProyectoIndex];
-                <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
-                    <button @onclick="() => publicoMostrarVotacion = false"
-                            class="mb-4 text-[#6C8A6C] hover:underline flex items-center gap-1">
-                        ← Volver
-                    </button>
-                    <div class="flex items-center gap-3 mb-2">
-                        <h2 class="text-3xl font-bold text-[#1A281B]">@proj.Name</h2>
-                        <button @onclick="() => ViewProjectMedia(proj)" class="px-3 py-1 bg-[#6C8A6C] text-white rounded-md text-sm">Ver contenido</button>
-                    </div>
-                    <p class="text-[#6C8A6C] mb-1">Equipo: @proj.Team</p>
-                    <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-sm mb-4">@proj.Category</span>
-                    <p class="text-[#4C6B4F] mb-6">@proj.Description</p>
-
-                    <div class="space-y-6 mb-6">
-                        <h3 class="text-xl font-bold text-[#1A281B]">Criterios de Evaluación</h3>
-                        @foreach (var criterion in mockCriteria)
-                        {
-                            <div class="bg-[#EFEFEE] rounded-xl p-6">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="flex-1">
-                                        <label class="text-[#1A281B] text-base font-bold">
-                                            @criterion.Name
-                                            <span class="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
-                                        </label>
-                                        <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
-                                    </div>
-                                    <div class="ml-4 text-right">
-                                        @if (editingCriteria.Contains(criterion.Id))
-                                        {
-                                            <input type="number" min="0" max="10" step="0.01"
-                                                   value="@GetScore(criterion.Id)"
-                                                   @onchange="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
-                                                   @onblur="() => ToggleEditMode(criterion.Id)"
-                                                   class="text-3xl font-bold text-[#6C8A6C] w-20 bg-[#E9EFE1] border-b-2 border-[#B5D6AC] outline-none text-right" />
-                                        }
-                                        else
-                                        {
-                                            <span class="text-3xl font-bold text-[#6C8A6C] cursor-pointer"
-                                                  @onclick="() => ToggleEditMode(criterion.Id)">
-                                                @GetScore(criterion.Id)
-                                            </span>
-                                        }
-                                        <span class="text-[#A6AAA9]">/10</span>
-                                    </div>
-                                </div>
-                                <input type="range" min="0" max="10" step="0.5"
-                                       value="@GetScore(criterion.Id)"
-                                       @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
-                                       class="w-full h-2 bg-[#B5D6AC] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4" />
-                                <div class="flex justify-between text-xs text-[#A6AAA9]">
-                                    <span>0 - Muy bajo</span>
-                                    <span>5 - Promedio</span>
-                                    <span>10 - Excelente</span>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                    <div class="mb-6">
-                        <label class="text-[#1A281B] font-bold mb-2 block">Comentarios (opcional)</label>
-                        <div class="relative">
                             <textarea value="@comments"
                                       @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
                                       maxlength="500"
@@ -379,6 +230,13 @@
                                 <button @onclick="() => confirmEliminarImagen = true" disabled="@(!hasProjectImage)"
                                         class="px-4 py-2 bg-red-500 text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed">Eliminar Contenido</button>
                             </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button @onclick="IrAComentariosProyecto"
+                                    class="w-full md:w-auto px-5 py-3 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                                Ver comentarios del proyecto
+                            </button>
                         </div>
                     }
                 </div>
@@ -870,6 +728,11 @@
         }
     }
 
+    private void IrAComentariosProyecto()
+    {
+        NavigationManager.NavigateTo($"/event-voting/{EventId}/comentarios");
+    }
+
     // Imagen del proyecto (competidor)
     private bool hasProjectImage = false;
     private string? imagenDataUrl = null;
@@ -987,7 +850,7 @@
         {
             errorImagen = $"Error de conexión: {ex.Message}";
         }
-        finally { cargandoImagen = false; StateHasChanged(); }
+        finally { cargandoImagen = false; }
     }
 
     private void MostrarImagenModal()
@@ -1496,19 +1359,20 @@
         }
     }
 
-    public class Project {
+    public class Project
+    {
         public string Id { get; set; }
         public int DbId { get; set; }
         public string Name { get; set; }
         public string Team { get; set; }
         public string Category { get; set; }
         public string Description { get; set; }
-        // URL o data-url de la imagen del proyecto (si se dispone)
         public string? ImageUrl { get; set; }
-        // Indica si el proyecto tiene imagen subida
         public bool HasImage { get; set; }
     }
-    public class Criterion { 
+
+    public class Criterion
+    {
         public string Id { get; set; }
         public string Name { get; set; }
         public int Weight { get; set; }
