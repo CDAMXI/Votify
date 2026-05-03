@@ -16,6 +16,8 @@ namespace Votify.Entities
             FechaFin = fechaFin;
             Estado = estado;
             Encargado = encargado;
+            PesoJurado = 70;
+            PesoPublico = 30;
         }
 
     }

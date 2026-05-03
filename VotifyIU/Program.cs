@@ -41,6 +41,12 @@ builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<VotifyDBContext>();
+    dbContext.EnsureAdministrativeSettingsSchema();
+}
+
 if (app.Environment.IsDevelopment())
     app.UseWebAssemblyDebugging();
 else
@@ -220,7 +226,14 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     try
     {
         service.RestoreSession(username);
-        int idVotacion = service.CrearVotacion(req.Titulo, req.Descripcion, req.FechaFin, true, req.PermiteCompetidoresVotar);
+        int idVotacion = service.CrearVotacion(
+            req.Titulo,
+            req.Descripcion,
+            req.FechaFin,
+            true,
+            req.PermiteCompetidoresVotar,
+            req.PesoJurado,
+            req.PesoPublico);
         return Results.Ok(idVotacion);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -244,6 +257,8 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
             FechaIni = v.FechaIni,
             FechaFin = v.FechaFin,
             Estado = v.Estado,
+            PesoJurado = v.PesoJurado,
+            PesoPublico = v.PesoPublico,
             RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
         }).ToList();
 
@@ -270,6 +285,8 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
             FechaIni = votacion.FechaIni,
             FechaFin = votacion.FechaFin,
             Estado = votacion.Estado,
+            PesoJurado = votacion.PesoJurado,
+            PesoPublico = votacion.PesoPublico,
             RolActual = usuarioActual == null ? null : service.GetTipoRolDeUsuario(usuarioActual.Id, votacion.EventoId)
         });
     }
@@ -420,6 +437,75 @@ app.MapDelete("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int i
 
 // ── Endpoint de resultados reales ───────────────────────────────
 
+app.MapGet("/api/votaciones/{id}/configuracion-resultados", (
+    int id,
+    IVotifyService service,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Organizador> organizadorRepo,
+    IDAL<EncargadoVotacion> encargadoRepo,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var usuarioActual = service.GetUsuarioActual();
+        var votacion = votacionRepo.GetById(id);
+        if (votacion == null) return Results.NotFound("Votación no encontrada");
+        if (usuarioActual == null || !UsuarioPuedeGestionarResultados(votacion, usuarioActual, organizadorRepo, encargadoRepo))
+            return Results.Text("No tienes permisos para gestionar esta votación.", statusCode: StatusCodes.Status403Forbidden);
+
+        return Results.Ok(new ConfiguracionResultadosDTO
+        {
+            PesoJurado = votacion.PesoJurado,
+            PesoPublico = votacion.PesoPublico
+        });
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+app.MapPut("/api/votaciones/{id}/configuracion-resultados", (
+    int id,
+    ConfiguracionResultadosDTO req,
+    IVotifyService service,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Organizador> organizadorRepo,
+    IDAL<EncargadoVotacion> encargadoRepo,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var usuarioActual = service.GetUsuarioActual();
+        var votacion = votacionRepo.GetById(id);
+        if (votacion == null) return Results.NotFound("Votación no encontrada");
+        if (usuarioActual == null || !UsuarioPuedeGestionarResultados(votacion, usuarioActual, organizadorRepo, encargadoRepo))
+            return Results.Text("No tienes permisos para gestionar esta votación.", statusCode: StatusCodes.Status403Forbidden);
+
+        string? errorPesos = ValidarPesosResultados(req.PesoJurado, req.PesoPublico);
+        if (errorPesos != null)
+            return Results.BadRequest(errorPesos);
+
+        votacion.PesoJurado = req.PesoJurado;
+        votacion.PesoPublico = req.PesoPublico;
+        votacionRepo.Commit();
+
+        return Results.Ok(new ConfiguracionResultadosDTO
+        {
+            PesoJurado = votacion.PesoJurado,
+            PesoPublico = votacion.PesoPublico
+        });
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
 app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
@@ -437,25 +523,12 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votac
         var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
         var votosPorProyecto = votos.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
 
-        var resultados = proyectos.Select(p =>
-        {
-            var votosProyecto = votosPorProyecto.TryGetValue(p.Id, out var vp) ? vp : new();
-            var participantesAdicionales = string.IsNullOrWhiteSpace(p.ParticipantesAdicionales)
-                ? new List<string>()
-                : p.ParticipantesAdicionales.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(u => u.Trim()).Where(u => !string.IsNullOrEmpty(u)).ToList();
-            return new ProyectoResultadoDTO
-            {
-                Id = p.Id,
-                Nombre = p.Nombre ?? $"Proyecto #{p.Id}",
-                Descripcion = p.Descripcion ?? "",
-                Competidor = p.competidor?.usuario?.Username ?? "",
-                Participantes = participantesAdicionales,
-                Media = votosProyecto.Any() ? Math.Round(votosProyecto.Average(v => v.Valor), 2) : 0,
-                NumVotos = votosProyecto.Count
-            };
-        })
-        .OrderByDescending(r => r.Media)
+        var resultados = proyectos
+            .Select(p => BuildProjectResult(
+                p,
+                votosPorProyecto.TryGetValue(p.Id, out var votosProyecto) ? votosProyecto : new List<Voto>(),
+                votacion))
+            .OrderByDescending(r => r.Media)
         .Select((r, i) => { r.Rank = i + 1; return r; })
         .ToList();
 
@@ -463,40 +536,107 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votac
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
     }
 });
 
 // ── Endpoint de monitoreo ───────────────────────────────────────
 
-app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, IDAL<Rol> rolRepo, IDAL<Usuario> usuarioRepo, HttpContext http) =>
+app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, IDAL<Jurado> juradoRepo, IDAL<Publico> publicoRepo, IDAL<Competidor> competidorRepo, IDAL<Usuario> usuarioRepo, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
 
     try
     {
+        var votacion = votacionRepo.GetById(idVotacion);
+        if (votacion == null) return Results.NotFound("Votación no encontrada");
+
         var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
         var votanteIds = votos.Select(v => v.VotanteId).Distinct().ToHashSet();
+        var evento = votacion.evento;
 
-        var rolesVotantes = rolRepo.GetAll().ToList().Where(r => votanteIds.Contains(r.Id)).ToList();
+        var rolesVotantes = juradoRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>()
+            .Concat(publicoRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>())
+            .Concat(competidorRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>())
+            .GroupBy(r => r.Id)
+            .Select(g => g.First())
+            .ToList();
         var userIds = rolesVotantes.Select(r => r.UsuarioId).Distinct().ToHashSet();
-        var usuarios = usuarioRepo.GetAll().ToList().Where(u => userIds.Contains(u.Id)).ToList();
+        var usuarios = usuarioRepo.GetAll().ToList()
+            .Where(u => userIds.Contains(u.Id))
+            .GroupBy(u => u.Id)
+            .Select(g => g.First())
+            .ToList();
 
         var usernamePorRolId = rolesVotantes.ToDictionary(
             r => r.Id,
             r => usuarios.FirstOrDefault(u => u.Id == r.UsuarioId)?.Username ?? $"Votante #{r.Id}"
         );
 
-        var votacion = votacionRepo.GetById(idVotacion);
         var todosVotantes = new List<VotanteEstadoDTO>();
         try
         {
-            var jurados = votacion?.jurados?.ToList() ?? new();
-            var publicos = votacion?.publicos?.ToList() ?? new();
+            if (votacion.EventoId > 0)
+            {
+                var tiposPermitidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "JURADO",
+                    "PUBLICO"
+                };
 
-            var allRolIds = jurados.Select(j => j.Id).Concat(publicos.Select(p => p.Id)).ToHashSet();
-            var allRoles = rolRepo.GetAll().ToList().Where(r => allRolIds.Contains(r.Id)).ToList();
+                if (evento?.PermiteCompetidoresVotar == true)
+                    tiposPermitidos.Add("COMPETIDOR");
+
+                var rolesEsperados = juradoRepo.GetWhere(r => r.EventoId == votacion.EventoId).Cast<Rol>()
+                    .Concat(publicoRepo.GetWhere(r => r.EventoId == votacion.EventoId).Cast<Rol>())
+                    .Concat(evento?.PermiteCompetidoresVotar == true
+                        ? competidorRepo.GetWhere(r => r.EventoId == votacion.EventoId).Cast<Rol>()
+                        : Enumerable.Empty<Rol>())
+                    .Where(r => tiposPermitidos.Contains(r.TipoRol ?? string.Empty))
+                    .GroupBy(r => r.Id)
+                    .Select(g => g.First())
+                    .OrderBy(r => r.TipoRol)
+                    .ThenBy(r => r.Id)
+                    .ToList();
+
+                var expectedUserIds = rolesEsperados.Select(r => r.UsuarioId).Distinct().ToHashSet();
+                var usuariosEsperados = usuarioRepo.GetAll().ToList()
+                    .Where(u => expectedUserIds.Contains(u.Id))
+                    .GroupBy(u => u.Id)
+                    .Select(g => g.First())
+                    .ToDictionary(u => u.Id, u => u.Username ?? $"Usuario #{u.Id}");
+
+                foreach (var rol in rolesEsperados)
+                {
+                    todosVotantes.Add(new VotanteEstadoDTO
+                    {
+                        Nombre = usuariosEsperados.TryGetValue(rol.UsuarioId, out var nombre)
+                            ? nombre
+                            : $"Usuario #{rol.UsuarioId}",
+                        Tipo = ObtenerEtiquetaRolMonitor(rol.TipoRol),
+                        HaVotado = votanteIds.Contains(rol.Id)
+                    });
+                }
+            }
+            else
+            {
+                var jurados = votacion.jurados?.ToList() ?? new();
+            var publicos = votacion.publicos?.ToList() ?? new();
+            var competidores = evento?.PermiteCompetidoresVotar == true
+                ? evento.roles?.OfType<Competidor>().ToList() ?? new List<Competidor>()
+                : new List<Competidor>();
+
+            var allRolIds = jurados.Select(j => j.Id)
+                .Concat(publicos.Select(p => p.Id))
+                .Concat(competidores.Select(c => c.Id))
+                .ToHashSet();
+            var allRoles = juradoRepo.GetWhere(r => allRolIds.Contains(r.Id)).Cast<Rol>()
+                .Concat(publicoRepo.GetWhere(r => allRolIds.Contains(r.Id)).Cast<Rol>())
+                .Concat(competidorRepo.GetWhere(r => allRolIds.Contains(r.Id)).Cast<Rol>())
+                .GroupBy(r => r.Id)
+                .Select(g => g.First())
+                .ToList();
             var allUserIds = allRoles.Select(r => r.UsuarioId).Distinct().ToHashSet();
             var allUsers = usuarioRepo.GetAll().ToList().Where(u => allUserIds.Contains(u.Id)).ToList();
             var nameMap = allRoles.ToDictionary(r => r.Id,
@@ -517,17 +657,20 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
                     Tipo = "Público",
                     HaVotado = votanteIds.Contains(p.Id)
                 });
+            }
         }
         catch { /* Ignorado por seguridad de la relación */ }
 
-        var proyectoStats = votos
-            .GroupBy(v => v.ProyectoId)
-            .Select(g => new ProyectoMonitorDTO
-            {
-                Nombre = g.First().proyecto?.Nombre ?? $"Proyecto #{g.Key}",
-                Media = Math.Round(g.Average(v => v.Valor), 2),
-                NumVotos = g.Count()
-            })
+        var proyectos = evento?.proyectos?.ToList() ?? new List<Proyecto>();
+        var votosPorProyecto = votos.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
+        int totalVotantesEsperados = todosVotantes.Count;
+
+        var proyectoStats = proyectos
+            .Select(p => BuildProjectMonitor(
+                p,
+                votosPorProyecto.TryGetValue(p.Id, out var votosProyecto) ? votosProyecto : new List<Voto>(),
+                votacion,
+                totalVotantesEsperados))
             .OrderByDescending(p => p.Media)
             .ToList();
 
@@ -547,7 +690,11 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
         {
             VotosEmitidos = votos.Count,
             TotalVotantes = todosVotantes.Count,
-            PromedioGeneral = votos.Any() ? Math.Round(votos.Average(v => v.Valor), 2) : 0,
+            PromedioGeneral = proyectoStats.Any(p => p.NumVotos > 0)
+                ? Math.Round(proyectoStats.Where(p => p.NumVotos > 0).Average(p => p.Media), 2)
+                : 0,
+            PesoJurado = votacion.PesoJurado,
+            PesoPublico = votacion.PesoPublico,
             Proyectos = proyectoStats,
             Votantes = todosVotantes,
             Historial = historial
@@ -557,7 +704,7 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
     }
 });
 
@@ -644,6 +791,108 @@ app.Run();
 
 static string? ObtenerUsernameAutenticado(HttpContext http)
     => http.Session.GetString(SessionConfig.UsernameKey);
+
+static string? ValidarPesosResultados(int pesoJurado, int pesoPublico)
+{
+    if (pesoJurado < 0 || pesoJurado > 100 || pesoPublico < 0 || pesoPublico > 100)
+        return "Los pesos de jurado y público deben estar entre 0 y 100";
+
+    if (pesoJurado + pesoPublico != 100)
+        return "Los pesos de jurado y público deben sumar 100";
+
+    return null;
+}
+
+static bool UsuarioPuedeGestionarResultados(Votacion votacion, Usuario usuarioActual, IDAL<Organizador> organizadorRepo, IDAL<EncargadoVotacion> encargadoRepo)
+{
+    bool esEncargado = encargadoRepo.GetWhere(r => r.Id == votacion.EncargadoId && r.UsuarioId == usuarioActual.Id).Any();
+    bool esOrganizador = organizadorRepo.GetWhere(r => r.UsuarioId == usuarioActual.Id && r.EventoId == votacion.EventoId).Any();
+    return esEncargado || esOrganizador;
+}
+
+static string ObtenerEtiquetaRolMonitor(string? tipoRol)
+{
+    return (tipoRol ?? string.Empty).Trim().ToUpperInvariant() switch
+    {
+        "JURADO" => "Jurado",
+        "PUBLICO" => "Publico",
+        "COMPETIDOR" => "Competidor",
+        _ => "Votante"
+    };
+}
+
+static string ObtenerMensajeErrorDetallado(Exception ex)
+{
+    return ex.InnerException?.InnerException?.Message
+        ?? ex.InnerException?.Message
+        ?? ex.Message;
+}
+
+static ProyectoResultadoDTO BuildProjectResult(Proyecto proyecto, List<Voto> votosProyecto, Votacion votacion)
+{
+    var votosJurado = votosProyecto.Where(ResultadosVotacionCalculator.EsVotoExperto).ToList();
+    var votosPopular = votosProyecto.Where(ResultadosVotacionCalculator.EsVotoPopular).ToList();
+    double mediaBruta = ResultadosVotacionCalculator.CalcularMedia(votosProyecto);
+    double? mediaJurado = votosJurado.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosJurado) : null;
+    double? mediaPopular = votosPopular.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPopular) : null;
+    double mediaAjustada = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(
+        mediaJurado,
+        mediaPopular,
+        votacion.PesoJurado,
+        votacion.PesoPublico);
+
+    var participantesAdicionales = string.IsNullOrWhiteSpace(proyecto.ParticipantesAdicionales)
+        ? new List<string>()
+        : proyecto.ParticipantesAdicionales.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(u => u.Trim())
+            .Where(u => !string.IsNullOrEmpty(u))
+            .ToList();
+
+    return new ProyectoResultadoDTO
+    {
+        Id = proyecto.Id,
+        Nombre = proyecto.Nombre ?? $"Proyecto #{proyecto.Id}",
+        Descripcion = proyecto.Descripcion ?? string.Empty,
+        Competidor = proyecto.competidor?.usuario?.Username ?? string.Empty,
+        Participantes = participantesAdicionales,
+        Media = mediaAjustada,
+        MediaBruta = mediaBruta,
+        MediaJurado = mediaJurado ?? 0,
+        MediaPopular = mediaPopular ?? 0,
+        NumVotos = votosProyecto.Count,
+        NumVotosJurado = votosJurado.Count,
+        NumVotosPopular = votosPopular.Count,
+        PesoJuradoAplicado = votacion.PesoJurado,
+        PesoPublicoAplicado = votacion.PesoPublico
+    };
+}
+
+static ProyectoMonitorDTO BuildProjectMonitor(Proyecto proyecto, List<Voto> votosProyecto, Votacion votacion, int totalVotantesEsperados)
+{
+    var votosJurado = votosProyecto.Where(ResultadosVotacionCalculator.EsVotoExperto).ToList();
+    var votosPopular = votosProyecto.Where(ResultadosVotacionCalculator.EsVotoPopular).ToList();
+    double mediaBruta = ResultadosVotacionCalculator.CalcularMedia(votosProyecto);
+    double? mediaJurado = votosJurado.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosJurado) : null;
+    double? mediaPopular = votosPopular.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPopular) : null;
+
+    return new ProyectoMonitorDTO
+    {
+        Id = proyecto.Id,
+        Nombre = proyecto.Nombre ?? $"Proyecto #{proyecto.Id}",
+        Media = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(
+            mediaJurado,
+            mediaPopular,
+            votacion.PesoJurado,
+            votacion.PesoPublico),
+        MediaBruta = mediaBruta,
+        MediaJurado = mediaJurado ?? 0,
+        MediaPopular = mediaPopular ?? 0,
+        NumVotos = votosProyecto.Count,
+        NumVotosJurado = votosJurado.Count,
+        NumVotosPopular = votosPopular.Count,
+        TotalVotantesEsperados = totalVotantesEsperados
+    };
+}
 
 // ── Configuración de sesión ──────────────────────────────────────
 

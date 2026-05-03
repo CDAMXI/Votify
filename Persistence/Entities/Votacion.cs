@@ -16,6 +16,8 @@ namespace Votify.Entities
         public bool Estado { get; set; }
         public int EventoId { get; set; }
         public int EncargadoId { get; set; }
+        public int PesoJurado { get; set; } = 70;
+        public int PesoPublico { get; set; } = 30;
 
         //Relaciones
         public virtual ICollection<Competidor> competidores { get; set; }

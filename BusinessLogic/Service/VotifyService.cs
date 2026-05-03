@@ -224,13 +224,15 @@ namespace Votify.BusinessLogic.Service
                 (Rol?)_encargadoRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault();
         }
 
-        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false)
+        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30)
         {
             RequireUsuarioLogueado();
 
             DateTime fechaInicio = DateTime.Now;
             if (fechaFin <= fechaInicio)
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
+
+            ValidarPesosResultados(pesoJurado, pesoPublico);
 
             string nombre = string.IsNullOrWhiteSpace(titulo) ? "Votacion" : titulo.Trim();
             string descripcionNormalizada = descripcion?.Trim() ?? string.Empty;
@@ -274,7 +276,9 @@ namespace Votify.BusinessLogic.Service
                 Descripcion = descripcionNormalizada,
                 evento = evento,
                 EventoId = evento.IdEvento,
-                EncargadoId = encargado.Id
+                EncargadoId = encargado.Id,
+                PesoJurado = pesoJurado,
+                PesoPublico = pesoPublico
             };
             _votacionRepository.Insert(votacion);
             Commit();
@@ -510,6 +514,15 @@ namespace Votify.BusinessLogic.Service
         {
             if (comentario != null && comentario.Length > MaxLongitudComentario)
                 throw new ServiceException($"El comentario no puede superar los {MaxLongitudComentario} caracteres");
+        }
+
+        private void ValidarPesosResultados(int pesoJurado, int pesoPublico)
+        {
+            if (pesoJurado < 0 || pesoJurado > 100 || pesoPublico < 0 || pesoPublico > 100)
+                throw new ServiceException("Los pesos de jurado y público deben estar entre 0 y 100");
+
+            if (pesoJurado + pesoPublico != 100)
+                throw new ServiceException("Los pesos de jurado y público deben sumar 100");
         }
 
         private Votacion ObtenerVotacionOFallar(int idVotacion)

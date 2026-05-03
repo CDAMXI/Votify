@@ -30,7 +30,7 @@ namespace Votify.BusinessLogic.Service
         void Commit();
 
         // Votaciones
-        int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false);
+        int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30);
         Votacion GetVotacion(int idVotacion);
         IEnumerable<Votacion> GetMisVotaciones();
         IEnumerable<Votacion> GetAllVotaciones(); 
