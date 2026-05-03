@@ -56,7 +56,8 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveWebAssemblyRenderMode();
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(VotifyIU.Client._Imports).Assembly);
 
 // ── Endpoints de autenticación ──────────────────────────────────
 
