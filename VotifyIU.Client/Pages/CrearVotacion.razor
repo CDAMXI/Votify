@@ -4,6 +4,7 @@
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
@@ -59,15 +60,23 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label class="text-sm font-medium text-[#4C6B4F]">Fecha de inicio</label>
-                            <InputDate @bind-Value="votacionDto.FechaIni"
-                                       disabled="@isLoading"
+                            <InputDate @bind-Value:get="votacionDto.FechaIni"
+                                       @bind-Value:set="OnFechaIniChanged"
                                        class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            @if (!string.IsNullOrEmpty(errorFechaIni))
+                            {
+                                <p class="text-xs text-[#A04040]">@errorFechaIni</p>
+                            }
                         </div>
                         <div class="space-y-1">
                             <label class="text-sm font-medium text-[#4C6B4F]">Fecha de fin</label>
-                            <InputDate @bind-Value="votacionDto.FechaFin"
-                                       disabled="@isLoading"
+                            <InputDate @bind-Value:get="votacionDto.FechaFin"
+                                       @bind-Value:set="OnFechaFinChanged"
                                        class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            @if (!string.IsNullOrEmpty(errorFechaFin))
+                            {
+                                <p class="text-xs text-[#A04040]">@errorFechaFin</p>
+                            }
                         </div>
                     </div>
                 </div>
@@ -170,6 +179,7 @@
                                         <div class="flex gap-2 pt-2 border-t border-[#E9EFE1]">
                                             <input value="@nuevoCriterioNombre.GetValueOrDefault(nombreCat, string.Empty)"
                                                    @oninput="e => SetNuevoCriterioNombre(nombreCat, e.Value?.ToString() ?? string.Empty)"
+                                                   @onkeydown="e => OnCriterioKeyDown(e, nombreCat)"
                                                    placeholder="Nombre del criterio"
                                                    class="flex-1 h-8 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-2 text-xs focus:outline-none focus:border-[#6C8A6C]" />
                                             <input type="number" min="0" max="100"
@@ -191,11 +201,11 @@
                                         <div class="flex items-center gap-3 pt-1">
                                             <div class="flex-1 h-1.5 bg-[#E9EFE1] rounded-full overflow-hidden">
                                                 <div class="h-full rounded-full transition-all duration-300
-                                                            @(sumaPesos == 100 ? "bg-green-500" : sumaPesos > 100 ? "bg-red-400" : "bg-amber-400")"
+                                                            @(sumaPesos == 100 ? "bg-[#6C8A6C]" : "bg-[#C97070]")"
                                                      style="width: @(Math.Min(sumaPesos, 100))%"></div>
                                             </div>
                                             <span class="text-xs font-medium whitespace-nowrap
-                                                         @(sumaPesos == 100 ? "text-green-600" : "text-amber-600")">
+                                                         @(sumaPesos == 100 ? "text-[#4C6B4F]" : "text-[#A04040]")">
                                                 Total: @sumaPesos%@(sumaPesos == 100 ? " ✓" : "")
                                             </span>
                                         </div>
@@ -240,7 +250,7 @@
                     }
                     else
                     {
-                        <p class="text-xs text-green-600">✓ Los pesos suman 100%</p>
+                        <p class="text-xs text-[#4C6B4F]">✓ Los pesos suman 100%</p>
                     }
 
                     <!-- Códigos de acceso -->
@@ -266,17 +276,9 @@
                        class="flex-1 py-2.5 rounded-xl border-2 border-[#6C8A6C] text-[#4C6B4F] font-medium text-center hover:bg-white transition-colors text-sm">
                         Cancelar
                     </a>
-                    <button type="submit" disabled="@isLoading"
-                            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white font-medium transition-all shadow disabled:opacity-60 flex items-center justify-center gap-2 text-sm">
-                        @if (isLoading)
-                        {
-                            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>Creando...</span>
-                        }
-                        else
-                        {
-                            <span>Crear Evento</span>
-                        }
+                    <button type="submit"
+                            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white font-medium transition-all shadow text-sm">
+                        Crear Evento
                     </button>
                 </div>
 
@@ -303,6 +305,8 @@
     private bool isLoading = false;
     private string errorMessage = string.Empty;
     private int descripcionLength = 0;
+    private string errorFechaIni = string.Empty;
+    private string errorFechaFin = string.Empty;
 
     private bool mostrarInputPersonalizada = false;
     private string nuevaCategoriaNombre = "";
@@ -312,6 +316,30 @@
     private Dictionary<string, string> nuevoCriterioNombre = new();
     private Dictionary<string, int> nuevoCriterioPeso = new();
     private Dictionary<string, string?> errorCriterioPorCategoria = new();
+
+    private void OnFechaIniChanged(DateTime value)
+    {
+        errorFechaIni = string.Empty;
+        if (value.Date < DateTime.Today)
+        {
+            errorFechaIni = "La fecha de inicio no puede ser anterior a hoy.";
+            return;
+        }
+        votacionDto.FechaIni = value;
+        votacionDto.FechaFin = value;
+        errorFechaFin = string.Empty;
+    }
+
+    private void OnFechaFinChanged(DateTime value)
+    {
+        errorFechaFin = string.Empty;
+        if (value.Date < DateTime.Today)
+        {
+            errorFechaFin = "La fecha de fin no puede ser anterior a hoy.";
+            return;
+        }
+        votacionDto.FechaFin = value;
+    }
 
     private void OnDescripcionInput(ChangeEventArgs e)
     {
@@ -354,9 +382,28 @@
         mostrarInputPersonalizada = false;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", """
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
+                        e.preventDefault();
+                    }
+                }, true);
+            """);
+        }
+    }
+
     private void OnCategoriaKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") AgregarCategoriaPersonalizada();
+    }
+
+    private void OnCriterioKeyDown(KeyboardEventArgs e, string catNombre)
+    {
+        if (e.Key == "Enter") AgregarCriterio(catNombre);
     }
 
     private void EliminarCategoria(CategoriaBaremoDTO cat)
@@ -414,7 +461,6 @@
             return;
         }
 
-        isLoading = true;
         try
         {
             var response = await Http.PostAsJsonAsync("/api/votaciones", votacionDto);
@@ -432,10 +478,6 @@
         catch
         {
             errorMessage = "Error de conexión con el servidor.";
-        }
-        finally
-        {
-            isLoading = false;
         }
     }
 }
