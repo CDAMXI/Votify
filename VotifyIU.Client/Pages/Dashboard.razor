@@ -146,7 +146,13 @@
     {
         try
         {
-            var res = await Http.GetFromJsonAsync<PerfilDTO>("/api/perfil");
+            var perfilRes = await Http.GetAsync("/api/perfil");
+            if (perfilRes.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+            var res = await perfilRes.Content.ReadFromJsonAsync<PerfilDTO>();
             fotoPerfil = res?.FotoPerfil;
         }
         catch { }
