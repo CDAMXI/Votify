@@ -859,6 +859,20 @@
         {
             await TryLoadMyProjectImage();
         }
+        // estado de la votación para encargado
+        if (Rol == "ENCARGADO")
+        {
+            try
+            {
+                if (int.TryParse(EventId, out int votId))
+                {
+                    var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{votId}");
+                    if (votacion != null)
+                        votacionPausada = !votacion.Estado; // Estado=false significa pausada
+                }
+            }
+            catch { }
+        }
     }
 
     // Imagen del proyecto (competidor)
@@ -1023,8 +1037,7 @@
         mensajeGestion = null;
         try
         {
-            var dto = new VotacionDTO { Estado = !votacionPausada, FechaFin = DateTime.Now.AddDays(30) };
-            var resp = await Http.PutAsJsonAsync($"/api/votaciones/{EventId}", dto);
+            var resp = await Http.PostAsync($"/api/votaciones/{EventId}/pausar", null);
             if (resp.IsSuccessStatusCode)
             {
                 votacionPausada = !votacionPausada;

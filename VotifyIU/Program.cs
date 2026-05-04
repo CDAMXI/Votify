@@ -259,7 +259,8 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
             Descripcion = v.Descripcion,
             Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
             FechaIni = v.FechaIni,
-            FechaFin = v.FechaFin
+            FechaFin = v.FechaFin,
+            Estado = v.Estado
         }).ToList();
 
         return Results.Ok(votaciones);
@@ -288,6 +289,19 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
         });
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+});
+app.MapPost("/api/votaciones/{id}/pausar", (int id, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        service.TogglePausarVotacion(id);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
 app.MapDelete("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext http) =>

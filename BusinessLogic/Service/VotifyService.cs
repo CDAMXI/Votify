@@ -323,13 +323,36 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+
             if (votacion.Encargado?.usuario?.Id != usuario!.Id)
                 throw new ServiceException("No eres el encargado de esta votación");
-            votacion.Estado = false;
-            votacion.FechaFin = DateTime.Now;
+
+            Votacion votacionLimpia = dal.GetWhere<Votacion>(v => v.Id == idVotacion)
+                .FirstOrDefault()
+                ?? throw new ServiceException("La votación no existe");
+
+            votacionLimpia.Estado = false;
+            votacionLimpia.FechaFin = DateTime.Now.AddDays(-1);
             dal.Commit();
         }
+        public void TogglePausarVotacion(int idVotacion)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
 
+            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
+                throw new ServiceException("No eres el encargado de esta votación");
+
+            if (votacion.FechaFin < DateTime.Now && !votacion.Estado)
+                throw new ServiceException("La votación está finalizada y no puede reanudarse");
+
+            Votacion votacionLimpia = dal.GetWhere<Votacion>(v => v.Id == idVotacion)
+                .FirstOrDefault()
+                ?? throw new ServiceException("La votación no existe");
+
+            votacionLimpia.Estado = !votacionLimpia.Estado;
+            dal.Commit();
+        }
         // ── Helpers privados ────────────────────────────────────────────────
 
         private void CargarRolDeUsuario(Usuario user)
