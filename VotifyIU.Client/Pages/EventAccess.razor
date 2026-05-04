@@ -44,36 +44,71 @@
         }
         else
         {
-            <div class="bg-white rounded-2xl shadow-xl p-10">
-                <p class="text-sm font-bold uppercase tracking-wide text-[#6C8A6C] mb-3">Acceso al evento</p>
-                <h1 class="text-3xl font-bold text-[#1A281B] mb-3">@TituloEvento</h1>
-                <p class="text-[#4C6B4F] mb-8">
-                    Elige cómo quieres participar en este evento. Este rol se guardará solo para este evento, así que puedes ser competidor en uno y jurado o público en otro.
-                </p>
+            @if (string.IsNullOrWhiteSpace(rolActual))
+            {
+                <div class="bg-white rounded-2xl shadow-xl p-10">
+                    <p class="text-sm font-bold uppercase tracking-wide text-[#6C8A6C] mb-3">Acceso al evento</p>
+                    <h1 class="text-3xl font-bold text-[#1A281B] mb-3">@TituloEvento</h1>
+                    <p class="text-[#4C6B4F] mb-8">
+                        Elige cómo quieres participar en este evento. Este rol se guardará solo para este evento, así que puedes ser competidor en uno y jurado o público en otro.
+                    </p>
 
-                <div class="grid gap-4 md:grid-cols-3">
-                    @foreach (var opcion in opcionesRol)
-                    {
-                        <button @onclick="() => SeleccionarRol(opcion.Tipo)"
-                                disabled="@asignando"
-                                class="text-left rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6 hover:border-[#6C8A6C] hover:bg-[#E9EFE1] transition-colors disabled:opacity-60">
-                            <p class="text-lg font-bold text-[#1A281B] mb-2">@opcion.Titulo</p>
-                            <p class="text-sm text-[#6C8A6C]">@opcion.Descripcion</p>
-                        </button>
-                    }
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(errorAsignacion))
-                {
-                    <div class="mt-6 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
-                        @errorAsignacion
+                    <div class="grid gap-4 md:grid-cols-3">
+                        @foreach (var opcion in opcionesRol)
+                        {
+                            <button @onclick="() => SeleccionarRol(opcion.Tipo)"
+                                    disabled="@asignando"
+                                    class="text-left rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6 hover:border-[#6C8A6C] hover:bg-[#E9EFE1] transition-colors disabled:opacity-60">
+                                <p class="text-lg font-bold text-[#1A281B] mb-2">@opcion.Titulo</p>
+                                <p class="text-sm text-[#6C8A6C]">@opcion.Descripcion</p>
+                            </button>
+                        }
                     </div>
-                }
 
-                <p class="mt-6 text-xs text-[#6C8A6C]">
-                    Si ya tienes un rol asignado por la organización, entrarás directamente sin volver a elegir.
-                </p>
-            </div>
+                    @if (!string.IsNullOrWhiteSpace(errorAsignacion))
+                    {
+                        <div class="mt-6 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+                            @errorAsignacion
+                        </div>
+                    }
+
+                    <p class="mt-6 text-xs text-[#6C8A6C]">
+                        Si ya tienes un rol asignado por la organización, entrarás directamente sin volver a elegir.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="bg-white rounded-2xl shadow-xl p-10">
+                    <p class="text-sm font-bold uppercase tracking-wide text-[#6C8A6C] mb-3">Votaciones del evento</p>
+                    <h1 class="text-3xl font-bold text-[#1A281B] mb-3">@TituloEvento</h1>
+                    <p class="text-[#4C6B4F] mb-8">
+                        Selecciona a qué votación quieres entrar.
+                    </p>
+
+                    <div class="space-y-4">
+                        @foreach (var v in votacionesEvento)
+                        {
+                            <div class="rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-5">
+                                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                        <p class="text-lg font-bold text-[#1A281B]">@v.Titulo</p>
+                                        @if (!string.IsNullOrWhiteSpace(v.Descripcion))
+                                        {
+                                            <p class="text-sm text-[#6C8A6C] mt-1">@v.Descripcion</p>
+                                        }
+                                        <p class="text-xs text-[#6C8A6C] mt-2">Finaliza: @v.FechaFin.ToString("dd/MM/yyyy")</p>
+                                    </div>
+                                    <button @onclick="() => IrADestino(v.Id)"
+                                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                                        @TextoAccion
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         }
     </main>
 </div>
@@ -88,7 +123,8 @@
     private bool asignando = false;
     private string? error;
     private string? errorAsignacion;
-    private VotacionDTO? votacion;
+    private string? rolActual;
+    private List<VotacionDTO> votacionesEvento = new();
 
     private readonly List<OpcionRol> opcionesRol = new()
     {
@@ -98,7 +134,13 @@
         new() { Tipo = "ENCARGADO", Titulo = "Encargado de votación", Descripcion = "Controlas la votación del evento sin asumir el rol de organizador." }
     };
 
-    private string TituloEvento => string.IsNullOrWhiteSpace(votacion?.Titulo) ? "Evento" : votacion!.Titulo;
+    private string TituloEvento => votacionesEvento.FirstOrDefault()?.NombreEvento
+        ?? votacionesEvento.FirstOrDefault()?.Titulo
+        ?? "Evento";
+
+    private string TextoAccion => string.Equals(Dest, "results", StringComparison.OrdinalIgnoreCase)
+        ? "Ver resultados"
+        : "Entrar";
 
     protected override async Task OnInitializedAsync()
     {
@@ -111,7 +153,7 @@
         error = null;
         errorAsignacion = null;
 
-        if (!int.TryParse(EventId, out var idVotacion))
+        if (!int.TryParse(EventId, out var idEvento))
         {
             error = "El identificador del evento no es válido.";
             cargando = false;
@@ -120,14 +162,15 @@
 
         try
         {
-            votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{idVotacion}");
-            var rol = await Http.GetFromJsonAsync<RolEventoInfo>($"/api/votaciones/{idVotacion}/rol");
-
-            if (!string.IsNullOrWhiteSpace(rol?.Rol))
+            votacionesEvento = await Http.GetFromJsonAsync<List<VotacionDTO>>($"/api/eventos/{idEvento}/votaciones") ?? new List<VotacionDTO>();
+            if (!votacionesEvento.Any())
             {
-                IrADestino(rol.Rol);
+                error = "Este evento no tiene votaciones disponibles.";
                 return;
             }
+
+            var rol = await Http.GetFromJsonAsync<RolEventoInfo>($"/api/eventos/{idEvento}/rol");
+            rolActual = rol?.Rol;
         }
         catch (Exception ex)
         {
@@ -146,7 +189,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync($"/api/votaciones/{EventId}/rol", new { TipoRol = tipoRol });
+            var response = await Http.PostAsJsonAsync($"/api/eventos/{EventId}/rol", new { TipoRol = tipoRol });
             if (!response.IsSuccessStatusCode)
             {
                 errorAsignacion = await response.Content.ReadAsStringAsync();
@@ -155,7 +198,7 @@
                 return;
             }
 
-            IrADestino(tipoRol);
+            rolActual = tipoRol;
         }
         catch (Exception ex)
         {
@@ -167,13 +210,13 @@
         }
     }
 
-    private void IrADestino(string rol)
+    private void IrADestino(int idVotacion)
     {
         var destino = string.Equals(Dest, "results", StringComparison.OrdinalIgnoreCase)
             ? "event-results"
             : "event-voting";
 
-        NavigationManager.NavigateTo($"/{destino}/{EventId}?rol={Uri.EscapeDataString(rol)}");
+        NavigationManager.NavigateTo($"/{destino}/{idVotacion}?rol={Uri.EscapeDataString(rolActual ?? string.Empty)}");
     }
 
     private sealed class RolEventoInfo

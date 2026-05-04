@@ -224,7 +224,7 @@ namespace Votify.BusinessLogic.Service
                 (Rol?)_encargadoRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault();
         }
 
-        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30)
+        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30, List<string>? categorias = null)
         {
             RequireUsuarioLogueado();
 
@@ -270,20 +270,50 @@ namespace Votify.BusinessLogic.Service
             _encargadoRepository.Insert(encargado);
             Commit();
 
-            Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado)
+            var categoriasNormalizadas = (categorias ?? new List<string>())
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (!categoriasNormalizadas.Any())
+                categoriasNormalizadas.Add(nombre);
+
+            var votacionesCreadas = new List<Votacion>();
+
+            foreach (var categoria in categoriasNormalizadas)
             {
-                Titulo = nombre,
-                Descripcion = descripcionNormalizada,
-                evento = evento,
-                EventoId = evento.IdEvento,
-                EncargadoId = encargado.Id,
-                PesoJurado = pesoJurado,
-                PesoPublico = pesoPublico
-            };
-            _votacionRepository.Insert(votacion);
+                bool esUnica = categoriasNormalizadas.Count == 1;
+                string tituloVotacion = esUnica ? nombre : categoria;
+                string descripcionVotacion = esUnica
+                    ? descripcionNormalizada
+                    : string.IsNullOrWhiteSpace(descripcionNormalizada)
+                        ? $"Categoría: {categoria}"
+                        : $"{descripcionNormalizada} · Categoría: {categoria}";
+
+                Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado)
+                {
+                    Titulo = tituloVotacion,
+                    Descripcion = descripcionVotacion,
+                    evento = evento,
+                    EventoId = evento.IdEvento,
+                    EncargadoId = encargado.Id,
+                    PesoJurado = pesoJurado,
+                    PesoPublico = pesoPublico
+                };
+
+                _votacionRepository.Insert(votacion);
+                votacionesCreadas.Add(votacion);
+            }
+
             Commit();
 
-            return votacion.Id;
+            return votacionesCreadas.First().Id;
+        }
+
+        public IEnumerable<Votacion> GetVotacionesByEvento(int idEvento)
+        {
+            return _votacionRepository.GetWhere(v => v.EventoId == idEvento).ToList();
         }
 
         public IEnumerable<Votacion> GetMisVotaciones()
@@ -299,9 +329,9 @@ namespace Votify.BusinessLogic.Service
                 return Enumerable.Empty<Votacion>();
 
             return _votacionRepository.GetAll()
-                      .ToList()
-                      .Where(v => v.Encargado != null && encargadoIds.Contains(v.Encargado.Id))
-                      .ToList();
+                        .ToList()
+                        .Where(v => v.Encargado != null && encargadoIds.Contains(v.Encargado.Id))
+                        .ToList();
         }
 
         // Obtener todas las votaciones (para la vista general)
