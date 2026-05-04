@@ -545,10 +545,17 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            if (!UsuarioEsOrganizadorEnEvento(votacion.EventoId))
-                throw new ServiceException("No eres el organizador de este evento");
 
-            Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
+            bool esOrganizador = UsuarioEsOrganizadorEnEvento(votacion.EventoId);
+            bool esEncargado = _encargadoRepository.GetWhere(e => e.UsuarioId == usuario!.Id && e.EventoId == votacion.EventoId).Any();
+
+            if (!esOrganizador && !esEncargado)
+                throw new ServiceException("No tienes permisos para eliminar este evento");
+
+            Evento evento = _eventoRepository.GetById(votacion.EventoId);
+            if (evento == null)
+                throw new ServiceException("El evento no existe");
+
             _eventoRepository.Delete(evento);
             Commit();
         }
