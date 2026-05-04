@@ -1,23 +1,26 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Components.Web
+
+<!DOCTYPE html>
 <html lang="en">
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="/" />
-    <ResourcePreloader />
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
-    <link rel="stylesheet" href="@Assets["app.css"]" />
-    <link rel="stylesheet" href="@Assets["VotifyIU.styles.css"]" />
-    <ImportMap />
-    <link rel="icon" type="image/png" href="favicon.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <HeadOutlet @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
-</head>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<base href="/" />
+		<ResourcePreloader />
+		<!-- Usamos comillas simples para que el parser no explote con las dobles de dentro -->
+		<link rel="stylesheet" href='@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]' />
+		<link rel="stylesheet" href='@Assets["app.css"]' />
+		<link rel="stylesheet" href='@Assets["VotifyIU.styles.css"]' />
+		<ImportMap />
+		<link rel="icon" type="image/png" href="favicon.png" />
+		<script src="https://cdn.tailwindcss.com"></script>
+		<HeadOutlet @rendermode='@(new InteractiveWebAssemblyRenderMode(prerender: false))' />
+	</head>
 
-<body>
-    <Routes @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
-</body>
+	<body>
+		<Routes @rendermode='@(new InteractiveWebAssemblyRenderMode(prerender: false))' />
+		<script src='@Assets["_framework/blazor.web.js"]'></script>
+	</body>
 
 </html>

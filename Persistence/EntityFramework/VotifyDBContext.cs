@@ -159,6 +159,8 @@ namespace Votify.Persistence
             modelBuilder.Entity<Votacion>().Property(v => v.FechaIni).HasColumnName("fecha_inicio");
             modelBuilder.Entity<Votacion>().Property(v => v.FechaFin).HasColumnName("fecha_fin");
             modelBuilder.Entity<Votacion>().Property(v => v.Estado).HasColumnName("estado");
+            modelBuilder.Entity<Votacion>().Property(v => v.PesoJurado).HasColumnName("peso_jurado");
+            modelBuilder.Entity<Votacion>().Property(v => v.PesoPublico).HasColumnName("peso_publico");
 
             modelBuilder.Entity<Votacion>().Property(v => v.EventoId).HasColumnName("id_evento");
             modelBuilder.Entity<Votacion>().Property(v => v.EncargadoId).HasColumnName("id_encargado");
@@ -191,6 +193,7 @@ namespace Votify.Persistence
             modelBuilder.Entity<Proyecto>().Property(p => p.Nombre).HasColumnName("nombre").IsRequired();
             modelBuilder.Entity<Proyecto>().Property(p => p.Descripcion).HasColumnName("descripcion");
             modelBuilder.Entity<Proyecto>().Property(p => p.ParticipantesAdicionales).HasColumnName("participantes_adicionales");
+            modelBuilder.Entity<Proyecto>().Property(p => p.FotoProyecto).HasColumnName("foto_proyecto");
             modelBuilder.Entity<Proyecto>().Property(p => p.EventoId).HasColumnName("id_evento");
             modelBuilder.Entity<Proyecto>().Property(p => p.CompetidorId).HasColumnName("id_competidor");
 
@@ -302,6 +305,16 @@ namespace Votify.Persistence
         {
             Database.ExecuteSqlCommand("TRUNCATE TABLE public.usuario CASCADE;");
             Database.ExecuteSqlCommand("TRUNCATE TABLE public.evento CASCADE;");
+        }
+
+        public void EnsureAdministrativeSettingsSchema()
+        {
+            Database.ExecuteSqlCommand(
+                "ALTER TABLE public.votacion ADD COLUMN IF NOT EXISTS peso_jurado integer NOT NULL DEFAULT 70;");
+            Database.ExecuteSqlCommand(
+                "ALTER TABLE public.votacion ADD COLUMN IF NOT EXISTS peso_publico integer NOT NULL DEFAULT 30;");
+            Database.ExecuteSqlCommand(
+                "ALTER TABLE public.proyecto ADD COLUMN IF NOT EXISTS foto_proyecto text;");
         }
     }
 }

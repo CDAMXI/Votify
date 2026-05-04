@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Votify.Persistence;
 using Votify.Entities;
 
@@ -11,16 +14,51 @@ namespace Votify.BusinessLogic.Service
 
         private Usuario? usuario;
         private Rol? rol;
-        private readonly IDAL dal;
 
-        public VotifyService(IDAL dal)
+        private readonly IDAL<Usuario> _usuarioRepository;
+        private readonly IDAL<Voto> _votoRepository;
+        private readonly IDAL<Votacion> _votacionRepository;
+        private readonly IDAL<Evento> _eventoRepository;
+        private readonly IDAL<Rol> _rolRepository;
+        private readonly IDAL<Proyecto> _proyectoRepository;
+        private readonly IDAL<Jurado> _juradoRepository;
+        private readonly IDAL<Publico> _publicoRepository;
+        private readonly IDAL<Competidor> _competidorRepository;
+        private readonly IDAL<Organizador> _organizadorRepository;
+        private readonly IDAL<EncargadoVotacion> _encargadoRepository;
+
+        public VotifyService(
+            IDAL<Usuario> usuarioRepository,
+            IDAL<Voto> votoRepository,
+            IDAL<Votacion> votacionRepository,
+            IDAL<Evento> eventoRepository,
+            IDAL<Rol> rolRepository,
+            IDAL<Proyecto> proyectoRepository,
+            IDAL<Jurado> juradoRepository,
+            IDAL<Publico> publicoRepository,
+            IDAL<Competidor> competidorRepository,
+            IDAL<Organizador> organizadorRepository,
+            IDAL<EncargadoVotacion> encargadoRepository)
         {
-            this.dal = dal;
+            _usuarioRepository = usuarioRepository;
+            _votoRepository = votoRepository;
+            _votacionRepository = votacionRepository;
+            _eventoRepository = eventoRepository;
+            _rolRepository = rolRepository;
+            _proyectoRepository = proyectoRepository;
+            _juradoRepository = juradoRepository;
+            _publicoRepository = publicoRepository;
+            _competidorRepository = competidorRepository;
+            _organizadorRepository = organizadorRepository;
+            _encargadoRepository = encargadoRepository;
         }
+
+        // Delegamos el Commit global a cualquier repositorio temporalmente 
+        public void Commit() => _usuarioRepository.Commit();
 
         public void LogIn(string username, string password)
         {
-            Usuario user = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+            Usuario user = _usuarioRepository.GetWhere(u => u.Username == username).FirstOrDefault();
             if (user == null || password != user.Password)
                 throw new ServiceException("Usuario o contraseña no válidos");
 
@@ -37,7 +75,7 @@ namespace Votify.BusinessLogic.Service
 
         public void RestoreSession(string username)
         {
-            Usuario user = dal.GetWhere<Usuario>(u => u.Username == username).FirstOrDefault();
+            Usuario user = _usuarioRepository.GetWhere(u => u.Username == username).FirstOrDefault();
             if (user == null)
                 throw new ServiceException("Usuario no encontrado");
 
@@ -50,16 +88,16 @@ namespace Votify.BusinessLogic.Service
             username = username.Trim();
             email = email.Trim().ToLowerInvariant();
 
-            bool usuarioExistente = dal.GetWhere<Usuario>(u => u.Username == username).Any();
+            bool usuarioExistente = _usuarioRepository.GetWhere(u => u.Username == username).Any();
             if (usuarioExistente)
                 throw new ServiceException("El usuario ya existe");
 
-            bool emailExistente = dal.GetWhere<Usuario>(u => u.Email.ToLower() == email).Any();
+            bool emailExistente = _usuarioRepository.GetWhere(u => u.Email.ToLower() == email).Any();
             if (emailExistente)
                 throw new ServiceException("El correo ya está registrado");
 
-            dal.Insert<Usuario>(new Usuario(username, email, password, 0));
-            dal.Commit();
+            _usuarioRepository.Insert(new Usuario(username, email, password, 0));
+            Commit();
         }
 
         public Usuario GetUsuarioActual() => usuario;
@@ -74,7 +112,7 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             usuario!.Email = nuevoEmail;
-            dal.Commit();
+            Commit();
         }
 
         public void UpdatePassword(string passwordActual, string nuevaPassword)
@@ -84,31 +122,31 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException("La contraseña actual no es correcta");
 
             usuario.Password = nuevaPassword;
-            dal.Commit();
+            Commit();
         }
 
         public void UpdateFotoPerfil(string base64Foto)
         {
             RequireUsuarioLogueado();
             usuario!.FotoPerfil = base64Foto;
-            dal.Commit();
+            Commit();
         }
 
         public string GeneratePasswordResetToken(string email)
         {
-            Usuario user = dal.GetWhere<Usuario>(u => u.Email == email).FirstOrDefault();
+            Usuario user = _usuarioRepository.GetWhere(u => u.Email == email).FirstOrDefault();
             if (user == null)
                 throw new ServiceException("No existe ninguna cuenta con ese correo");
 
             user.ResetToken = Guid.NewGuid().ToString("N");
             user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(MinutosExpiracionResetToken);
-            dal.Commit();
+            Commit();
             return user.ResetToken;
         }
 
         public void ResetPassword(string token, string nuevaPassword)
         {
-            Usuario user = dal.GetWhere<Usuario>(u => u.ResetToken == token).FirstOrDefault();
+            Usuario user = _usuarioRepository.GetWhere(u => u.ResetToken == token).FirstOrDefault();
             if (user == null)
                 throw new ServiceException("El enlace no es válido");
 
@@ -118,7 +156,7 @@ namespace Votify.BusinessLogic.Service
             user.Password = nuevaPassword;
             user.ResetToken = null;
             user.ResetTokenExpiry = null;
-            dal.Commit();
+            Commit();
         }
 
         public void GuardarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario)
@@ -130,8 +168,12 @@ namespace Votify.BusinessLogic.Service
             Proyecto proyecto = ObtenerProyectoOFallar(idProyecto);
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
 
-            // Buscar el rol del usuario para este evento consultando cada subtype
-            // individualmente — evita el JOIN multi-tabla TPT de EF6+Npgsql
+            if (!votacion.Estado)
+                throw new ServiceException("La votación está pausada");
+
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación ha finalizado");
+
             int eventoId = evento.IdEvento;
             Rol? rolEvento = BuscarRolEnEvento(eventoId);
             if (rolEvento == null)
@@ -143,12 +185,12 @@ namespace Votify.BusinessLogic.Service
             if (rolEvento is Competidor comp && !evento.PermiteCompetidoresVotar)
                 throw new ServiceException("Los competidores no pueden votar en este evento");
 
-            // Usar IDs directamente para evitar el bug de JOINs de EF6+Npgsql
-            bool yaVoto = dal.GetWhere<Voto>(v =>
+            bool yaVoto = _votoRepository.GetWhere(v =>
                 v.VotanteId == rolEvento.Id &&
                 v.VotacionId == votacion.Id &&
                 v.ProyectoId == proyecto.Id
             ).Any();
+
             if (yaVoto)
                 throw new ServiceException("Ya has votado en este proyecto para esta votación");
 
@@ -159,26 +201,36 @@ namespace Votify.BusinessLogic.Service
                 votante = rolEvento
             };
 
-            dal.Insert<Voto>(voto);
-            dal.Commit();
+            _votoRepository.Insert(voto);
+            Commit();
         }
 
-        // Consulta cada tabla concreta de rol por separado para evitar el
-        // JOIN multi-tabla que genera EF6 al usar la clase base abstracta Rol
+        // Obtener mis votos en una votación específica
+        public List<int> GetMisVotos(int idVotacion)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.evento == null) return new List<int>();
+
+            Rol? rol = BuscarRolEnEvento(votacion.evento.IdEvento);
+            if (rol == null) return new List<int>();
+
+            return _votoRepository.GetWhere(v => v.VotanteId == rol.Id && v.VotacionId == idVotacion)
+                .Select(v => v.ProyectoId).ToList();
+        }
+
         private Rol? BuscarRolEnEvento(int eventoId)
         {
             int uid = usuario!.Id;
             return
-                (Rol?)dal.GetWhere<Jurado>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
-                (Rol?)dal.GetWhere<Publico>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
-                (Rol?)dal.GetWhere<Competidor>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
-                (Rol?)dal.GetWhere<Organizador>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
-                (Rol?)dal.GetWhere<EncargadoVotacion>(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault();
+                (Rol?)_juradoRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)_publicoRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)_competidorRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)_organizadorRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault() ??
+                (Rol?)_encargadoRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault();
         }
 
-        public void Commit() => dal.Commit();
-
-        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa)
+        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30)
         {
             RequireUsuarioLogueado();
 
@@ -186,55 +238,56 @@ namespace Votify.BusinessLogic.Service
             if (fechaFin <= fechaInicio)
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
 
+            ValidarPesosResultados(pesoJurado, pesoPublico);
+
             string nombre = string.IsNullOrWhiteSpace(titulo) ? "Votacion" : titulo.Trim();
             string descripcionNormalizada = descripcion?.Trim() ?? string.Empty;
 
-            // 1. Insertar Evento primero para obtener su ID antes de crear los roles
             Evento evento = new Evento
             {
                 Nombre = nombre,
                 Descripcion = descripcionNormalizada,
                 FechaIni = fechaInicio,
                 FechaFin = fechaFin,
-                PermiteCompetidoresVotar = false,
+                PermiteCompetidoresVotar = permiteCompetidoresVotar,
                 organizador = usuario!,
                 OrganizadorId = usuario!.Id
             };
-            dal.Insert<Evento>(evento);
-            dal.Commit(); // evento.IdEvento queda asignado por la BD
+            _eventoRepository.Insert(evento);
+            Commit();
 
-            // 2. Insertar roles con FK escalar ya conocida para evitar el bug de shadow FK de EF6
             Organizador organizador = new Organizador(fechaInicio, 0)
             {
-                usuario  = usuario,
-                evento   = evento,
+                usuario = usuario,
+                evento = evento,
                 UsuarioId = usuario!.Id,
-                EventoId  = evento.IdEvento
+                EventoId = evento.IdEvento
             };
 
             EncargadoVotacion encargado = new EncargadoVotacion(fechaInicio, 0)
             {
-                usuario  = usuario,
-                evento   = evento,
+                usuario = usuario,
+                evento = evento,
                 UsuarioId = usuario!.Id,
-                EventoId  = evento.IdEvento
+                EventoId = evento.IdEvento
             };
 
-            dal.Insert<Organizador>(organizador);
-            dal.Insert<EncargadoVotacion>(encargado);
-            dal.Commit(); // encargado.Id queda asignado por la BD
+            _organizadorRepository.Insert(organizador);
+            _encargadoRepository.Insert(encargado);
+            Commit();
 
-            // 3. Insertar Votacion con FKs escalares explícitas — evita shadow FK de EF6
             Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado)
             {
-                Titulo       = nombre,
-                Descripcion  = descripcionNormalizada,
-                evento       = evento,
-                EventoId     = evento.IdEvento,
-                EncargadoId  = encargado.Id
+                Titulo = nombre,
+                Descripcion = descripcionNormalizada,
+                evento = evento,
+                EventoId = evento.IdEvento,
+                EncargadoId = encargado.Id,
+                PesoJurado = pesoJurado,
+                PesoPublico = pesoPublico
             };
-            dal.Insert<Votacion>(votacion);
-            dal.Commit();
+            _votacionRepository.Insert(votacion);
+            Commit();
 
             return votacion.Id;
         }
@@ -243,10 +296,6 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
 
-            // EF6+Npgsql falla con JOINs profundos desde Votaciones hacia Roles/Usuarios.
-            // Solución: obtener IDs de encargado desde usuario.roles (ya cargado en memoria),
-            // luego materializar TODAS las votaciones con una sola SELECT sin JOIN,
-            // y filtrar en memoria con lazy loading solo sobre la tabla Roles.
             var encargadoIds = (usuario!.roles
                 ?.OfType<EncargadoVotacion>()
                 .Select(e => e.Id)
@@ -255,25 +304,47 @@ namespace Votify.BusinessLogic.Service
             if (!encargadoIds.Any())
                 return Enumerable.Empty<Votacion>();
 
-            return dal.GetAll<Votacion>()   // SELECT * FROM Votaciones — sin JOINs
-                      .ToList()             // materializar en memoria
+            return _votacionRepository.GetAll()
+                      .ToList()
                       .Where(v => v.Encargado != null && encargadoIds.Contains(v.Encargado.Id))
                       .ToList();
         }
 
+        // Obtener todas las votaciones (para la vista general)
+        public IEnumerable<Votacion> GetAllVotaciones() => _votacionRepository.GetAll().ToList();
+
         public Votacion GetVotacion(int idVotacion)
         {
-            Votacion votacion = dal.GetById<Votacion>(idVotacion);
+            Votacion votacion = _votacionRepository.GetById(idVotacion);
             if (votacion == null)
                 throw new ServiceException("La votación no existe");
             return votacion;
         }
 
-
         public Rol GetRolEnEvento(int idEvento)
         {
             RequireUsuarioLogueado();
-            return usuario!.roles?.FirstOrDefault(r => r.evento?.IdEvento == idEvento);
+            return BuscarRolEnEvento(idEvento);
+        }
+
+        // Helper para obtener el tipo de rol en string
+        public string? GetTipoRolEnEvento(int idEvento)
+        {
+            RequireUsuarioLogueado();
+            return BuscarRolEnEvento(idEvento)?.TipoRol;
+        }
+
+        // Helper para obtener tipo de rol sin logueo estricto (útil para listas)
+        public string? GetTipoRolDeUsuario(int idUsuario, int idEvento)
+        {
+            var rol =
+                (Rol?)_juradoRepository.GetWhere(r => r.UsuarioId == idUsuario && r.EventoId == idEvento).FirstOrDefault() ??
+                (Rol?)_publicoRepository.GetWhere(r => r.UsuarioId == idUsuario && r.EventoId == idEvento).FirstOrDefault() ??
+                (Rol?)_competidorRepository.GetWhere(r => r.UsuarioId == idUsuario && r.EventoId == idEvento).FirstOrDefault() ??
+                (Rol?)_organizadorRepository.GetWhere(r => r.UsuarioId == idUsuario && r.EventoId == idEvento).FirstOrDefault() ??
+                (Rol?)_encargadoRepository.GetWhere(r => r.UsuarioId == idUsuario && r.EventoId == idEvento).FirstOrDefault();
+
+            return rol?.TipoRol;
         }
 
         public bool HasVotadoEnEvento(int idEvento)
@@ -283,31 +354,44 @@ namespace Votify.BusinessLogic.Service
             if (rol == null) return false;
 
             int rolId = rol.Id;
-            var votacionIds = dal.GetWhere<Votacion>(v => v.EventoId == idEvento)
+            var votacionIds = _votacionRepository.GetWhere(v => v.EventoId == idEvento)
                 .Select(v => v.Id)
                 .ToList();
 
             return votacionIds.Any(vid =>
-                dal.GetWhere<Voto>(v => v.VotanteId == rolId && v.VotacionId == vid).Any());
+                _votoRepository.GetWhere(v => v.VotanteId == rolId && v.VotacionId == vid).Any());
         }
 
         public void AsignarRolEnEvento(string tipoRol, int idEvento)
         {
             RequireUsuarioLogueado();
 
-            Evento evento = dal.GetById<Evento>(idEvento);
+            tipoRol = (tipoRol ?? string.Empty).Trim().ToUpperInvariant();
+            if (tipoRol != "PUBLICO" && tipoRol != "JURADO" && tipoRol != "COMPETIDOR" && tipoRol != "ENCARGADO")
+                throw new ServiceException("Solo puedes unirte al evento como público, jurado, competidor o encargado");
+
+            Evento evento = _eventoRepository.GetById(idEvento);
             if (evento == null)
                 throw new ServiceException("El evento no existe");
 
+            if (BuscarRolEnEvento(idEvento) != null)
+                throw new ServiceException("Ya tienes un rol asignado en este evento");
+
             Rol nuevoRol = RolFactory.Create(tipoRol, DateTime.Now, 0);
+            nuevoRol.usuario = usuario!;
             nuevoRol.evento = evento;
+            nuevoRol.UsuarioId = usuario!.Id;
+            nuevoRol.EventoId = evento.IdEvento;
             usuario!.roles ??= new List<Rol>();
             usuario.roles.Add(nuevoRol);
-            dal.Insert<Rol>(nuevoRol);
-            dal.Commit();
+
+            _rolRepository.Insert(nuevoRol);
+            Commit();
+            rol = nuevoRol;
         }
-        //metodo para modificar votacion (solo encargados)
-        public void ModificarVotacion (int idVotacion, DateTime nuevaFechaFin, bool estado) {
+
+        public void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado)
+        {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
             if (votacion.Encargado?.usuario?.Id != usuario!.Id)
@@ -316,42 +400,124 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
             votacion.FechaFin = nuevaFechaFin;
             votacion.Estado = estado;
-            dal.Commit();
+            Commit();
         }
-        //metodo para cerrar votacion (solo encargados)
+
         public void CerrarVotacion(int idVotacion)
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            bool esEncargado = votacion.Encargado?.usuario?.Id == usuario!.Id;
+            bool esOrganizador = UsuarioEsOrganizadorEnEvento(votacion.EventoId);
+            if (!esEncargado && !esOrganizador)
+                throw new ServiceException("No tienes permisos para cerrar esta votación");
+            votacion.Estado = false;
+            votacion.FechaFin = DateTime.Now.AddDays(-1);
+            Commit();
+        }
 
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
+        // Métodos de Gestión de Proyectos
+        public Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
 
-            Votacion votacionLimpia = dal.GetWhere<Votacion>(v => v.Id == idVotacion)
-                .FirstOrDefault()
-                ?? throw new ServiceException("La votación no existe");
+            if (!UsuarioEsOrganizadorEnEvento(evento.IdEvento))
+                throw new ServiceException("No eres el organizador de este evento");
 
-            votacionLimpia.Estado = false;
-            votacionLimpia.FechaFin = DateTime.Now.AddDays(-1);
-            dal.Commit();
+            Usuario competidorUser = _usuarioRepository.GetWhere(u => u.Username == usernameCompetidor).FirstOrDefault();
+            if (competidorUser == null)
+                throw new ServiceException($"No existe ningún usuario con el nombre '{usernameCompetidor}'");
+
+            Competidor competidorRol = _competidorRepository.GetWhere(c => c.UsuarioId == competidorUser.Id && c.EventoId == evento.IdEvento).FirstOrDefault();
+
+            if (competidorRol == null)
+            {
+                competidorRol = new Competidor(DateTime.Now, 0)
+                {
+                    usuario = competidorUser,
+                    evento = evento,
+                    UsuarioId = competidorUser.Id,
+                    EventoId = evento.IdEvento
+                };
+                _competidorRepository.Insert(competidorRol);
+                Commit();
+            }
+
+            Proyecto proyecto = new Proyecto
+            {
+                Nombre = nombre.Trim(),
+                Descripcion = descripcion?.Trim() ?? "",
+                competidor = competidorRol,
+                evento = evento,
+                CompetidorId = competidorRol.Id,
+                EventoId = evento.IdEvento,
+                ParticipantesAdicionales = ""
+            };
+            _proyectoRepository.Insert(proyecto);
+            Commit();
+
+            // Para devolver el objeto completo a la vista sin recargar de BD
+            proyecto.competidor.usuario = competidorUser;
+            return proyecto;
+        }
+
+        public void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales)
+        {
+            RequireUsuarioLogueado();
+            Proyecto proyecto = _proyectoRepository.GetById(idProyecto);
+            if (proyecto == null) throw new ServiceException("Proyecto no encontrado");
+
+            Evento evento = proyecto.evento;
+            if (evento == null || !UsuarioEsOrganizadorEnEvento(evento.IdEvento))
+                throw new ServiceException("No eres el organizador de este evento");
+
+            proyecto.Nombre = nombre.Trim();
+            proyecto.Descripcion = descripcion?.Trim() ?? string.Empty;
+
+            if (participantesAdicionales != null)
+            {
+                string leadUsername = proyecto.competidor?.usuario?.Username ?? "";
+                var adicionales = participantesAdicionales.Select(u => u.Trim())
+                    .Where(u => !string.IsNullOrEmpty(u) && u != leadUsername).Distinct().ToList();
+                proyecto.ParticipantesAdicionales = string.Join(",", adicionales);
+            }
+            Commit();
+        }
+
+        public void EliminarProyecto(int idProyecto)
+        {
+            RequireUsuarioLogueado();
+            Proyecto proyecto = _proyectoRepository.GetById(idProyecto);
+            if (proyecto == null) throw new ServiceException("Proyecto no encontrado");
+
+            Evento evento = proyecto.evento;
+            if (evento == null || !UsuarioEsOrganizadorEnEvento(evento.IdEvento))
+                throw new ServiceException("No eres el organizador de este evento");
+
+            // Eliminar votos del proyecto
+            var votos = _votoRepository.GetWhere(v => v.ProyectoId == idProyecto).ToList();
+            foreach (var voto in votos) _votoRepository.Delete(voto);
+
+            _proyectoRepository.Delete(proyecto);
+            Commit();
         }
         public void TogglePausarVotacion(int idVotacion)
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
 
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
+            bool esEncargado = votacion.Encargado?.usuario?.Id == usuario!.Id;
+            bool esOrganizador = UsuarioEsOrganizadorEnEvento(votacion.EventoId);
+            if (!esEncargado && !esOrganizador)
+                throw new ServiceException("No tienes permisos para gestionar esta votación");
 
-            if (votacion.FechaFin < DateTime.Now && !votacion.Estado)
+            if (votacion.FechaFin <= DateTime.Now && !votacion.Estado)
                 throw new ServiceException("La votación está finalizada y no puede reanudarse");
 
-            Votacion votacionLimpia = dal.GetWhere<Votacion>(v => v.Id == idVotacion)
-                .FirstOrDefault()
-                ?? throw new ServiceException("La votación no existe");
-
-            votacionLimpia.Estado = !votacionLimpia.Estado;
-            dal.Commit();
+            votacion.Estado = !votacion.Estado;
+            Commit();
         }
         // ── Helpers privados ────────────────────────────────────────────────
 
@@ -373,9 +539,18 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException($"El comentario no puede superar los {MaxLongitudComentario} caracteres");
         }
 
+        private void ValidarPesosResultados(int pesoJurado, int pesoPublico)
+        {
+            if (pesoJurado < 0 || pesoJurado > 100 || pesoPublico < 0 || pesoPublico > 100)
+                throw new ServiceException("Los pesos de jurado y público deben estar entre 0 y 100");
+
+            if (pesoJurado + pesoPublico != 100)
+                throw new ServiceException("Los pesos de jurado y público deben sumar 100");
+        }
+
         private Votacion ObtenerVotacionOFallar(int idVotacion)
         {
-            Votacion votacion = dal.GetById<Votacion>(idVotacion);
+            Votacion votacion = _votacionRepository.GetById(idVotacion);
             if (votacion == null)
                 throw new ServiceException("La votación no existe");
             return votacion;
@@ -383,7 +558,7 @@ namespace Votify.BusinessLogic.Service
 
         private Proyecto ObtenerProyectoOFallar(int idProyecto)
         {
-            Proyecto proyecto = dal.GetById<Proyecto>(idProyecto);
+            Proyecto proyecto = _proyectoRepository.GetById(idProyecto);
             if (proyecto == null)
                 throw new ServiceException("El proyecto no existe");
             return proyecto;
@@ -393,12 +568,12 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
+            if (!UsuarioEsOrganizadorEnEvento(votacion.EventoId))
+                throw new ServiceException("No eres el organizador de este evento");
 
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
-            dal.Delete<Evento>(evento);
-            dal.Commit();
+            _eventoRepository.Delete(evento);
+            Commit();
         }
 
         private Evento ObtenerEventoDeVotacionOFallar(Votacion votacion)
@@ -407,5 +582,8 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException("La votación no está asociada a ningún evento");
             return votacion.evento;
         }
+
+        private bool UsuarioEsOrganizadorEnEvento(int eventoId)
+            => _organizadorRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
     }
 }

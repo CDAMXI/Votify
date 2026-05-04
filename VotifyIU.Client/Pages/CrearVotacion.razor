@@ -1,4 +1,4 @@
-﻿@page "/crear-votacion"
+@page "/crear-votacion"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @layout EmptyLayout
@@ -6,102 +6,466 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
-    <div class="w-full max-w-md px-6">
-        <div class="bg-white rounded-2xl shadow-2xl p-8">
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 relative flex items-center">
+            <a href="/dashboard" class="flex items-center text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-md transition-colors">
+                <span class="mr-2">←</span> Volver
+            </a>
+            <img src="imagenes/LogoVotifyPNG.png" alt="Votify" class="h-16 object-contain" />
+            <h1 class="absolute left-1/2 -translate-x-1/2 text-3xl font-bold text-[#1A281B]">Crear Nuevo Evento</h1>
+        </div>
+    </header>
 
-            <div class="flex items-center mb-8">
-                <a href="/dashboard" class="text-[#6C8A6C] hover:text-[#4C6B4F] transition-colors mr-4">
-                    ← Volver
-                </a>
-                <div class="flex-1 flex justify-center">
-                    <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-                </div>
-            </div>
+    <div class="w-full max-w-2xl mx-auto px-4 py-8 space-y-6">
 
-            <div class="text-center mb-8">
-                <h1 class="text-3xl text-[#1A281B] mb-2">Crear Evento</h1>
-                <p class="text-[#6C8A6C]">Configura un nuevo evento</p>
-            </div>
+        <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit">
 
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-xl text-sm text-center">
-                    @errorMessage
-                </div>
-            }
+            <!-- Card único -->
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
 
-            <EditForm Model="@votacionDto" OnValidSubmit="HandleSubmit" class="space-y-6">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="mx-6 mt-6 p-3 bg-red-100 text-red-700 rounded-xl text-sm border border-red-200">
+                        ⚠️ @errorMessage
+                    </div>
+                }
 
-                <div class="space-y-2">
-                    <label class="text-[#4C6B4F]">Título</label>
-                    <InputText @bind-Value="votacionDto.Titulo"
-                               placeholder="¿Cómo se llamará la votación?"
-                               disabled="@isLoading"
-                               required
-                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[#4C6B4F]">Descripción</label>
-                    <div class="relative">
-                        <textarea value="@votacionDto.Descripcion"
-                                  @oninput="(e) => { votacionDto.Descripcion = e.Value?.ToString() ?? string.Empty; descripcionLength = votacionDto.Descripcion.Length; }"
-                                  maxlength="500"
-                                  placeholder="Describe la votación"
-                                  disabled="@isLoading"
-                                  class="w-full min-h-[100px] rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]"></textarea>
-                        <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@descripcionLength/500</span>
+                <!-- ── Sección: Información del Evento ── -->
+                <div class="p-6 space-y-4">
+                    <p class="text-xs font-semibold text-[#6C8A6C] uppercase tracking-wider">Información del Evento</p>
+
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-[#4C6B4F]">Título</label>
+                        <InputText @bind-Value="votacionDto.Titulo"
+                                   placeholder="¿Cómo se llamará el evento?"
+                                   disabled="@isLoading"
+                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-[#4C6B4F]">Descripción</label>
+                        <div class="relative">
+                            <textarea value="@votacionDto.Descripcion"
+                                      @oninput="OnDescripcionInput"
+                                      maxlength="500"
+                                      placeholder="Describe el evento..."
+                                      disabled="@isLoading"
+                                      rows="3"
+                                      class="w-full rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] resize-none"></textarea>
+                            <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@descripcionLength/500</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Fecha de inicio</label>
+                            <InputDate @bind-Value:get="votacionDto.FechaIni"
+                                       @bind-Value:set="OnFechaIniChanged"
+                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            @if (!string.IsNullOrEmpty(errorFechaIni))
+                            {
+                                <p class="text-xs text-[#A04040]">@errorFechaIni</p>
+                            }
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Fecha de fin</label>
+                            <InputDate @bind-Value:get="votacionDto.FechaFin"
+                                       @bind-Value:set="OnFechaFinChanged"
+                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            @if (!string.IsNullOrEmpty(errorFechaFin))
+                            {
+                                <p class="text-xs text-[#A04040]">@errorFechaFin</p>
+                            }
+                        </div>
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-[#4C6B4F]">Fecha de inicio</label>
-                    <InputDate @bind-Value="votacionDto.FechaIni"
-                               disabled="@isLoading"
-                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                <!-- ── Sección: Categorías y Criterios ── -->
+                <div class="p-6 space-y-4">
+                    <p class="text-xs font-semibold text-[#6C8A6C] uppercase tracking-wider">Categorías y Criterios de Evaluación</p>
+
+                    <!-- Chips de categorías predefinidas -->
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var preset in categoriasPreset)
+                        {
+                            bool seleccionada = votacionDto.Categorias.Any(c => c.Nombre == preset);
+                            <button type="button" @onclick="() => TogglePreset(preset)"
+                                    class="px-4 py-2 rounded-full text-sm font-medium transition-all border-2
+                                           @(seleccionada
+                                               ? "bg-[#6C8A6C] border-[#6C8A6C] text-white"
+                                               : "bg-white border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")">
+                                @preset
+                            </button>
+                        }
+                    </div>
+
+                    <!-- Añadir categoría personalizada -->
+                    @if (mostrarInputPersonalizada)
+                    {
+                        <div class="space-y-2">
+                            <div class="flex gap-2">
+                                <input @bind="nuevaCategoriaNombre"
+                                       @bind:event="oninput"
+                                       @onkeydown="OnCategoriaKeyDown"
+                                       placeholder="Nombre de la categoría personalizada"
+                                       class="flex-1 h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                                <button type="button" @onclick="AgregarCategoriaPersonalizada"
+                                        class="h-10 px-4 bg-[#6C8A6C] hover:bg-[#4C6B4F] text-white text-sm font-semibold rounded-xl transition-colors">
+                                    Añadir
+                                </button>
+                                <button type="button" @onclick='() => { mostrarInputPersonalizada = false; errorCategoria = null; }'
+                                        class="h-10 px-3 rounded-xl border border-[#B5D6AC] text-[#6C8A6C] text-sm hover:bg-[#E9EFE1] transition-colors">
+                                    ✕
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(errorCategoria))
+                            {
+                                <p class="text-xs text-red-600">⚠️ @errorCategoria</p>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button" @onclick='() => mostrarInputPersonalizada = true'
+                                class="px-4 py-2 rounded-full text-sm font-medium transition-all border-2 bg-white border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]">
+                            + Personalizada
+                        </button>
+                    }
+
+                    <!-- Categorías seleccionadas con criterios -->
+                    @if (!votacionDto.Categorias.Any())
+                    {
+                        <p class="text-center text-[#A6AAA9] text-sm py-4">
+                            Selecciona una categoría arriba o añade una personalizada
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="space-y-3">
+                            @foreach (var cat in votacionDto.Categorias)
+                            {
+                                int sumaPesos = cat.Criterios.Sum(c => c.Peso);
+                                string nombreCat = cat.Nombre;
+
+                                <div class="rounded-xl border border-[#B5D6AC] overflow-hidden">
+                                    <div class="flex items-center justify-between bg-[#E9EFE1] px-4 py-3">
+                                        <span class="font-semibold text-[#1A281B] text-sm">@cat.Nombre</span>
+                                        <button type="button" @onclick="() => EliminarCategoria(cat)"
+                                                class="text-xs text-[#A6AAA9] hover:text-red-500 transition-colors">
+                                            Quitar
+                                        </button>
+                                    </div>
+
+                                    <div class="px-4 py-3 space-y-2">
+                                        @if (!cat.Criterios.Any())
+                                        {
+                                            <p class="text-xs text-[#A6AAA9] italic">Sin criterios todavía. Añade al menos uno.</p>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var crit in cat.Criterios)
+                                            {
+                                                var critRef = crit;
+                                                <div class="flex items-center gap-2 py-1">
+                                                    <span class="flex-1 text-sm text-[#1A281B]">@crit.Nombre</span>
+                                                    <span class="text-sm font-medium text-[#4C6B4F] w-10 text-right">@crit.Peso%</span>
+                                                    <button type="button" @onclick="() => EliminarCriterio(cat, critRef)"
+                                                            class="text-[#A6AAA9] hover:text-red-500 text-sm w-5 transition-colors">✕</button>
+                                                </div>
+                                            }
+                                        }
+
+                                        <div class="flex gap-2 pt-2 border-t border-[#E9EFE1]">
+                                            <input value="@nuevoCriterioNombre.GetValueOrDefault(nombreCat, string.Empty)"
+                                                   @oninput="e => SetNuevoCriterioNombre(nombreCat, e.Value?.ToString() ?? string.Empty)"
+                                                   @onkeydown="e => OnCriterioKeyDown(e, nombreCat)"
+                                                   placeholder="Nombre del criterio"
+                                                   class="flex-1 h-8 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-2 text-xs focus:outline-none focus:border-[#6C8A6C]" />
+                                            <input type="number" min="0" max="100"
+                                                   value="@nuevoCriterioPeso.GetValueOrDefault(nombreCat, 0)"
+                                                   @oninput="e => SetNuevoCriterioPeso(nombreCat, e.Value?.ToString() ?? string.Empty)"
+                                                   placeholder="%"
+                                                   class="w-16 h-8 rounded-lg border bg-[#E9EFE1] border-[#B5D6AC] px-2 text-xs focus:outline-none focus:border-[#6C8A6C]" />
+                                            <button type="button" @onclick="() => AgregarCriterio(nombreCat)"
+                                                    class="h-8 px-3 bg-[#6C8A6C] hover:bg-[#4C6B4F] text-white text-xs font-bold rounded-lg transition-colors">
+                                                +
+                                            </button>
+                                        </div>
+
+                                        @if (errorCriterioPorCategoria.TryGetValue(nombreCat, out var errCrit) && !string.IsNullOrEmpty(errCrit))
+                                        {
+                                            <p class="text-xs text-red-600">⚠️ @errCrit</p>
+                                        }
+
+                                        <div class="flex items-center gap-3 pt-1">
+                                            <div class="flex-1 h-1.5 bg-[#E9EFE1] rounded-full overflow-hidden">
+                                                <div class="h-full rounded-full transition-all duration-300
+                                                            @(sumaPesos == 100 ? "bg-[#6C8A6C]" : "bg-[#C97070]")"
+                                                     style="width: @(Math.Min(sumaPesos, 100))%"></div>
+                                            </div>
+                                            <span class="text-xs font-medium whitespace-nowrap
+                                                         @(sumaPesos == 100 ? "text-[#4C6B4F]" : "text-[#A04040]")">
+                                                Total: @sumaPesos%@(sumaPesos == 100 ? " ✓" : "")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-[#4C6B4F]">Fecha de fin</label>
-                    <InputDate @bind-Value="votacionDto.FechaFin"
-                               disabled="@isLoading"
-                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                <!-- ── Sección: Configuración ── -->
+                <div class="p-6 space-y-4">
+                    <p class="text-xs font-semibold text-[#6C8A6C] uppercase tracking-wider">Configuración de Votación</p>
+
+                    <!-- Toggle: competidores votan -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-[#1A281B]">Los competidores pueden votar</span>
+                        <button type="button" @onclick="ToggleCompetidoresVotan"
+                                class="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none @(votacionDto.PermiteCompetidoresVotar ? "bg-[#6C8A6C]" : "bg-gray-300")">
+                            <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 @(votacionDto.PermiteCompetidoresVotar ? "translate-x-5" : "translate-x-0")"></span>
+                        </button>
+                    </div>
+
+                    <!-- Peso jurado / público -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Peso voto jurado (%)</label>
+                            <input type="number" @bind="votacionDto.PesoJurado"
+                                   min="0" max="100" disabled="@isLoading"
+                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Peso voto público (%)</label>
+                            <input type="number" @bind="votacionDto.PesoPublico"
+                                   min="0" max="100" disabled="@isLoading"
+                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        </div>
+                    </div>
+                    @if (votacionDto.PesoJurado + votacionDto.PesoPublico != 100)
+                    {
+                        <p class="text-xs text-amber-600">⚠️ Los pesos deben sumar 100% (actualmente @(votacionDto.PesoJurado + votacionDto.PesoPublico)%)</p>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-[#4C6B4F]">✓ Los pesos suman 100%</p>
+                    }
+
+                    <!-- Códigos de acceso -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Código encargado</label>
+                            <input @bind="votacionDto.CodigoEncargado"
+                                   placeholder="Ej: ENC2026" disabled="@isLoading"
+                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm font-mono focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Código jurado</label>
+                            <input @bind="votacionDto.CodigoJurado"
+                                   placeholder="Ej: JUR2026" disabled="@isLoading"
+                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm font-mono focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        </div>
+                    </div>
                 </div>
 
-                <button type="submit" disabled="@isLoading"
-                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-medium disabled:opacity-60">
-                    @(isLoading ? "Creando evento..." : "Crear Evento")
-                </button>
+                <!-- ── Footer del card: botones ── -->
+                <div class="flex gap-4 px-6 py-5 border-t border-[#E9EFE1]">
+                    <a href="/dashboard"
+                       class="flex-1 py-2.5 rounded-xl border-2 border-[#6C8A6C] text-[#4C6B4F] font-medium text-center hover:bg-white transition-colors text-sm">
+                        Cancelar
+                    </a>
+                    <button type="submit"
+                            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white font-medium transition-all shadow text-sm">
+                        Crear Evento
+                    </button>
+                </div>
 
-            </EditForm>
+            </div>
 
-        </div>
+        </EditForm>
     </div>
 </div>
 
 @code {
-    private VotacionDTO votacionDto = new VotacionDTO
+    private VotacionDTO votacionDto = new()
     {
-        FechaIni = DateTime.Now,
-        FechaFin = DateTime.Now.AddDays(1)
+        FechaIni = DateTime.Today,
+        FechaFin = DateTime.Today.AddDays(7),
+        PesoJurado = 70,
+        PesoPublico = 30
+    };
+
+    private static readonly List<string> categoriasPreset = new()
+    {
+        "Medio ambiente", "IA", "Educación", "Salud", "Fintech"
     };
 
     private bool isLoading = false;
     private string errorMessage = string.Empty;
     private int descripcionLength = 0;
+    private string errorFechaIni = string.Empty;
+    private string errorFechaFin = string.Empty;
+
+    private bool mostrarInputPersonalizada = false;
+    private string nuevaCategoriaNombre = "";
+    private string? errorCategoria = null;
+
+    // Estado por categoría para el criterio que se está escribiendo
+    private Dictionary<string, string> nuevoCriterioNombre = new();
+    private Dictionary<string, int> nuevoCriterioPeso = new();
+    private Dictionary<string, string?> errorCriterioPorCategoria = new();
+
+    private void OnFechaIniChanged(DateTime value)
+    {
+        errorFechaIni = string.Empty;
+        if (value.Date < DateTime.Today)
+        {
+            errorFechaIni = "La fecha de inicio no puede ser anterior a hoy.";
+            return;
+        }
+        votacionDto.FechaIni = value;
+        votacionDto.FechaFin = value;
+        errorFechaFin = string.Empty;
+    }
+
+    private void OnFechaFinChanged(DateTime value)
+    {
+        errorFechaFin = string.Empty;
+        if (value.Date < DateTime.Today)
+        {
+            errorFechaFin = "La fecha de fin no puede ser anterior a hoy.";
+            return;
+        }
+        votacionDto.FechaFin = value;
+    }
+
+    private void OnDescripcionInput(ChangeEventArgs e)
+    {
+        votacionDto.Descripcion = e.Value?.ToString() ?? string.Empty;
+        descripcionLength = votacionDto.Descripcion.Length;
+    }
+
+    private void ToggleCompetidoresVotan()
+    {
+        votacionDto.PermiteCompetidoresVotar = !votacionDto.PermiteCompetidoresVotar;
+    }
+
+    private void TogglePreset(string nombre)
+    {
+        var existente = votacionDto.Categorias.FirstOrDefault(c => c.Nombre == nombre);
+        if (existente != null)
+            votacionDto.Categorias.Remove(existente);
+        else
+            votacionDto.Categorias.Add(new CategoriaBaremoDTO { Nombre = nombre });
+    }
+
+    private void AgregarCategoriaPersonalizada()
+    {
+        errorCategoria = null;
+        string nombre = nuevaCategoriaNombre.Trim();
+
+        if (string.IsNullOrEmpty(nombre))
+        {
+            errorCategoria = "El nombre no puede estar vacío.";
+            return;
+        }
+        if (votacionDto.Categorias.Any(c => c.Nombre.Equals(nombre, StringComparison.OrdinalIgnoreCase)))
+        {
+            errorCategoria = "Ya existe una categoría con ese nombre.";
+            return;
+        }
+
+        votacionDto.Categorias.Add(new CategoriaBaremoDTO { Nombre = nombre });
+        nuevaCategoriaNombre = "";
+        mostrarInputPersonalizada = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", """
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
+                        e.preventDefault();
+                    }
+                }, true);
+            """);
+        }
+    }
+
+    private void OnCategoriaKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") AgregarCategoriaPersonalizada();
+    }
+
+    private void OnCriterioKeyDown(KeyboardEventArgs e, string catNombre)
+    {
+        if (e.Key == "Enter") AgregarCriterio(catNombre);
+    }
+
+    private void EliminarCategoria(CategoriaBaremoDTO cat)
+    {
+        votacionDto.Categorias.Remove(cat);
+    }
+
+    private void SetNuevoCriterioNombre(string catNombre, string val)
+    {
+        nuevoCriterioNombre[catNombre] = val;
+    }
+
+    private void SetNuevoCriterioPeso(string catNombre, string val)
+    {
+        nuevoCriterioPeso[catNombre] = int.TryParse(val, out int p) ? Math.Max(0, Math.Min(100, p)) : 0;
+    }
+
+    private void AgregarCriterio(string catNombre)
+    {
+        var cat = votacionDto.Categorias.FirstOrDefault(c => c.Nombre == catNombre);
+        if (cat == null) return;
+
+        errorCriterioPorCategoria[catNombre] = null;
+        string nombre = nuevoCriterioNombre.GetValueOrDefault(catNombre, "").Trim();
+        int peso = nuevoCriterioPeso.GetValueOrDefault(catNombre, 0);
+
+        if (string.IsNullOrEmpty(nombre))
+        {
+            errorCriterioPorCategoria[catNombre] = "El nombre del criterio no puede estar vacío.";
+            return;
+        }
+        if (cat.Criterios.Any(c => c.Nombre.Equals(nombre, StringComparison.OrdinalIgnoreCase)))
+        {
+            errorCriterioPorCategoria[catNombre] = "Ya existe un criterio con ese nombre en esta categoría.";
+            return;
+        }
+
+        cat.Criterios.Add(new CriterioDTO { Nombre = nombre, Peso = peso });
+        nuevoCriterioNombre[catNombre] = "";
+        nuevoCriterioPeso[catNombre] = 0;
+    }
+
+    private void EliminarCriterio(CategoriaBaremoDTO cat, CriterioDTO crit)
+    {
+        cat.Criterios.Remove(crit);
+    }
 
     private async Task HandleSubmit()
     {
-        isLoading = true;
         errorMessage = string.Empty;
+
+        if (votacionDto.PesoJurado + votacionDto.PesoPublico != 100)
+        {
+            errorMessage = $"Los pesos de jurado y público deben sumar 100% (actualmente {votacionDto.PesoJurado + votacionDto.PesoPublico}%).";
+            return;
+        }
 
         try
         {
             var response = await Http.PostAsJsonAsync("/api/votaciones", votacionDto);
-
             if (response.IsSuccessStatusCode)
             {
-                try { await JS.InvokeVoidAsync("sessionStorage.setItem", "votify_rol", "ENCARGADO"); } catch { }
                 NavigationManager.NavigateTo("/dashboard");
             }
             else
@@ -114,10 +478,6 @@
         catch
         {
             errorMessage = "Error de conexión con el servidor.";
-        }
-        finally
-        {
-            isLoading = false;
         }
     }
 }

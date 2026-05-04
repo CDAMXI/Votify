@@ -1,28 +1,28 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using Votify.Entities;
-using System.Text;
-using System.Threading.Tasks;
+using Votify.Entities; 
 
 namespace Votify.Persistence
 {
-    public interface IDAL
+    // El genérico <T> ahora define el tipo de entidad para todo el repositorio
+    public interface IDAL<T> where T : class
     {
-        void Insert<T>(T entity) where T : class;
-        void Delete<T>(T entity) where T : class;
-        IEnumerable<T> GetAll<T>() where T : class;
-        T GetById<T>(IComparable id) where T : class;
-        bool Exists<T>(IComparable id) where T : class;
-        void Clear<T>() where T : class;
-        IEnumerable<T> GetWhere<T>(Expression<Func<T, bool>> predicate) where T : class;
+        // Operaciones CRUD del Repositorio
+        void Insert(T entity); 
+        void Delete(T entity); 
+        IEnumerable<T> GetAll(); 
+        T GetById(IComparable id); 
+        bool Exists(IComparable id); 
+        void Clear();
+        IEnumerable<T> GetWhere(Expression<Func<T, bool>> predicate); 
 
+        // Operaciones de Transacción (Unit of Work)
         void Commit();
-        void Rollback();
-        void RemoveAllData();
-        void BeginTransaction();
-        void CommitTransaction();
-        void RollbackTransaction();
+        void Rollback(); 
+        void RemoveAllData(); 
+        void BeginTransaction(); 
+        void CommitTransaction(); 
+        void RollbackTransaction(); 
     }
 }

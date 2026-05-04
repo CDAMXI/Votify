@@ -1,0 +1,91 @@
+@page "/event-voting/{EventId}/comentarios"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using System.Linq
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <button @onclick="Volver" class="flex items-center text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-md transition-colors">
+                <span class="mr-2">←</span> Volver a mi proyecto
+            </button>
+            <h1 class="text-lg font-bold text-[#1A281B]">Comentarios de tu proyecto</h1>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            @if (cargando)
+            {
+                <div class="flex justify-center items-center py-14">
+                    <div class="w-8 h-8 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            }
+            else if (comentarios.Count == 0)
+            {
+                <div class="p-4 bg-[#F8FAF7] border border-[#B5D6AC] rounded-lg text-sm text-[#6C8A6C]">
+                    Aún no hay comentarios para tu proyecto.
+                </div>
+            }
+            else
+            {
+                <ul class="space-y-3">
+                    @foreach (var comentario in comentarios)
+                    {
+                        <li class="bg-[#F8FAF7] border border-[#B5D6AC]/40 rounded-xl p-4 text-sm text-[#4C6B4F] leading-relaxed">
+                            @comentario
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter] public string? EventId { get; set; }
+
+    private bool cargando = true;
+    private List<string> comentarios = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!int.TryParse(EventId, out _))
+        {
+            comentarios = new();
+            cargando = false;
+            return;
+        }
+
+        try
+        {
+            var resp = await Http.GetAsync($"/api/proyectos/{EventId}/mis-comentarios");
+            if (!resp.IsSuccessStatusCode)
+            {
+                comentarios = new();
+                return;
+            }
+
+            var data = await resp.Content.ReadFromJsonAsync<List<string>>();
+            comentarios = data?
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim())
+                .ToList() ?? new();
+        }
+        catch
+        {
+            comentarios = new();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void Volver()
+    {
+        NavigationManager.NavigateTo($"/event-voting/{EventId}?Rol=COMPETIDOR");
+    }
+}
