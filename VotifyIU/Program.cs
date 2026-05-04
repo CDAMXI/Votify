@@ -48,7 +48,24 @@ using (var scope = app.Services.CreateScope())
 }
 
 if (app.Environment.IsDevelopment())
+{
     app.UseWebAssemblyDebugging();
+
+    // Evita que el navegador sirva versiones cacheadas del bundle WASM
+    // y del manifiesto de arranque tras un rebuild. Solo en desarrollo.
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value ?? string.Empty;
+        if (path.Contains("/_framework/", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("blazor.boot.json", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            context.Response.Headers["Pragma"] = "no-cache";
+            context.Response.Headers["Expires"] = "0";
+        }
+        await next();
+    });
+}
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
