@@ -14,7 +14,7 @@
 
 	<ItemGroup>
 		<Compile Remove="Program.cs" />
-		<Compile Remove="VotifyIU\**\*.cs;VotifyIU.Client\**\*.cs;Votify.shared\**\*.cs" />
+		<Compile Remove="VotifyIU\**\*.cs;VotifyIU.Client\**\*.cs;Votify.shared\**\*.cs;Votify.Tests\**\*.cs" />
 		<EmbeddedResource Remove="VotifyIU\**;VotifyIU.Client\**;Votify.shared\**" />
 		<None Remove="VotifyIU\**;VotifyIU.Client\**;Votify.shared\**" />
 	</ItemGroup>
