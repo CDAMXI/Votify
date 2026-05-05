@@ -4,6 +4,23 @@ using Votify.Entities;
 
 namespace Votify.BusinessLogic.Service
 {
+    public class HistorialEventoItem
+    {
+        public Evento Evento { get; set; } = null!;
+        public string? TipoRol { get; set; }
+        public bool Voto { get; set; }
+        public Proyecto? ProyectoDestacado { get; set; }
+        public int? PosicionProyecto { get; set; }
+        public int? TotalProyectos { get; set; }
+    }
+
+    public class HistorialEventosResultado
+    {
+        public int EventosParticipados { get; set; }
+        public int VotosEmitidos { get; set; }
+        public List<HistorialEventoItem> Eventos { get; set; } = new();
+    }
+
     public interface IVotifyService
     {
         // Autenticación
@@ -46,9 +63,16 @@ namespace Votify.BusinessLogic.Service
         string? GetTipoRolEnEvento(int idEvento); 
         string? GetTipoRolDeUsuario(int idUsuario, int idEvento); 
 
-        // Proyectos 
-        Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor); 
-        void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales); 
-        void EliminarProyecto(int idProyecto); 
+        // Proyectos
+        Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor);
+        void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales);
+        void EliminarProyecto(int idProyecto);
+
+        // Historial y reclamaciones
+        HistorialEventosResultado GetHistorialDelUsuario();
+        Reclamacion CrearReclamacion(int idEvento, string descripcion);
+        IEnumerable<Reclamacion> GetReclamacionesDelUsuario();
+        IEnumerable<Reclamacion> GetReclamacionesComoOrganizador();
+        Reclamacion ResponderReclamacion(int idReclamacion, string estado, string? respuesta);
     }
 }

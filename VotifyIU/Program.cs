@@ -266,6 +266,105 @@ app.MapPut("/api/perfil/foto", (UpdateFotoRequest req, IVotifyService service, H
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
+app.MapGet("/api/perfil/historial", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var resultado = service.GetHistorialDelUsuario();
+        var reclamaciones = service.GetReclamacionesDelUsuario()
+            .GroupBy(r => r.EventoId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.FechaCreacion).First());
+
+        var dto = new HistorialEventosDTO
+        {
+            EventosParticipados = resultado.EventosParticipados,
+            VotosEmitidos = resultado.VotosEmitidos,
+            Eventos = resultado.Eventos.Select(item => new EventoHistorialItemDTO
+            {
+                IdEvento = item.Evento.IdEvento,
+                Nombre = item.Evento.Nombre ?? $"Evento #{item.Evento.IdEvento}",
+                FechaIni = item.Evento.FechaIni,
+                FechaFin = item.Evento.FechaFin,
+                RolUsuario = item.TipoRol,
+                Voto = item.Voto,
+                ProyectoDestacado = item.ProyectoDestacado?.Nombre,
+                PosicionProyecto = item.PosicionProyecto,
+                TotalProyectos = item.TotalProyectos,
+                YaReclamado = reclamaciones.ContainsKey(item.Evento.IdEvento),
+                EstadoReclamacion = reclamaciones.TryGetValue(item.Evento.IdEvento, out var r) ? r.Estado : null
+            }).ToList()
+        };
+        return Results.Ok(dto);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+// ── Endpoints de reclamaciones ──────────────────────────────────
+
+app.MapPost("/api/reclamaciones", (CrearReclamacionRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var reclamacion = service.CrearReclamacion(req.EventoId, req.Descripcion);
+        return Results.Ok(MapReclamacion(reclamacion, username));
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapGet("/api/reclamaciones/mias", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var reclamaciones = service.GetReclamacionesDelUsuario()
+            .Select(r => MapReclamacion(r, username))
+            .ToList();
+        return Results.Ok(reclamaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapGet("/api/reclamaciones/organizador", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var reclamaciones = service.GetReclamacionesComoOrganizador()
+            .Select(r => MapReclamacion(r, r.usuario?.Username ?? $"Usuario #{r.UsuarioId}"))
+            .ToList();
+        return Results.Ok(reclamaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPut("/api/reclamaciones/{id}/responder", (int id, ResponderReclamacionRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+    try
+    {
+        service.RestoreSession(username);
+        var reclamacion = service.ResponderReclamacion(id, req.Estado, req.Respuesta);
+        return Results.Ok(MapReclamacion(reclamacion, reclamacion.usuario?.Username ?? $"Usuario #{reclamacion.UsuarioId}"));
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
 // ── Endpoints de votaciones ─────────────────────────────────────
 
 app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpContext http) =>
@@ -923,6 +1022,22 @@ static string ObtenerMensajeErrorDetallado(Exception ex)
     return ex.InnerException?.InnerException?.Message
         ?? ex.InnerException?.Message
         ?? ex.Message;
+}
+
+static ReclamacionDTO MapReclamacion(Reclamacion reclamacion, string solicitante)
+{
+    return new ReclamacionDTO
+    {
+        Id = reclamacion.Id,
+        EventoId = reclamacion.EventoId,
+        EventoNombre = reclamacion.evento?.Nombre ?? $"Evento #{reclamacion.EventoId}",
+        Solicitante = solicitante,
+        Descripcion = reclamacion.Descripcion ?? string.Empty,
+        FechaCreacion = reclamacion.FechaCreacion,
+        Estado = reclamacion.Estado ?? Reclamacion.EstadoPendiente,
+        RespuestaOrganizador = reclamacion.RespuestaOrganizador,
+        FechaRespuesta = reclamacion.FechaRespuesta
+    };
 }
 
 static ProyectoResultadoDTO BuildProjectResult(Proyecto proyecto, List<Voto> votosProyecto, Votacion votacion)
