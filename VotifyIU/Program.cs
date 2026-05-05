@@ -458,7 +458,7 @@ app.MapPost("/api/votaciones/{id}/cerrar", (int id, IVotifyService service, Http
         return Results.Ok();
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
-    catch (Exception ex) { return Results.Problem(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
 });
 
 // ── Endpoint guardar voto ────────────────────────────────────────

@@ -97,7 +97,7 @@
                                         {
                                             <p class="text-sm text-[#6C8A6C] mt-1">@v.Descripcion</p>
                                         }
-                                        <p class="text-xs text-[#6C8A6C] mt-2">Finaliza: @v.FechaFin.ToString("dd/MM/yyyy")</p>
+                                        <p class="text-xs mt-2 @GetEstadoVotacionClase(v)">@GetEstadoVotacionTexto(v)</p>
                                     </div>
                                     <button @onclick="() => IrADestino(v.Id)"
                                             class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
@@ -141,6 +141,28 @@
     private string TextoAccion => string.Equals(Dest, "results", StringComparison.OrdinalIgnoreCase)
         ? "Ver resultados"
         : "Entrar";
+
+    private static string GetEstadoVotacionTexto(VotacionDTO votacion)
+    {
+        if (!votacion.Estado && votacion.FechaFin <= DateTime.Now)
+            return "Cerrada definitivamente";
+
+        if (!votacion.Estado)
+            return "Pausada";
+
+        return $"Finaliza: {votacion.FechaFin:dd/MM/yyyy}";
+    }
+
+    private static string GetEstadoVotacionClase(VotacionDTO votacion)
+    {
+        if (!votacion.Estado && votacion.FechaFin <= DateTime.Now)
+            return "text-red-600 font-semibold";
+
+        if (!votacion.Estado)
+            return "text-orange-500 font-semibold";
+
+        return "text-[#6C8A6C]";
+    }
 
     protected override async Task OnInitializedAsync()
     {

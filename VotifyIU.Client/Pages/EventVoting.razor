@@ -253,24 +253,32 @@
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-xl font-bold text-[#1A281B]">Control de votación</h2>
-                    <span class="px-4 py-2 @(votacionPausada ? "bg-orange-400" : "bg-[#6C8A6C]") text-white text-sm font-bold rounded-full">
-                        @(votacionPausada ? "⏸ Pausada" : "● Votación abierta")
+                    <span class="px-4 py-2 @(votacionCerrada ? "bg-red-500" : votacionPausada ? "bg-orange-400" : "bg-[#6C8A6C]") text-white text-sm font-bold rounded-full">
+                        @(votacionCerrada ? "■ Votación cerrada" : votacionPausada ? "⏸ Pausada" : "● Votación abierta")
                     </span>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mb-6">
-                    <button @onclick="TogglePausa" disabled="@gestionando"
-                            class="@(votacionPausada
+                    <button @onclick="TogglePausa" disabled="@(gestionando || votacionCerrada)"
+                            class="@(votacionCerrada
+                                        ? "bg-[#EFEFEE] text-[#A6AAA9] py-4 rounded-xl font-bold cursor-not-allowed"
+                                        : votacionPausada
                                         ? "bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors disabled:opacity-50"
                                         : "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50")">
-                        @(gestionando ? "..." : votacionPausada ? "▶ Reanudar votación" : "⏸ Pausar votación")
+                        @(gestionando ? "..." : votacionCerrada ? "Votación cerrada" : votacionPausada ? "▶ Reanudar votación" : "⏸ Pausar votación")
                     </button>
-                    <button @onclick="MostrarConfirmCierre" disabled="@gestionando"
+                    <button @onclick="MostrarConfirmCierre" disabled="@(gestionando || votacionCerrada)"
                             class="bg-red-50 border-2 border-red-300 text-red-500 py-4 rounded-xl font-bold hover:bg-red-100 transition-colors disabled:opacity-50">
                         ⏹ Cerrar votación
                     </button>
                 </div>
 
-                @if (confirmarCierre)
+                @if (votacionCerrada)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                        <p class="text-red-700 font-medium text-sm">La votación está cerrada definitivamente. Ya no puede reanudarse ni recibir nuevos votos.</p>
+                    </div>
+                }
+                else if (confirmarCierre)
                 {
                     <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
                         <p class="text-red-700 font-medium mb-3 text-sm">¿Cerrar definitivamente? Esta acción no se puede deshacer.</p>
@@ -513,24 +521,32 @@
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-xl font-bold text-[#1A281B]">Control de votación</h2>
-                    <span class="px-4 py-2 @(votacionPausada ? "bg-orange-400" : "bg-[#6C8A6C]") text-white text-sm font-bold rounded-full">
-                        @(votacionPausada ? "⏸ Pausada" : "● Votación abierta")
+                    <span class="px-4 py-2 @(votacionCerrada ? "bg-red-500" : votacionPausada ? "bg-orange-400" : "bg-[#6C8A6C]") text-white text-sm font-bold rounded-full">
+                        @(votacionCerrada ? "■ Votación cerrada" : votacionPausada ? "⏸ Pausada" : "● Votación abierta")
                     </span>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mb-6">
-                    <button @onclick="TogglePausa" disabled="@gestionando"
-                            class="@(votacionPausada
+                    <button @onclick="TogglePausa" disabled="@(gestionando || votacionCerrada)"
+                            class="@(votacionCerrada
+                                            ? "bg-[#EFEFEE] text-[#A6AAA9] py-4 rounded-xl font-bold cursor-not-allowed"
+                                            : votacionPausada
                                             ? "bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] py-4 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors disabled:opacity-50"
                                             : "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50")">
-                        @(gestionando ? "..." : votacionPausada ? "▶ Reanudar votación" : "⏸ Pausar votación")
+                        @(gestionando ? "..." : votacionCerrada ? "Votación cerrada" : votacionPausada ? "▶ Reanudar votación" : "⏸ Pausar votación")
                     </button>
-                    <button @onclick="MostrarConfirmCierre" disabled="@gestionando"
+                    <button @onclick="MostrarConfirmCierre" disabled="@(gestionando || votacionCerrada)"
                             class="bg-red-50 border-2 border-red-300 text-red-500 py-4 rounded-xl font-bold hover:bg-red-100 transition-colors disabled:opacity-50">
                         ⏹ Cerrar votación
                     </button>
                 </div>
 
-                @if (confirmarCierre)
+                @if (votacionCerrada)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                        <p class="text-red-700 font-medium text-sm">La votación está cerrada definitivamente. Ya no puede reanudarse ni recibir nuevos votos.</p>
+                    </div>
+                }
+                else if (confirmarCierre)
                 {
                     <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
                         <p class="text-red-700 font-medium mb-3 text-sm">¿Cerrar definitivamente? Esta acción no se puede deshacer.</p>
@@ -695,6 +711,7 @@
     private bool eliminandoProyecto = false;
     // Estado encargado
     private bool votacionPausada = false;
+    private bool votacionCerrada = false;
     private bool gestionando = false;
     private bool confirmarCierre = false;
     private string? mensajeGestion = null;
@@ -785,7 +802,10 @@
                 {
                     var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{votId}");
                     if (votacion != null)
-                        votacionPausada = !votacion.Estado; // Estado=false significa pausada
+                    {
+                        votacionCerrada = !votacion.Estado && votacion.FechaFin <= DateTime.Now;
+                        votacionPausada = !votacion.Estado && !votacionCerrada;
+                    }
                 }
             }
             catch { }
@@ -950,6 +970,13 @@
     }
     private async Task TogglePausa()
     {
+        if (votacionCerrada)
+        {
+            mensajeGestion = "La votación ya está cerrada definitivamente.";
+            errorGestion = true;
+            return;
+        }
+
         gestionando = true;
         mensajeGestion = null;
         try
@@ -987,8 +1014,8 @@
             {
                 mensajeGestion = "Votación cerrada definitivamente.";
                 errorGestion = false;
-                await Task.Delay(1500);
-                NavigationManager.NavigateTo("/dashboard");
+                votacionCerrada = true;
+                votacionPausada = false;
             }
             else
             {

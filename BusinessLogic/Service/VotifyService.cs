@@ -168,11 +168,11 @@ namespace Votify.BusinessLogic.Service
             Proyecto proyecto = ObtenerProyectoOFallar(idProyecto);
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
 
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
+
             if (!votacion.Estado)
                 throw new ServiceException("La votación está pausada");
-
-            if (votacion.FechaFin <= DateTime.Now)
-                throw new ServiceException("La votación ha finalizado");
 
             int eventoId = evento.IdEvento;
             Rol? rolEvento = BuscarRolEnEvento(eventoId);
@@ -424,8 +424,8 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            if (votacion.Encargado?.usuario?.Id != usuario!.Id)
-                throw new ServiceException("No eres el encargado de esta votación");
+            if (!UsuarioPuedeGestionarVotacion(votacion))
+                throw new ServiceException("No tienes permisos para modificar esta votación");
             if (nuevaFechaFin <= DateTime.Now)
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
             votacion.FechaFin = nuevaFechaFin;
@@ -437,12 +437,15 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
-            bool esEncargado = votacion.Encargado?.usuario?.Id == usuario!.Id;
-            bool esOrganizador = UsuarioEsOrganizadorEnEvento(votacion.EventoId);
-            if (!esEncargado && !esOrganizador)
+            if (!UsuarioPuedeGestionarVotacion(votacion))
                 throw new ServiceException("No tienes permisos para cerrar esta votación");
+
+            DateTime fechaCierre = votacion.FechaIni <= DateTime.Now
+                ? votacion.FechaIni
+                : DateTime.Now;
+
             votacion.Estado = false;
-            votacion.FechaFin = DateTime.Now.AddDays(-1);
+            votacion.FechaFin = fechaCierre;
             Commit();
         }
 
@@ -538,9 +541,7 @@ namespace Votify.BusinessLogic.Service
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
 
-            bool esEncargado = votacion.Encargado?.usuario?.Id == usuario!.Id;
-            bool esOrganizador = UsuarioEsOrganizadorEnEvento(votacion.EventoId);
-            if (!esEncargado && !esOrganizador)
+            if (!UsuarioPuedeGestionarVotacion(votacion))
                 throw new ServiceException("No tienes permisos para gestionar esta votación");
 
             if (votacion.FechaFin <= DateTime.Now && !votacion.Estado)
@@ -619,6 +620,12 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException("La votación no está asociada a ningún evento");
             return votacion.evento;
         }
+
+        private bool UsuarioPuedeGestionarVotacion(Votacion votacion)
+            => UsuarioEsOrganizadorEnEvento(votacion.EventoId) || UsuarioEsEncargadoEnEvento(votacion.EventoId);
+
+        private bool UsuarioEsEncargadoEnEvento(int eventoId)
+            => _encargadoRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
 
         private bool UsuarioEsOrganizadorEnEvento(int eventoId)
             => _organizadorRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
