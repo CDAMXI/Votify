@@ -6,6 +6,7 @@ namespace Votify.shared
         public string Nombre { get; set; } = "";
         public string Descripcion { get; set; } = "";
         public string Competidor { get; set; } = "";
+        public string Categoria { get; set; } = "";
         public List<string> Participantes { get; set; } = new();
         public double Media { get; set; }
         public double MediaBruta { get; set; }

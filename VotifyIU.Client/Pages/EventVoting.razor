@@ -50,9 +50,9 @@
         }
 
     
-        else if (Rol == "JURADO")
+        else if (Rol == "JURADO" || Rol == "PUBLICO")
         {
-            @if (yaVotadoEnEvento)
+            @if (Rol == "JURADO" && yaVotadoEnEvento)
             {
                 <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
                     <p class="text-2xl font-bold text-[#1A281B] mb-2">Ya has votado en este evento</p>
@@ -69,7 +69,7 @@
                         <div class="flex items-center gap-4">   
                             <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
                             <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
-                            <span class="   text-sm text-[#4C6B4F]">• Votos realizados: @votesSubmitted/3</span>
+                            <span class="text-sm text-[#4C6B4F]">• Votos realizados: @(Rol == "JURADO" ? $"{votesSubmitted}/3" : $"{votesSubmitted}/{mockProjects.Count}")</span>
                         </div>            
                     </div>
                     <div class="w-full bg-white rounded-full h-2 overflow-hidden">
@@ -173,10 +173,22 @@
                             <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
                         </div>
                     </div>
-                    <button @onclick="SubmitVotoPublico"
+                    <button @onclick="SubmitCurrentVote"
                             class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
                         Enviar voto
                     </button>
+
+                    <div class="mt-4 flex items-center gap-3">
+                        <button @onclick="PreviousProject" disabled="@(currentProjectIndex == 0)"
+                                class="px-4 py-2 border border-[#6C8A6C] text-[#6C8A6C] rounded-lg font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+                            ← Retroceder
+                        </button>
+                        <div class="flex-1"></div>
+                        <button @onclick="SkipNext"
+                                class="px-4 py-2 bg-white border border-[#B5D6AC] text-[#4C6B4F] rounded-lg font-semibold hover:bg-[#F8FAF7]">
+                            Saltar proyecto
+                        </button>
+                    </div>
                 </div>
             }
         }
@@ -184,18 +196,47 @@
         {
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 text-center">
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] flex items-center justify-center mx-auto mb-4 text-4xl">🚀</div>
-                <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Tu proyecto está siendo evaluado</h2>
-                <p class="text-[#6C8A6C] mb-6">Los jurados están revisando tu trabajo ahora mismo. Los resultados estarán disponibles al terminar la votación.</p>
-                <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left">
-                    <h3 class="text-lg font-bold text-[#1A281B] mb-3">Tu proyecto</h3>
-                    @{var myProj = mockProjects.Count > 0 ? mockProjects[0] : null;}
-                    @if (myProj == null)
-                    {
-                        <p class="text-sm text-[#A6AAA9]">No hay proyecto asociado.</p>
-                    }
-                    else
-                    {
-                        <p class="text-xl font-bold text-[#4C6B4F]">@myProj.Name</p>
+                @if (miProyectoCompetidor == null)
+                {
+                    <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Presenta tu proyecto</h2>
+                    <p class="text-[#6C8A6C] mb-6">Envía tu proyecto para la categoría <span class="font-bold">@CategoriaActual</span>. La imagen es opcional y podrás subirla después.</p>
+                    <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left max-w-2xl mx-auto">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Nombre del proyecto *</label>
+                                <input @bind="nuevoProyectoCompetidorNombre"
+                                       class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B]" />
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción *</label>
+                                <textarea @bind="nuevoProyectoCompetidorDescripcion"
+                                          class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] min-h-[120px]"></textarea>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(errorProyectoCompetidor))
+                            {
+                                <p class="text-red-500 text-sm font-medium">⚠️ @errorProyectoCompetidor</p>
+                            }
+                            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                                <button @onclick="CrearProyectoCompetidorAsync" disabled="@creandoProyectoCompetidor"
+                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+                                    @(creandoProyectoCompetidor ? "Guardando..." : "Presentar proyecto")
+                                </button>
+                                <a href="/dashboard"
+                                   class="px-6 py-3 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#F8FAF7] transition-colors text-center">
+                                    Volver
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Tu proyecto está siendo evaluado</h2>
+                    <p class="text-[#6C8A6C] mb-6">Los jurados están revisando tu trabajo ahora mismo. Los resultados estarán disponibles al terminar la votación.</p>
+                    <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left">
+                        <h3 class="text-lg font-bold text-[#1A281B] mb-3">Tu proyecto</h3>
+                        @{var myProj = miProyectoCompetidor;}
+                        <p class="text-xl font-bold text-[#4C6B4F]">@myProj!.Name</p>
                         <p class="text-sm text-[#6C8A6C]">Equipo: @myProj.Team</p>
                         <span class="inline-block mt-2 px-3 py-1 bg-white text-[#4C6B4F] rounded-full text-xs font-bold">@myProj.Category</span>
                         <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@myProj.Description</p>
@@ -220,7 +261,7 @@
                             }
 
                             <div class="mt-3 flex gap-2 items-center">
-                            <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold cursor-pointer">
+                                <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold cursor-pointer">
                                     Subir Contenido
                                     <InputFile OnChange="OnInputFileChange" accept="image/*" style="display:none" />
                                 </label>
@@ -238,14 +279,14 @@
                                 Ver comentarios del proyecto
                             </button>
                         </div>
-                    }
-                </div>
-                <div class="flex items-center justify-center gap-3 text-[#6C8A6C]">
-                    <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0s"></div>
-                    <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0.2s"></div>
-                    <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0.4s"></div>
-                    <span class="text-sm font-medium ml-2">Votación en curso</span>
-                </div>
+                    </div>
+                    <div class="flex items-center justify-center gap-3 text-[#6C8A6C]">
+                        <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0s"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0.2s"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#6C8A6C] animate-bounce" style="animation-delay:0.4s"></div>
+                        <span class="text-sm font-medium ml-2">Votación en curso</span>
+                    </div>
+                }
             </div>
         }
         else if (Rol == "ORGANIZADOR")
@@ -626,6 +667,17 @@
     private bool cargando = true;
     private bool yaVotadoEnEvento = false;
     private string? avisoSinDatos = null;
+    private const string CategoryMarkerPrefix = "__CAT__:";
+    private VotacionDTO? votacionActual;
+    private string? currentUsername;
+    private Project? miProyectoCompetidor;
+    private string nuevoProyectoCompetidorNombre = "";
+    private string nuevoProyectoCompetidorDescripcion = "";
+    private string? errorProyectoCompetidor;
+    private bool creandoProyectoCompetidor;
+    private bool publicoMostrarVotacion = false;
+    private int publicoProyectoIndex = 0;
+    private HashSet<int> publicosVotados = new();
 
     // Estado del organizador — crear proyecto
     private List<ProyectoResultadoDTO> proyectosOrganizador = new();
@@ -663,6 +715,7 @@
     private List<string> editParticipantes = new();
     private string busquedaParticipante = "";
     private string editParticipanteLeader = "";
+    private string CategoriaActual => votacionActual?.Titulo ?? "esta categoría";
 
     protected override async Task OnInitializedAsync()
     {
@@ -674,30 +727,45 @@
 
         try
         {
-            // 1. Cargar proyectos reales
-            var reales = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}");
-            if (reales != null && reales.Count > 0)
+            votacionActual = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{EventId}");
+            AplicarCriteriosDeVotacion();
+            var perfil = await Http.GetFromJsonAsync<PerfilPaginaDTO>("/api/perfil");
+            currentUsername = perfil?.Username;
+
+            mockProjects = new();
+            proyectosOrganizador = new();
+
+            var reales = await Http.GetFromJsonAsync<List<ProyectoResultadoDTO>>($"/api/resultados/{EventId}") ?? new List<ProyectoResultadoDTO>();
+            var filtrados = reales
+                .Where(ProyectoCoincideConCategoriaActual)
+                .Select(LimpiarProyectoResultado)
+                .ToList();
+
+            if (filtrados.Count > 0)
             {
-                mockProjects = reales.Select(p => new Project
+                mockProjects = filtrados.Select(p => new Project
                 {
                     Id = p.Id.ToString(),
                     DbId = p.Id,
                     Name = p.Nombre,
                     Team = p.Competidor,
-                    Category = "",
+                    Category = ObtenerCategoriaProyecto(p),
                     Description = p.Descripcion
                 }).ToList();
 
-                // Si es organizador, sincronizar lista de gestión
                 if (Rol == "ORGANIZADOR")
-                    proyectosOrganizador = reales;
+                    proyectosOrganizador = filtrados;
             }
-            else
+            else if (Rol == "JURADO" || Rol == "PUBLICO")
             {
                 avisoSinDatos = "Esta votación no tiene proyectos registrados en la base de datos. El organizador debe añadirlos antes de que se pueda votar.";
             }
 
-            // 2. Cargar votos ya emitidos por este usuario en esta votación
+            if (Rol == "COMPETIDOR" && !string.IsNullOrWhiteSpace(currentUsername))
+            {
+                miProyectoCompetidor = mockProjects.FirstOrDefault(p => string.Equals(p.Team, currentUsername, StringComparison.OrdinalIgnoreCase));
+            }
+
             var votados = await Http.GetFromJsonAsync<List<int>>($"/api/votos/misVotos/{EventId}");
             if (votados != null)
             {
@@ -714,12 +782,9 @@
             }
 
             votesSubmitted = votedProjects.Count;
-
-            // 3. Comprobar si ya alcanzó el límite de votos (para JURADO)
             yaVotadoEnEvento = votesSubmitted >= 3;
 
-            // Si es competidor, intentar cargar la imagen asociada a su proyecto
-            if (Rol == "COMPETIDOR")
+            if (Rol == "COMPETIDOR" && miProyectoCompetidor != null)
                 await TryLoadMyProjectImage();
         }
         catch
@@ -749,7 +814,7 @@
 
     private async Task TryLoadMyProjectImage()
     {
-        var proj = mockProjects.Count > 0 ? mockProjects[0] : null;
+        var proj = miProyectoCompetidor;
         if (proj == null || proj.DbId == 0) return;
         cargandoImagen = true;
         try
@@ -787,7 +852,7 @@
             var file = e.File;
             if (file == null) return;
 
-            var proj = mockProjects.Count > 0 ? mockProjects[0] : null;
+            var proj = miProyectoCompetidor;
             if (proj == null || proj.DbId == 0)
             {
                 await JS.InvokeVoidAsync("alert", "No hay proyecto válido para subir la imagen.");
@@ -871,7 +936,7 @@
 
     private async Task ConfirmarEliminarImagenAsync()
     {
-        var proj = mockProjects.Count > 0 ? mockProjects[0] : null;
+        var proj = miProyectoCompetidor;
         if (proj == null || proj.DbId == 0) return;
         confirmEliminarImagen = false;
         cargandoImagen = true;
@@ -894,6 +959,164 @@
         }
         finally { cargandoImagen = false; StateHasChanged(); }
     }
+
+    private async Task CrearProyectoCompetidorAsync()
+    {
+        errorProyectoCompetidor = null;
+        if (string.IsNullOrWhiteSpace(nuevoProyectoCompetidorNombre))
+        {
+            errorProyectoCompetidor = "El nombre del proyecto es obligatorio.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(nuevoProyectoCompetidorDescripcion))
+        {
+            errorProyectoCompetidor = "La descripción del proyecto es obligatoria.";
+            return;
+        }
+
+        creandoProyectoCompetidor = true;
+        try
+        {
+            var resp = await Http.PostAsJsonAsync($"/api/proyectos/{EventId}", new
+            {
+                Nombre = nuevoProyectoCompetidorNombre.Trim(),
+                Descripcion = nuevoProyectoCompetidorDescripcion.Trim(),
+                UsernameCompetidor = (string?)null
+            });
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                errorProyectoCompetidor = await resp.Content.ReadAsStringAsync();
+                return;
+            }
+
+            var creado = await resp.Content.ReadFromJsonAsync<ProyectoResultadoDTO>();
+            if (creado == null)
+            {
+                errorProyectoCompetidor = "No se pudo guardar el proyecto.";
+                return;
+            }
+
+            creado = LimpiarProyectoResultado(creado);
+            miProyectoCompetidor = new Project
+            {
+                Id = creado.Id.ToString(),
+                DbId = creado.Id,
+                Name = creado.Nombre,
+                Team = string.IsNullOrWhiteSpace(creado.Competidor) ? currentUsername ?? string.Empty : creado.Competidor,
+                Category = ObtenerCategoriaProyecto(creado),
+                Description = creado.Descripcion
+            };
+
+            mockProjects.RemoveAll(p => p.DbId == miProyectoCompetidor.DbId);
+            mockProjects.Add(miProyectoCompetidor);
+            nuevoProyectoCompetidorNombre = string.Empty;
+            nuevoProyectoCompetidorDescripcion = string.Empty;
+            imagenDataUrl = null;
+            hasProjectImage = false;
+            errorImagen = null;
+        }
+        catch (Exception ex)
+        {
+            errorProyectoCompetidor = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            creandoProyectoCompetidor = false;
+        }
+    }
+
+    private bool ProyectoCoincideConCategoriaActual(ProyectoResultadoDTO proyecto)
+    {
+        if (string.IsNullOrWhiteSpace(votacionActual?.Titulo))
+            return true;
+
+        var categoria = ObtenerCategoriaProyecto(proyecto);
+        return string.IsNullOrWhiteSpace(categoria)
+            || string.Equals(categoria, votacionActual.Titulo, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private ProyectoResultadoDTO LimpiarProyectoResultado(ProyectoResultadoDTO proyecto)
+    {
+        proyecto.Categoria = ObtenerCategoriaProyecto(proyecto);
+        proyecto.Participantes = proyecto.Participantes?
+            .Where(p => !string.IsNullOrWhiteSpace(p) && !p.StartsWith(CategoryMarkerPrefix, StringComparison.OrdinalIgnoreCase))
+            .ToList() ?? new List<string>();
+        return proyecto;
+    }
+
+    private string ObtenerCategoriaProyecto(ProyectoResultadoDTO proyecto)
+    {
+        if (!string.IsNullOrWhiteSpace(proyecto.Categoria))
+            return proyecto.Categoria;
+
+        var categoria = proyecto.Participantes?
+            .FirstOrDefault(p => !string.IsNullOrWhiteSpace(p) && p.StartsWith(CategoryMarkerPrefix, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(categoria))
+            return categoria[CategoryMarkerPrefix.Length..].Trim();
+
+        return CategoriaActual;
+    }
+
+    private void AplicarCriteriosDeVotacion()
+    {
+        var categoria = votacionActual?.Categorias?
+            .FirstOrDefault(c => string.Equals(c.Nombre, CategoriaActual, StringComparison.OrdinalIgnoreCase))
+            ?? votacionActual?.Categorias?.FirstOrDefault();
+
+        var criterios = categoria?.Criterios;
+        if ((criterios == null || criterios.Count == 0) && !string.IsNullOrWhiteSpace(votacionActual?.Descripcion))
+        {
+            criterios = ExtraerCriteriosDesdeDescripcion(votacionActual.Descripcion);
+        }
+
+        if (criterios == null || criterios.Count == 0)
+            return;
+
+        mockCriteria = criterios
+            .Select((criterio, idx) => new Criterion
+            {
+                Id = (idx + 1).ToString(),
+                Name = criterio.Nombre,
+                Weight = criterio.Peso,
+                Description = string.Empty
+            })
+            .ToList();
+    }
+
+    private List<CriterioDTO> ExtraerCriteriosDesdeDescripcion(string descripcion)
+    {
+        const string marker = "\n__CRITERIOS__:";
+        const string legacyMarker = "\n||CRITERIOS||:";
+
+        int idx = descripcion.IndexOf(marker, StringComparison.Ordinal);
+        string markerUsado = marker;
+
+        if (idx < 0)
+        {
+            idx = descripcion.IndexOf(legacyMarker, StringComparison.Ordinal);
+            markerUsado = legacyMarker;
+        }
+
+        if (idx < 0)
+            return new();
+
+        string encoded = descripcion[(idx + markerUsado.Length)..].Trim();
+        if (string.IsNullOrWhiteSpace(encoded))
+            return new();
+
+        try
+        {
+            string json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            return System.Text.Json.JsonSerializer.Deserialize<List<CriterioDTO>>(json) ?? new();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
     private async Task TogglePausa()
     {
         gestionando = true;
@@ -950,7 +1173,7 @@
         }
         finally { gestionando = false; }
     }
-    
+
     private void ToggleEditMode(string criterionId)
     {
         if (editingCriteria.Contains(criterionId))
@@ -958,11 +1181,13 @@
         else
             editingCriteria.Add(criterionId);
     }
+
     private double GetScore(string criterionId)
     {
         string key = $"{mockProjects[currentProjectIndex].Id}-{criterionId}";
         return scores.ContainsKey(key) ? scores[key] : 5.0;
     }
+
     private void HandleScoreChange(string criterionId, string? val)
     {
         if (double.TryParse(val, out double result))
@@ -973,16 +1198,15 @@
             scores[key] = result;
         }
     }
+
     private string CalculateTotalScore()
     {
         double total = 0;
-        var currentId = mockProjects[currentProjectIndex].Id;
         foreach (var c in mockCriteria)
-        {
             total += (GetScore(c.Id) * c.Weight) / 100;
-        }
         return total.ToString("F1");
     }
+
     private double CalculateTotalScoreDouble()
     {
         double total = 0;
@@ -990,20 +1214,20 @@
             total += (GetScore(c.Id) * c.Weight) / 100;
         return Math.Round(total, 2);
     }
-    private double GetProgress() => (votedProjects.Count / (double)mockProjects.Count) * 100;
+
+    private double GetProgress() => mockProjects.Count == 0 ? 0 : (votedProjects.Count / (double)mockProjects.Count) * 100;
     private int NonVotedCount => mockProjects.Count(p => !votedProjects.Contains(p.Id));
-    private int NonVotedRemainingExcludingCurrent => mockProjects.Count(p => !votedProjects.Contains(p.Id) && p.Id != mockProjects[currentProjectIndex].Id);
-    private bool IsLastProject => currentProjectIndex == mockProjects.Count - 1;
+    private int NonVotedRemainingExcludingCurrent => mockProjects.Count == 0 ? 0 : mockProjects.Count(p => !votedProjects.Contains(p.Id) && p.Id != mockProjects[currentProjectIndex].Id);
+    private bool IsLastProject => mockProjects.Count == 0 || currentProjectIndex == mockProjects.Count - 1;
+
     private async Task SubmitVote()
     {
-        // Limitar a 3 votaciones por evento
         if (votesSubmitted >= 3)
         {
             NavigationManager.NavigateTo("/dashboard");
             return;
         }
 
-        // Persistir el voto en la base de datos
         var currentProject = mockProjects[currentProjectIndex];
         errorVoto = null;
         if (!int.TryParse(EventId, out int votacionId))
@@ -1036,16 +1260,7 @@
         votedProjects.Add(currentProject.Id);
         votesSubmitted++;
 
-        if (votesSubmitted >= 3)
-        {
-            // Al alcanzar el límite, finalizar y volver al dashboard
-            await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
-            NavigationManager.NavigateTo("/dashboard");
-            return;
-        }
-
-        // Si es el último proyecto de la lista, finalizar la votación tras votar
-        if (IsLastProject)
+        if (votesSubmitted >= 3 || IsLastProject)
         {
             await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
             NavigationManager.NavigateTo("/dashboard");
@@ -1059,7 +1274,6 @@
         }
         else
         {
-            // Fallback: finalizar
             await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
             NavigationManager.NavigateTo("/dashboard");
         }
@@ -1073,26 +1287,21 @@
         }
         catch
         {
-            // Ignorar errores en finalización del ejemplo
         }
         NavigationManager.NavigateTo("/dashboard");
     }
 
     private async Task SkipNext()
     {
-        // Solo finalizar si el proyecto actual es el último de la lista.
         if (IsLastProject)
         {
             await FinalizeVotingAsync();
             return;
         }
 
-        // Buscar siguiente proyecto no votado; si no hay, avanzar al siguiente índice hasta el final
         int nextIndex = currentProjectIndex + 1;
         while (nextIndex < mockProjects.Count && votedProjects.Contains(mockProjects[nextIndex].Id))
-        {
             nextIndex++;
-        }
 
         if (nextIndex < mockProjects.Count)
         {
@@ -1100,24 +1309,22 @@
             return;
         }
 
-        // No se encontró proyecto no votado después: mover al último proyecto disponible (sin finalizar)
         currentProjectIndex = mockProjects.Count - 1;
     }
+
     private void NavigateNext()
     {
         if (currentProjectIndex < mockProjects.Count - 1)
             currentProjectIndex++;
     }
+
     private void PreviousProject() => currentProjectIndex--;
 
-    private bool publicoMostrarVotacion = false;
-    private int publicoProyectoIndex = 0;
-    private HashSet<int> publicosVotados = new();
+    private Task SubmitCurrentVote() => Rol == "JURADO" ? SubmitVote() : SubmitVotoPublico();
 
     private async Task SubmitVotoPublico()
     {
-        // Persistir el voto en la base de datos
-        var proj = mockProjects[publicoProyectoIndex];
+        var proj = mockProjects[currentProjectIndex];
         errorVoto = null;
         if (!int.TryParse(EventId, out int votacionId))
         {
@@ -1146,11 +1353,35 @@
             return;
         }
 
-        publicosVotados.Add(publicoProyectoIndex);
+        votedProjects.Add(proj.Id);
+        votesSubmitted++;
+        publicosVotados.Add(currentProjectIndex);
         publicoMostrarVotacion = false;
         comments = "";
         commentLength = 0;
+
+        if (votedProjects.Count >= mockProjects.Count)
+        {
+            await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+            NavigationManager.NavigateTo("/dashboard");
+            return;
+        }
+
+        int nextIndex = currentProjectIndex + 1;
+        while (nextIndex < mockProjects.Count && votedProjects.Contains(mockProjects[nextIndex].Id))
+            nextIndex++;
+
+        if (nextIndex >= mockProjects.Count)
+            nextIndex = mockProjects.FindIndex(p => !votedProjects.Contains(p.Id));
+
+        if (nextIndex >= 0)
+        {
+            currentProjectIndex = nextIndex;
+            return;
+        }
+
         await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
+        NavigationManager.NavigateTo("/dashboard");
     }
 
     private async Task EliminarEvento()
@@ -1292,7 +1523,7 @@
             if (resp.IsSuccessStatusCode)
             {
                 var creado = await resp.Content.ReadFromJsonAsync<ProyectoResultadoDTO>();
-                if (creado != null) proyectosOrganizador.Add(creado);
+                if (creado != null) proyectosOrganizador.Add(LimpiarProyectoResultado(creado));
                 nuevoNombre = "";
                 nuevaDescripcion = "";
                 nuevoCompetidor = "";
@@ -1364,23 +1595,28 @@
         }
     }
 
+    private class PerfilPaginaDTO
+    {
+        public string? Username { get; set; }
+    }
+
     public class Project
     {
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public int DbId { get; set; }
-        public string Name { get; set; }
-        public string Team { get; set; }
-        public string Category { get; set; }
-        public string Description { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Team { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }
         public bool HasImage { get; set; }
     }
 
     public class Criterion
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public int Weight { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
     }
 }

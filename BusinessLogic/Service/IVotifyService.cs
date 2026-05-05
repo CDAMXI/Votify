@@ -46,7 +46,7 @@ namespace Votify.BusinessLogic.Service
         string? GetTipoRolDeUsuario(int idUsuario, int idEvento); 
 
         // Proyectos 
-        Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor); 
+        Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string? usernameCompetidor = null); 
         void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales); 
         void EliminarProyecto(int idProyecto); 
     }
