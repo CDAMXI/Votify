@@ -481,7 +481,7 @@
                                             }
                                             <div class="flex gap-3">
                                                 <button @onclick="() => GuardarProyecto(proj)" disabled="@guardandoProyecto"
-                                                        class="bg-gradient-to-r from-[#6C8A6C] to[#4C6B4F] text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 disabled:opacity-50">
+                                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 disabled:opacity-50">
                                                     @(guardandoProyecto ? "Guardando..." : "Guardar")
                                                 </button>
                                                 <button @onclick="() => { editandoProyectoId = null; errorEditProyecto = null; }"
@@ -648,18 +648,6 @@
                         <p class="text-sm text-red-500 mt-3">@errorImagen</p>
                     }
                     <div class="mt-4 flex justify-end gap-2">
-                        @if (hasProjectImage)
-                        {
-                            @if (confirmEliminarImagen)
-                            {
-                                <button @onclick="ConfirmarEliminarImagenAsync" class="px-4 py-2 bg-red-500 text-white rounded">Sí, eliminar</button>
-                                <button @onclick="() => confirmEliminarImagen = false" class="px-4 py-2 border rounded">Cancelar</button>
-                            }
-                            else
-                            {
-                                <button @onclick="() => confirmEliminarImagen = true" class="px-4 py-2 bg-red-500 text-white rounded">Eliminar</button>
-                            }
-                        }
                         <button @onclick="CerrarImagenModal" class="px-4 py-2 border rounded">Cerrar</button>
                     </div>
                 </div>
