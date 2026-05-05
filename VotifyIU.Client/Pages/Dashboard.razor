@@ -161,7 +161,13 @@
     {
         try
         {
-            var res = await Http.GetFromJsonAsync<PerfilDTO>("/api/perfil");
+            var perfilRes = await Http.GetAsync("/api/perfil");
+            if (perfilRes.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+            var res = await perfilRes.Content.ReadFromJsonAsync<PerfilDTO>();
             fotoPerfil = res?.FotoPerfil;
         }
         catch { }
@@ -171,19 +177,29 @@
             var votaciones = await Http.GetFromJsonAsync<List<VotacionDTO>>("/api/votaciones");
             if (votaciones != null)
             {
-                mockEvents = votaciones.OrderBy(v => v.FechaFin).Select(v => new EventModel
-                {
-                    Id = v.Id.ToString(),
-                    Name = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
-                    Description = string.IsNullOrEmpty(v.Descripcion) ? "Sin descripción" : v.Descripcion,
-                    Date = v.FechaFin.ToString("dd/MM/yyyy"),
-                    Status = v.FechaFin <= DateTime.Now ? "finished"
-                        : !v.Estado ? "paused"
-                        : "active",
-                    Participants = 0,
-                    Projects = 0,
-                    RolActual = v.RolActual
-                }).ToList();
+                mockEvents = votaciones
+                    .GroupBy(v => v.IdEvento)
+                    .Select(g =>
+                    {
+                        var primera = g.OrderBy(v => v.FechaFin).First();
+                        var fechaEvento = g.Max(v => v.FechaFin);
+                        return new EventModel
+                        {
+                            Id = g.Key.ToString(),
+                            Name = string.IsNullOrWhiteSpace(primera.NombreEvento)
+                                ? (string.IsNullOrWhiteSpace(primera.Titulo) ? $"Evento #{g.Key}" : primera.Titulo)
+                                : primera.NombreEvento,
+                            Description = string.IsNullOrWhiteSpace(primera.Descripcion) ? "Sin descripción" : primera.Descripcion,
+                            Date = fechaEvento.ToString("dd/MM/yyyy"),
+                            FechaOrden = fechaEvento,
+                            Status = fechaEvento >= DateTime.Today ? "active" : "finished",
+                            Participants = 0,
+                            Projects = 0,
+                            RolActual = primera.RolActual
+                        };
+                    })
+                    .OrderBy(e => e.FechaOrden)
+                    .ToList();
             }
         }
         catch { }
@@ -267,6 +283,7 @@
         public string Name { get; set; } = "";
         public string Description { get; set; } = "";
         public string Date { get; set; } = "";
+        public DateTime FechaOrden { get; set; }
         public int Participants { get; set; }
         public string Status { get; set; } = ""; 
         public int Projects { get; set; }

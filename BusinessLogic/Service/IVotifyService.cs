@@ -30,10 +30,11 @@ namespace Votify.BusinessLogic.Service
         void Commit();
 
         // Votaciones
-        int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30);
+        int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30, List<string>? categorias = null);
         Votacion GetVotacion(int idVotacion);
         IEnumerable<Votacion> GetMisVotaciones();
         IEnumerable<Votacion> GetAllVotaciones(); 
+        IEnumerable<Votacion> GetVotacionesByEvento(int idEvento);
         void EliminarEvento(int idVotacion);
         void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado);
         void CerrarVotacion(int idVotacion);

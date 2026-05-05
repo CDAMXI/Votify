@@ -84,6 +84,7 @@
     {
         isLoading = true;
         errorMessage = string.Empty;
+        bool loginOk = false;
 
         try
         {
@@ -94,13 +95,9 @@
             });
 
             if (response.IsSuccessStatusCode)
-            {
-                NavigationManager.NavigateTo("/dashboard");
-            }
+                loginOk = true;
             else
-            {
                 errorMessage = "Usuario o contraseña incorrectos.";
-            }
         }
         catch
         {
@@ -110,6 +107,9 @@
         {
             isLoading = false;
         }
+
+        if (loginOk)
+            NavigationManager.NavigateTo("/dashboard");
     }
 
     public class UserLoginDTO

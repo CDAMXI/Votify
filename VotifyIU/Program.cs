@@ -48,7 +48,24 @@ using (var scope = app.Services.CreateScope())
 }
 
 if (app.Environment.IsDevelopment())
+{
     app.UseWebAssemblyDebugging();
+
+    // Evita que el navegador sirva versiones cacheadas del bundle WASM
+    // y del manifiesto de arranque tras un rebuild. Solo en desarrollo.
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value ?? string.Empty;
+        if (path.Contains("/_framework/", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("blazor.boot.json", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            context.Response.Headers["Pragma"] = "no-cache";
+            context.Response.Headers["Expires"] = "0";
+        }
+        await next();
+    });
+}
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -265,7 +282,8 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             true,
             req.PermiteCompetidoresVotar,
             req.PesoJurado,
-            req.PesoPublico);
+            req.PesoPublico,
+            req.Categorias?.Select(c => c.Nombre).ToList());
         return Results.Ok(idVotacion);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -284,6 +302,7 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
         {
             Id = v.Id,
             IdEvento = v.EventoId,
+            NombreEvento = v.evento?.Nombre ?? string.Empty,
             Descripcion = v.Descripcion,
             Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
             FechaIni = v.FechaIni,
@@ -296,6 +315,40 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
 
         return Results.Ok(votaciones);
     }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var usuarioActual = service.GetUsuarioActual();
+
+        var votaciones = service.GetVotacionesByEvento(idEvento)
+            .OrderBy(v => v.FechaFin)
+            .Select(v => new VotacionDTO
+            {
+                Id = v.Id,
+                IdEvento = v.EventoId,
+                NombreEvento = v.evento?.Nombre ?? string.Empty,
+                Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
+                Descripcion = v.Descripcion,
+                FechaIni = v.FechaIni,
+                FechaFin = v.FechaFin,
+                Estado = v.Estado,
+                PesoJurado = v.PesoJurado,
+                PesoPublico = v.PesoPublico,
+                RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
+            })
+            .ToList();
+
+        return Results.Ok(votaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
@@ -312,6 +365,7 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
         {
             Id = votacion.Id,
             IdEvento = votacion.EventoId,
+            NombreEvento = votacion.evento?.Nombre ?? string.Empty,
             Titulo = votacion.Titulo,
             Descripcion = votacion.Descripcion,
             FechaIni = votacion.FechaIni,
@@ -338,21 +392,20 @@ app.MapPost("/api/votaciones/{id}/pausar", (int id, IVotifyService service, Http
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
-app.MapGet("/api/votaciones/{id}/rol", (int id, IVotifyService service, HttpContext http) =>
+app.MapGet("/api/eventos/{idEvento}/rol", (int idEvento, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
     try
     {
         service.RestoreSession(username);
-        var votacion = service.GetVotacion(id);
-        var rol = service.GetTipoRolEnEvento(votacion.EventoId);
-        return Results.Ok(new RolEventoResponse(votacion.EventoId, rol));
+        var rol = service.GetTipoRolEnEvento(idEvento);
+        return Results.Ok(new RolEventoResponse(idEvento, rol));
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });
 
-app.MapPost("/api/votaciones/{id}/rol", (int id, AsignarRolEventoRequest req, IVotifyService service, HttpContext http) =>
+app.MapPost("/api/eventos/{idEvento}/rol", (int idEvento, AsignarRolEventoRequest req, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
@@ -360,9 +413,8 @@ app.MapPost("/api/votaciones/{id}/rol", (int id, AsignarRolEventoRequest req, IV
     try
     {
         service.RestoreSession(username);
-        var votacion = service.GetVotacion(id);
-        service.AsignarRolEnEvento(req.TipoRol, votacion.EventoId);
-        return Results.Ok(new RolEventoResponse(votacion.EventoId, req.TipoRol.Trim().ToUpperInvariant()));
+        service.AsignarRolEnEvento(req.TipoRol, idEvento);
+        return Results.Ok(new RolEventoResponse(idEvento, req.TipoRol.Trim().ToUpperInvariant()));
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
 });

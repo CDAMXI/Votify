@@ -24,6 +24,34 @@
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         @if (PuedeGestionarResultados)
         {
+            <!-- Eliminar evento -->
+            <div class="flex justify-end mb-4">
+                <button @onclick="() => mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento"
+                        class="border border-red-400 text-red-500 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
+                    🗑 Eliminar evento
+                </button>
+            </div>
+            @if (mostrarConfirmEliminarEvento)
+            {
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                    <p class="text-red-700 font-medium mb-3 text-sm">¿Eliminar este evento? Se borrarán todos los proyectos y votos de forma permanente.</p>
+                    <div class="flex gap-3">
+                        <button @onclick="EliminarEvento" disabled="@eliminandoEvento"
+                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50">
+                            @(eliminandoEvento ? "Eliminando..." : "Sí, eliminar")
+                        </button>
+                        <button @onclick="() => mostrarConfirmEliminarEvento = false"
+                                class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                    @if (errorEliminarEvento != null)
+                    {
+                        <p class="text-red-500 text-sm mt-2">⚠️ @errorEliminarEvento</p>
+                    }
+                </div>
+            }
+
             <div class="flex flex-wrap gap-2 mb-6">
                 <button @onclick='() => tabActiva = "resultados"'
                         class="px-5 py-2 rounded-xl font-medium text-sm transition-all @(tabActiva == "resultados" ? "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white shadow-md" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")">
@@ -593,6 +621,9 @@
     private bool guardandoConfiguracion = false;
     private string? mensajeConfiguracion;
     private bool errorConfiguracion = false;
+    private bool mostrarConfirmEliminarEvento = false;
+    private bool eliminandoEvento = false;
+    private string? errorEliminarEvento;
 
     private bool PuedeGestionarResultados => Rol == "ENCARGADO" || Rol == "ORGANIZADOR";
     private int SumaPesosActual => configuracionResultados.PesoJurado + configuracionResultados.PesoPublico;
@@ -802,6 +833,30 @@
         {
             guardandoConfiguracion = false;
         }
+    }
+
+    private async Task EliminarEvento()
+    {
+        eliminandoEvento = true;
+        try
+        {
+            var resp = await Http.DeleteAsync($"/api/votaciones/{EventId}");
+            if (resp.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorEliminarEvento = await resp.Content.ReadAsStringAsync();
+                mostrarConfirmEliminarEvento = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorEliminarEvento = $"Error de conexión: {ex.Message}";
+            mostrarConfirmEliminarEvento = false;
+        }
+        finally { eliminandoEvento = false; }
     }
 
     private double GetVoteProgressPct(ProyectoMonitorDTO proyecto)
