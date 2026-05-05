@@ -493,6 +493,80 @@ app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
+app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}/foto", (
+    int idVotacion,
+    int idProyecto,
+    UpdateProyectoFotoRequest req,
+    IVotifyService service,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Proyecto> proyectoRepo,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var usuario = service.GetUsuarioActual();
+        if (usuario == null) return Results.Unauthorized();
+
+        var votacion = votacionRepo.GetById(idVotacion);
+        if (votacion == null) return Results.NotFound("Votación no encontrada");
+
+        var proyecto = proyectoRepo.GetById(idProyecto);
+        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+        if (proyecto.EventoId != votacion.EventoId)
+            return Results.BadRequest("El proyecto no pertenece al evento de la votación");
+
+        if (string.IsNullOrWhiteSpace(req.Base64Foto))
+        {
+            proyecto.FotoProyecto = null;
+        }
+        else
+        {
+            if (!EsDataUrlImagenValida(req.Base64Foto))
+                return Results.BadRequest("Formato de imagen inválido");
+
+            proyecto.FotoProyecto = req.Base64Foto.Trim();
+        }
+
+        proyectoRepo.Commit();
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+}).DisableAntiforgery();
+
+app.MapGet("/api/proyectos/{idVotacion}/{idProyecto}/imagen", (
+    int idVotacion,
+    int idProyecto,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Proyecto> proyectoRepo,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    var votacion = votacionRepo.GetById(idVotacion);
+    if (votacion == null) return Results.NotFound("Votación no encontrada");
+
+    var proyecto = proyectoRepo.GetById(idProyecto);
+    if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+    if (proyecto.EventoId != votacion.EventoId)
+        return Results.BadRequest("El proyecto no pertenece al evento de la votación");
+
+    if (string.IsNullOrWhiteSpace(proyecto.FotoProyecto))
+        return Results.NotFound("No hay contenido");
+
+    if (!TryParseDataUrl(proyecto.FotoProyecto, out var contentType, out var bytes))
+        return Results.Problem("La imagen guardada es inválida");
+
+    return Results.File(bytes, contentType);
+});
+
 app.MapPut("/api/proyectos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, ModificarProyectoRequest req, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
@@ -953,6 +1027,47 @@ static ProyectoMonitorDTO BuildProjectMonitor(Proyecto proyecto, List<Voto> voto
     };
 }
 
+static bool EsDataUrlImagenValida(string dataUrl)
+    => TryParseDataUrl(dataUrl, out _, out _);
+
+static bool TryParseDataUrl(string dataUrl, out string contentType, out byte[] bytes)
+{
+    contentType = "application/octet-stream";
+    bytes = Array.Empty<byte>();
+
+    if (string.IsNullOrWhiteSpace(dataUrl))
+        return false;
+
+    var trimmed = dataUrl.Trim();
+    if (!trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        return false;
+
+    int commaIndex = trimmed.IndexOf(',');
+    if (commaIndex <= 0)
+        return false;
+
+    var metadata = trimmed.Substring(5, commaIndex - 5);
+    var payload = trimmed[(commaIndex + 1)..];
+
+    if (!metadata.Contains(";base64", StringComparison.OrdinalIgnoreCase))
+        return false;
+
+    var mediaType = metadata.Split(';', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+    if (!mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        return false;
+
+    try
+    {
+        bytes = Convert.FromBase64String(payload);
+        contentType = mediaType;
+        return bytes.Length > 0;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
 // ── Configuración de sesión ──────────────────────────────────────
 
 static class SessionConfig
@@ -978,3 +1093,4 @@ record AiChatTurn(string Role, string Content);
 record GuardarVotoRequest(int VotacionId, int ProyectoId, double Puntuacion, string? Comentario);
 record CrearProyectoRequest(string Nombre, string? Descripcion, string? UsernameCompetidor);
 record ModificarProyectoRequest(string Nombre, string? Descripcion, List<string>? ParticipantesAdicionales);
+record UpdateProyectoFotoRequest(string Base64Foto);

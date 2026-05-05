@@ -212,6 +212,25 @@
                                 <textarea @bind="nuevoProyectoCompetidorDescripcion"
                                           class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] min-h-[120px]"></textarea>
                             </div>
+                            <div>
+                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Imagen del proyecto (opcional)</label>
+                                <div class="flex items-center gap-3">
+                                    <label class="px-4 py-2 bg-white border border-[#B5D6AC] rounded-lg text-sm font-semibold text-[#4C6B4F] cursor-pointer hover:bg-[#F8FAF7] transition-colors">
+                                        @(procesandoNuevaImagen ? "Procesando..." : "Seleccionar imagen")
+                                        <InputFile OnChange="OnNuevoProyectoImageChange" accept="image/*" style="display:none" />
+                                    </label>
+                                    @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
+                                    {
+                                        <span class="text-xs text-[#6C8A6C]">Imagen lista para subir</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
+                                {
+                                    <div class="mt-2 p-2 bg-white border border-[#B5D6AC] rounded-lg">
+                                        <img src="@nuevaImagenProyectoPreview" alt="Vista previa" class="max-h-28 mx-auto" />
+                                    </div>
+                                }
+                            </div>
                             @if (!string.IsNullOrWhiteSpace(errorProyectoCompetidor))
                             {
                                 <p class="text-red-500 text-sm font-medium">⚠️ @errorProyectoCompetidor</p>
@@ -261,7 +280,7 @@
                             }
 
                             <div class="mt-3 flex gap-2 items-center">
-                                <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold cursor-pointer">
+                                <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#70D939] text-white rounded-xl font-bold cursor-pointer">
                                     Subir Contenido
                                     <InputFile OnChange="OnInputFileChange" accept="image/*" style="display:none" />
                                 </label>
@@ -368,6 +387,25 @@
                                            class="w-full px-4 py-2 rounded-lg bg-[#E9EFE1] border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B]" />
                                     <p class="text-xs text-[#A6AAA9] mt-1">El competidor debe tener una cuenta en Votify.</p>
                                 </div>
+                                <div>
+                                    <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Imagen del proyecto (opcional)</label>
+                                    <div class="flex items-center gap-3">
+                                        <label class="px-4 py-2 bg-white border border-[#B5D6AC] rounded-lg text-sm font-semibold text-[#4C6B4F] cursor-pointer hover:bg-[#F8FAF7] transition-colors">
+                                            @(procesandoNuevaImagen ? "Procesando..." : "Seleccionar imagen")
+                                            <InputFile OnChange="OnNuevoProyectoImageChange" accept="image/*" style="display:none" />
+                                        </label>
+                                        @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
+                                        {
+                                            <span class="text-xs text-[#6C8A6C]">Imagen lista para subir</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
+                                    {
+                                        <div class="mt-2 p-2 bg-white border border-[#B5D6AC] rounded-lg">
+                                            <img src="@nuevaImagenProyectoPreview" alt="Vista previa" class="max-h-28 mx-auto" />
+                                        </div>
+                                    }
+                                </div>
                                 @if (errorProyecto != null)
                                 {
                                     <p class="text-red-500 text-sm font-medium">⚠️ @errorProyecto</p>
@@ -443,7 +481,7 @@
                                             }
                                             <div class="flex gap-3">
                                                 <button @onclick="() => GuardarProyecto(proj)" disabled="@guardandoProyecto"
-                                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 disabled:opacity-50">
+                                                        class="bg-gradient-to-r from-[#6C8A6C] to[#4C6B4F] text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 disabled:opacity-50">
                                                     @(guardandoProyecto ? "Guardando..." : "Guardar")
                                                 </button>
                                                 <button @onclick="() => { editandoProyectoId = null; errorEditProyecto = null; }"
@@ -673,6 +711,9 @@
     private Project? miProyectoCompetidor;
     private string nuevoProyectoCompetidorNombre = "";
     private string nuevoProyectoCompetidorDescripcion = "";
+    private string? nuevaImagenProyectoBase64;
+    private string? nuevaImagenProyectoPreview;
+    private bool procesandoNuevaImagen;
     private string? errorProyectoCompetidor;
     private bool creandoProyectoCompetidor;
     private bool publicoMostrarVotacion = false;
@@ -844,6 +885,40 @@
         finally { cargandoImagen = false; StateHasChanged(); }
     }
 
+    private async Task OnNuevoProyectoImageChange(InputFileChangeEventArgs e)
+    {
+        procesandoNuevaImagen = true;
+        try
+        {
+            var file = e.File;
+            if (file == null)
+            {
+                nuevaImagenProyectoBase64 = null;
+                nuevaImagenProyectoPreview = null;
+                return;
+            }
+
+            var resized = await file.RequestImageFileAsync("image/jpeg", 300, 300);
+            var buffer = new byte[resized.Size];
+            await resized.OpenReadStream(maxAllowedSize: 1024 * 1024).ReadAsync(buffer);
+            var base64 = $"data:image/jpeg;base64,{Convert.ToBase64String(buffer)}";
+
+            nuevaImagenProyectoBase64 = base64;
+            nuevaImagenProyectoPreview = base64;
+        }
+        catch (Exception ex)
+        {
+            errorProyectoCompetidor = $"No se pudo procesar la imagen: {ex.Message}";
+            nuevaImagenProyectoBase64 = null;
+            nuevaImagenProyectoPreview = null;
+        }
+        finally
+        {
+            procesandoNuevaImagen = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
         errorImagen = string.Empty;
@@ -997,6 +1072,24 @@
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoBase64))
+            {
+                var imgResp = await Http.PutAsJsonAsync($"/api/proyectos/{EventId}/{creado.Id}/foto", new
+                {
+                    Base64Foto = nuevaImagenProyectoBase64
+                });
+
+                if (!imgResp.IsSuccessStatusCode)
+                {
+                    errorProyectoCompetidor = "El proyecto se creó, pero no se pudo subir la imagen.";
+                }
+                else
+                {
+                    imagenDataUrl = nuevaImagenProyectoBase64;
+                    hasProjectImage = true;
+                }
+            }
+
             creado = LimpiarProyectoResultado(creado);
             miProyectoCompetidor = new Project
             {
@@ -1012,8 +1105,12 @@
             mockProjects.Add(miProyectoCompetidor);
             nuevoProyectoCompetidorNombre = string.Empty;
             nuevoProyectoCompetidorDescripcion = string.Empty;
-            imagenDataUrl = null;
-            hasProjectImage = false;
+            nuevaImagenProyectoBase64 = null;
+            nuevaImagenProyectoPreview = null;
+            if (string.IsNullOrWhiteSpace(imagenDataUrl))
+            {
+                hasProjectImage = false;
+            }
             errorImagen = null;
         }
         catch (Exception ex)
