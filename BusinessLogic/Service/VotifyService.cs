@@ -26,6 +26,7 @@ namespace Votify.BusinessLogic.Service
         private readonly IDAL<Competidor> _competidorRepository;
         private readonly IDAL<Organizador> _organizadorRepository;
         private readonly IDAL<EncargadoVotacion> _encargadoRepository;
+        private readonly IDAL<Reclamacion> _reclamacionRepository;
 
         public VotifyService(
             IDAL<Usuario> usuarioRepository,
@@ -38,7 +39,8 @@ namespace Votify.BusinessLogic.Service
             IDAL<Publico> publicoRepository,
             IDAL<Competidor> competidorRepository,
             IDAL<Organizador> organizadorRepository,
-            IDAL<EncargadoVotacion> encargadoRepository)
+            IDAL<EncargadoVotacion> encargadoRepository,
+            IDAL<Reclamacion> reclamacionRepository)
         {
             _usuarioRepository = usuarioRepository;
             _votoRepository = votoRepository;
@@ -51,6 +53,7 @@ namespace Votify.BusinessLogic.Service
             _competidorRepository = competidorRepository;
             _organizadorRepository = organizadorRepository;
             _encargadoRepository = encargadoRepository;
+            _reclamacionRepository = reclamacionRepository;
         }
 
         // Delegamos el Commit global a cualquier repositorio temporalmente 
@@ -599,5 +602,185 @@ namespace Votify.BusinessLogic.Service
 
         private bool UsuarioEsOrganizadorEnEvento(int eventoId)
             => _organizadorRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
+
+        // ── Historial de eventos del usuario ────────────────────────────
+
+        public HistorialEventosResultado GetHistorialDelUsuario()
+        {
+            RequireUsuarioLogueado();
+            int uid = usuario!.Id;
+
+            var roles = _rolRepository.GetWhere(r => r.UsuarioId == uid).ToList();
+            var rolIdsUsuario = roles.Select(r => r.Id).ToHashSet();
+            var eventoIds = roles.Select(r => r.EventoId).Distinct().ToList();
+
+            if (!eventoIds.Any())
+                return new HistorialEventosResultado();
+
+            var eventos = _eventoRepository.GetWhere(e => eventoIds.Contains(e.IdEvento))
+                .OrderByDescending(e => e.FechaIni)
+                .ToList();
+
+            var votosUsuario = _votoRepository.GetWhere(v => rolIdsUsuario.Contains(v.VotanteId)).ToList();
+            int totalVotosEmitidos = votosUsuario.Count;
+
+            var items = new List<HistorialEventoItem>();
+            foreach (var evento in eventos)
+            {
+                var rolEnEvento = roles.FirstOrDefault(r => r.EventoId == evento.IdEvento);
+                var item = new HistorialEventoItem
+                {
+                    Evento = evento,
+                    TipoRol = rolEnEvento?.TipoRol
+                };
+
+                var proyectosEvento = _proyectoRepository.GetWhere(p => p.EventoId == evento.IdEvento).ToList();
+                item.TotalProyectos = proyectosEvento.Count;
+
+                Proyecto? proyectoDestacado = null;
+                if (rolEnEvento is Competidor)
+                {
+                    proyectoDestacado = proyectosEvento.FirstOrDefault(p => p.CompetidorId == rolEnEvento.Id);
+                }
+
+                var votosEnEvento = votosUsuario
+                    .Where(v => v.votacion?.EventoId == evento.IdEvento)
+                    .ToList();
+                item.Voto = votosEnEvento.Any();
+
+                if (proyectoDestacado == null && item.Voto)
+                {
+                    int idMejorVotado = votosEnEvento.OrderByDescending(v => v.Valor).First().ProyectoId;
+                    proyectoDestacado = proyectosEvento.FirstOrDefault(p => p.Id == idMejorVotado);
+                }
+
+                if (proyectoDestacado != null)
+                {
+                    item.ProyectoDestacado = proyectoDestacado;
+                    item.PosicionProyecto = CalcularPosicionProyecto(proyectoDestacado, proyectosEvento);
+                }
+
+                items.Add(item);
+            }
+
+            return new HistorialEventosResultado
+            {
+                EventosParticipados = eventos.Count,
+                VotosEmitidos = totalVotosEmitidos,
+                Eventos = items
+            };
+        }
+
+        private int? CalcularPosicionProyecto(Proyecto proyecto, List<Proyecto> proyectosEvento)
+        {
+            if (!proyectosEvento.Any()) return null;
+
+            var votacionesEvento = _votacionRepository.GetWhere(v => v.EventoId == proyecto.EventoId).ToList();
+            if (!votacionesEvento.Any()) return null;
+
+            var votacionPrincipal = votacionesEvento.OrderByDescending(v => v.FechaFin).First();
+            var votosVotacion = _votoRepository.GetWhere(v => v.VotacionId == votacionPrincipal.Id).ToList();
+
+            var ranking = proyectosEvento
+                .Select(p =>
+                {
+                    var votosP = votosVotacion.Where(v => v.ProyectoId == p.Id).ToList();
+                    var votosJ = votosP.Where(ResultadosVotacionCalculator.EsVotoExperto).ToList();
+                    var votosPop = votosP.Where(ResultadosVotacionCalculator.EsVotoPopular).ToList();
+                    double? mediaJ = votosJ.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosJ) : null;
+                    double? mediaPop = votosPop.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPop) : null;
+                    double media = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(
+                        mediaJ, mediaPop, votacionPrincipal.PesoJurado, votacionPrincipal.PesoPublico);
+                    return new { p.Id, Media = media };
+                })
+                .OrderByDescending(x => x.Media)
+                .Select((x, i) => new { x.Id, Posicion = i + 1 })
+                .ToList();
+
+            return ranking.FirstOrDefault(x => x.Id == proyecto.Id)?.Posicion;
+        }
+
+        // ── Reclamaciones ───────────────────────────────────────────────
+
+        public Reclamacion CrearReclamacion(int idEvento, string descripcion)
+        {
+            RequireUsuarioLogueado();
+
+            string descripcionLimpia = (descripcion ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(descripcionLimpia))
+                throw new ServiceException("La descripción de la reclamación no puede estar vacía");
+            if (descripcionLimpia.Length > 2000)
+                throw new ServiceException("La descripción no puede superar los 2000 caracteres");
+
+            Evento evento = _eventoRepository.GetById(idEvento);
+            if (evento == null)
+                throw new ServiceException("El evento no existe");
+
+            Rol? rolEnEvento = BuscarRolEnEvento(idEvento);
+            if (rolEnEvento == null)
+                throw new ServiceException("Solo puedes reclamar en eventos en los que has participado");
+
+            int uid = usuario!.Id;
+            bool yaReclamado = _reclamacionRepository.GetWhere(r =>
+                r.EventoId == idEvento &&
+                r.UsuarioId == uid &&
+                r.Estado == Reclamacion.EstadoPendiente).Any();
+            if (yaReclamado)
+                throw new ServiceException("Ya tienes una reclamación pendiente para este evento");
+
+            Reclamacion reclamacion = new Reclamacion(idEvento, uid, descripcionLimpia)
+            {
+                evento = evento,
+                usuario = usuario
+            };
+            _reclamacionRepository.Insert(reclamacion);
+            Commit();
+            return reclamacion;
+        }
+
+        public IEnumerable<Reclamacion> GetReclamacionesDelUsuario()
+        {
+            RequireUsuarioLogueado();
+            int uid = usuario!.Id;
+            return _reclamacionRepository.GetWhere(r => r.UsuarioId == uid)
+                .OrderByDescending(r => r.FechaCreacion)
+                .ToList();
+        }
+
+        public IEnumerable<Reclamacion> GetReclamacionesComoOrganizador()
+        {
+            RequireUsuarioLogueado();
+            int uid = usuario!.Id;
+            var eventoIds = _organizadorRepository.GetWhere(o => o.UsuarioId == uid)
+                .Select(o => o.EventoId)
+                .Distinct()
+                .ToList();
+            if (!eventoIds.Any()) return Enumerable.Empty<Reclamacion>();
+
+            return _reclamacionRepository.GetWhere(r => eventoIds.Contains(r.EventoId))
+                .OrderByDescending(r => r.FechaCreacion)
+                .ToList();
+        }
+
+        public Reclamacion ResponderReclamacion(int idReclamacion, string estado, string? respuesta)
+        {
+            RequireUsuarioLogueado();
+            Reclamacion reclamacion = _reclamacionRepository.GetById(idReclamacion);
+            if (reclamacion == null)
+                throw new ServiceException("La reclamación no existe");
+
+            if (!UsuarioEsOrganizadorEnEvento(reclamacion.EventoId))
+                throw new ServiceException("No eres el organizador de este evento");
+
+            string estadoNormalizado = (estado ?? string.Empty).Trim().ToUpperInvariant();
+            if (estadoNormalizado != Reclamacion.EstadoResuelta && estadoNormalizado != Reclamacion.EstadoRechazada)
+                throw new ServiceException("Estado inválido. Debe ser RESUELTA o RECHAZADA");
+
+            reclamacion.Estado = estadoNormalizado;
+            reclamacion.RespuestaOrganizador = string.IsNullOrWhiteSpace(respuesta) ? null : respuesta!.Trim();
+            reclamacion.FechaRespuesta = DateTime.Now;
+            Commit();
+            return reclamacion;
+        }
     }
 }

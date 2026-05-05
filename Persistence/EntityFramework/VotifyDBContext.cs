@@ -46,6 +46,7 @@ namespace Votify.Persistence
         public DbSet<Organizador> Organizadores { get; set; }
         public DbSet<Dashboard> Dashboards { get; set; }
         public DbSet<HojaRuta> HojasRuta { get; set; }
+        public DbSet<Reclamacion> Reclamaciones { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
@@ -60,6 +61,7 @@ namespace Votify.Persistence
             ConfigureVoto(modelBuilder);
             ConfigureDashboard(modelBuilder);
             ConfigureHojaRuta(modelBuilder);
+            ConfigureReclamacion(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
         }
@@ -282,6 +284,32 @@ namespace Votify.Persistence
                 .WillCascadeOnDelete(true);
         }
 
+        private static void ConfigureReclamacion(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Reclamacion>().ToTable("reclamacion");
+            modelBuilder.Entity<Reclamacion>().HasKey(r => r.Id);
+            modelBuilder.Entity<Reclamacion>().Property(r => r.Id).HasColumnName("id_reclamacion");
+            modelBuilder.Entity<Reclamacion>().Property(r => r.EventoId).HasColumnName("id_evento");
+            modelBuilder.Entity<Reclamacion>().Property(r => r.UsuarioId).HasColumnName("id_usuario");
+            modelBuilder.Entity<Reclamacion>().Property(r => r.Descripcion).HasColumnName("descripcion").IsRequired();
+            modelBuilder.Entity<Reclamacion>().Property(r => r.FechaCreacion).HasColumnName("fecha_creacion");
+            modelBuilder.Entity<Reclamacion>().Property(r => r.Estado).HasColumnName("estado").IsRequired();
+            modelBuilder.Entity<Reclamacion>().Property(r => r.RespuestaOrganizador).HasColumnName("respuesta_organizador");
+            modelBuilder.Entity<Reclamacion>().Property(r => r.FechaRespuesta).HasColumnName("fecha_respuesta");
+
+            modelBuilder.Entity<Reclamacion>()
+                .HasRequired(r => r.evento)
+                .WithMany()
+                .HasForeignKey(r => r.EventoId)
+                .WillCascadeOnDelete(true);
+
+            modelBuilder.Entity<Reclamacion>()
+                .HasRequired(r => r.usuario)
+                .WithMany()
+                .HasForeignKey(r => r.UsuarioId)
+                .WillCascadeOnDelete(false);
+        }
+
         public void Rollback()
         {
             foreach (var entry in ChangeTracker.Entries().ToList())
@@ -315,6 +343,21 @@ namespace Votify.Persistence
                 "ALTER TABLE public.votacion ADD COLUMN IF NOT EXISTS peso_publico integer NOT NULL DEFAULT 30;");
             Database.ExecuteSqlCommand(
                 "ALTER TABLE public.proyecto ADD COLUMN IF NOT EXISTS foto_proyecto text;");
+            Database.ExecuteSqlCommand(@"
+                CREATE TABLE IF NOT EXISTS public.reclamacion (
+                    id_reclamacion serial PRIMARY KEY,
+                    id_evento integer NOT NULL REFERENCES public.evento(id_evento) ON DELETE CASCADE,
+                    id_usuario integer NOT NULL REFERENCES public.usuario(id_usuario),
+                    descripcion text NOT NULL,
+                    fecha_creacion timestamp without time zone NOT NULL DEFAULT now(),
+                    estado varchar(20) NOT NULL DEFAULT 'PENDIENTE',
+                    respuesta_organizador text NULL,
+                    fecha_respuesta timestamp without time zone NULL
+                );");
+            Database.ExecuteSqlCommand(
+                "CREATE INDEX IF NOT EXISTS ix_reclamacion_evento ON public.reclamacion(id_evento);");
+            Database.ExecuteSqlCommand(
+                "CREATE INDEX IF NOT EXISTS ix_reclamacion_usuario ON public.reclamacion(id_usuario);");
         }
     }
 }

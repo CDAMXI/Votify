@@ -466,7 +466,7 @@
             var response = await Http.PostAsJsonAsync("/api/votaciones", votacionDto);
             if (response.IsSuccessStatusCode)
             {
-                NavigationManager.NavigateTo("/dashboard");
+                NavigationManager.NavigateTo("/dashboard", forceLoad: true);
             }
             else
             {
