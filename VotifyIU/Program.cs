@@ -400,6 +400,12 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
         service.RestoreSession(username);
         var usuarioActual = service.GetUsuarioActual();
 
+        // Carga todos los roles del usuario en un único query en lugar de 5 queries por votación
+        var rolesPorEvento = usuarioActual.roles?
+            .GroupBy(r => r.EventoId)
+            .ToDictionary(g => g.Key, g => g.First().TipoRol)
+            ?? new Dictionary<int, string?>();
+
         var votaciones = service.GetAllVotaciones().OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
         {
             Id = v.Id,
@@ -412,7 +418,7 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
             Estado = v.Estado,
             PesoJurado = v.PesoJurado,
             PesoPublico = v.PesoPublico,
-            RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
+            RolActual = rolesPorEvento.TryGetValue(v.EventoId, out var rol) ? rol : null
         }).ToList();
 
         return Results.Ok(votaciones);
@@ -430,6 +436,11 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
         service.RestoreSession(username);
         var usuarioActual = service.GetUsuarioActual();
 
+        var rolesPorEvento2 = usuarioActual.roles?
+            .GroupBy(r => r.EventoId)
+            .ToDictionary(g => g.Key, g => g.First().TipoRol)
+            ?? new Dictionary<int, string?>();
+
         var votaciones = service.GetVotacionesByEvento(idEvento)
             .OrderBy(v => v.FechaFin)
             .Select(v => new VotacionDTO
@@ -444,7 +455,7 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
                 Estado = v.Estado,
                 PesoJurado = v.PesoJurado,
                 PesoPublico = v.PesoPublico,
-                RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
+                RolActual = rolesPorEvento2.TryGetValue(v.EventoId, out var rol2) ? rol2 : null
             })
             .ToList();
 
@@ -982,6 +993,20 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
         .GetString() ?? "Sin respuesta.";
 
     return Results.Ok(text);
+});
+
+// ── Endpoints de pruebas de aceptación ──────────────────────────
+
+app.MapGet("/api/tests/ut3962", () =>
+{
+    var (ok, msg) = Votify.Tests.ValoresPorDefectoTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut3938", () =>
+{
+    var (ok, msg) = Votify.Tests.EncargadoCicloVidaTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 
 app.Run();
