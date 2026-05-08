@@ -35,6 +35,7 @@ builder.Services.AddScoped<VotifyDBContext>(sp =>
 
 // Registro del Patrón Repositorio Genérico
 builder.Services.AddScoped(typeof(IDAL<>), typeof(EntityFrameworkDAL<>));
+builder.Services.AddScoped<VotifyRepositories>();
 builder.Services.AddScoped<IVotifyService, VotifyService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
@@ -374,15 +375,17 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     try
     {
         service.RestoreSession(username);
-        int idVotacion = service.CrearVotacion(
-            req.Titulo,
-            req.Descripcion,
-            req.FechaFin,
-            true,
-            req.PermiteCompetidoresVotar,
-            req.PesoJurado,
-            req.PesoPublico,
-            req.Categorias?.Select(c => c.Nombre).ToList());
+        int idVotacion = service.CrearVotacion(new CrearVotacionRequest
+        {
+            Titulo = req.Titulo,
+            Descripcion = req.Descripcion,
+            FechaFin = req.FechaFin,
+            Activa = true,
+            PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
+            PesoJurado = req.PesoJurado,
+            PesoPublico = req.PesoPublico,
+            Categorias = req.Categorias?.Select(c => c.Nombre).ToList() ?? new List<string>()
+        });
         return Results.Ok(idVotacion);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
