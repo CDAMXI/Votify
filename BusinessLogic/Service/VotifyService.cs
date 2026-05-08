@@ -28,32 +28,20 @@ namespace Votify.BusinessLogic.Service
         private readonly IDAL<EncargadoVotacion> _encargadoRepository;
         private readonly IDAL<Reclamacion> _reclamacionRepository;
 
-        public VotifyService(
-            IDAL<Usuario> usuarioRepository,
-            IDAL<Voto> votoRepository,
-            IDAL<Votacion> votacionRepository,
-            IDAL<Evento> eventoRepository,
-            IDAL<Rol> rolRepository,
-            IDAL<Proyecto> proyectoRepository,
-            IDAL<Jurado> juradoRepository,
-            IDAL<Publico> publicoRepository,
-            IDAL<Competidor> competidorRepository,
-            IDAL<Organizador> organizadorRepository,
-            IDAL<EncargadoVotacion> encargadoRepository,
-            IDAL<Reclamacion> reclamacionRepository)
+        public VotifyService(VotifyRepositories repositories)
         {
-            _usuarioRepository = usuarioRepository;
-            _votoRepository = votoRepository;
-            _votacionRepository = votacionRepository;
-            _eventoRepository = eventoRepository;
-            _rolRepository = rolRepository;
-            _proyectoRepository = proyectoRepository;
-            _juradoRepository = juradoRepository;
-            _publicoRepository = publicoRepository;
-            _competidorRepository = competidorRepository;
-            _organizadorRepository = organizadorRepository;
-            _encargadoRepository = encargadoRepository;
-            _reclamacionRepository = reclamacionRepository;
+            _usuarioRepository = repositories.Usuarios;
+            _votoRepository = repositories.Votos;
+            _votacionRepository = repositories.Votaciones;
+            _eventoRepository = repositories.Eventos;
+            _rolRepository = repositories.Roles;
+            _proyectoRepository = repositories.Proyectos;
+            _juradoRepository = repositories.Jurados;
+            _publicoRepository = repositories.Publicos;
+            _competidorRepository = repositories.Competidores;
+            _organizadorRepository = repositories.Organizadores;
+            _encargadoRepository = repositories.Encargados;
+            _reclamacionRepository = repositories.Reclamaciones;
         }
 
         // Delegamos el Commit global a cualquier repositorio temporalmente 
@@ -233,26 +221,26 @@ namespace Votify.BusinessLogic.Service
                 (Rol?)_encargadoRepository.GetWhere(r => r.UsuarioId == uid && r.EventoId == eventoId).FirstOrDefault();
         }
 
-        public int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30, List<string>? categorias = null)
+        public int CrearVotacion(CrearVotacionRequest request)
         {
             RequireUsuarioLogueado();
 
             DateTime fechaInicio = DateTime.Now;
-            if (fechaFin <= fechaInicio)
+            if (request.FechaFin <= fechaInicio)
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
 
-            ValidarPesosResultados(pesoJurado, pesoPublico);
+            ValidarPesosResultados(request.PesoJurado, request.PesoPublico);
 
-            string nombre = string.IsNullOrWhiteSpace(titulo) ? "Votacion" : titulo.Trim();
-            string descripcionNormalizada = descripcion?.Trim() ?? string.Empty;
+            string nombre = string.IsNullOrWhiteSpace(request.Titulo) ? "Votacion" : request.Titulo.Trim();
+            string descripcionNormalizada = request.Descripcion?.Trim() ?? string.Empty;
 
             Evento evento = new Evento
             {
                 Nombre = nombre,
                 Descripcion = descripcionNormalizada,
                 FechaIni = fechaInicio,
-                FechaFin = fechaFin,
-                PermiteCompetidoresVotar = permiteCompetidoresVotar,
+                FechaFin = request.FechaFin,
+                PermiteCompetidoresVotar = request.PermiteCompetidoresVotar,
                 organizador = usuario!,
                 OrganizadorId = usuario!.Id
             };
@@ -279,7 +267,7 @@ namespace Votify.BusinessLogic.Service
             _encargadoRepository.Insert(encargado);
             Commit();
 
-            var categoriasNormalizadas = (categorias ?? new List<string>())
+            var categoriasNormalizadas = request.Categorias
                 .Where(c => !string.IsNullOrWhiteSpace(c))
                 .Select(c => c.Trim())
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -300,15 +288,15 @@ namespace Votify.BusinessLogic.Service
                         ? $"Categoría: {categoria}"
                         : $"{descripcionNormalizada} · Categoría: {categoria}";
 
-                Votacion votacion = new Votacion(fechaInicio, fechaFin, activa, encargado)
+                Votacion votacion = new Votacion(fechaInicio, request.FechaFin, request.Activa, encargado)
                 {
                     Titulo = tituloVotacion,
                     Descripcion = descripcionVotacion,
                     evento = evento,
                     EventoId = evento.IdEvento,
                     EncargadoId = encargado.Id,
-                    PesoJurado = pesoJurado,
-                    PesoPublico = pesoPublico
+                    PesoJurado = request.PesoJurado,
+                    PesoPublico = request.PesoPublico
                 };
 
                 _votacionRepository.Insert(votacion);
