@@ -971,8 +971,8 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
 });
 
 // ── Endpoints de pruebas de aceptación ──────────────────────────
-/*
- * app.MapGet("/api/tests/ut3962", () =>
+
+app.MapGet("/api/tests/ut3962", () =>
 {
     var (ok, msg) = Votify.Tests.ValoresPorDefectoTest.RunAll();
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
@@ -983,7 +983,7 @@ app.MapGet("/api/tests/ut3938", () =>
     var (ok, msg) = Votify.Tests.EncargadoCicloVidaTest.RunAll();
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
-*/
+
 app.Run();
 
 // ── Helpers ────────────────────────────────────────────────────
