@@ -1,6 +1,7 @@
 @page "/perfil"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @layout EmptyLayout
+@using Votify.shared
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
 @inject IJSRuntime JS
@@ -97,8 +98,115 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Estadísticas -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+                <h2 class="text-lg font-bold text-[#1A281B]">Estadísticas</h2>
+                @if (cargandoHistorial)
+                {
+                    <div class="flex justify-center py-4">
+                        <div class="w-6 h-6 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                }
+                else if (historial != null)
+                {
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] rounded-xl p-4">
+                            <p class="text-sm text-[#4C6B4F]">Eventos Participados</p>
+                            <p class="text-3xl font-bold text-[#1A281B]">@historial.EventosParticipados</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] rounded-xl p-4">
+                            <p class="text-sm text-[#4C6B4F]">Votos Emitidos</p>
+                            <p class="text-3xl font-bold text-[#1A281B]">@historial.VotosEmitidos</p>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Historial de Eventos -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+                <h2 class="text-lg font-bold text-[#1A281B]">Historial de Eventos</h2>
+                @if (cargandoHistorial)
+                {
+                    <div class="flex justify-center py-6">
+                        <div class="w-8 h-8 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                }
+                else if (historial == null || !historial.Eventos.Any())
+                {
+                    <p class="text-sm text-[#6C8A6C]">Aún no has participado en ningún evento.</p>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var ev in historial.Eventos)
+                        {
+                            <div class="border border-[#B5D6AC] rounded-xl p-4 flex items-start justify-between gap-4">
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-[#1A281B]">@ev.Nombre</p>
+                                    <p class="text-sm text-[#6C8A6C]">📅 @FormatearRangoFechas(ev.FechaIni, ev.FechaFin)</p>
+                                    <p class="text-sm text-[#4C6B4F] mt-1">@DescribirParticipacion(ev)</p>
+                                </div>
+                                @if (ev.Voto)
+                                {
+                                    <button @onclick="() => AbrirReclamacion(ev)"
+                                            disabled="@ev.YaReclamado"
+                                            class="@(ev.YaReclamado
+                                                ? "bg-[#E9EFE1] text-[#A6AAA9] cursor-not-allowed"
+                                                : "bg-white border border-[#6C8A6C] text-[#4C6B4F] hover:bg-[#E9EFE1]")
+                                                px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 shrink-0">
+                                        <span>⚠</span>
+                                        <span>@(ev.YaReclamado ? "Reclamado" : "Reclamar")</span>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
         }
     </main>
+
+    @if (eventoReclamando != null)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-[#1A281B]">Reclamación de Resultados</h3>
+                    <button @onclick="CerrarReclamacion" class="text-[#6C8A6C] hover:text-[#1A281B]">✕</button>
+                </div>
+
+                <div class="bg-[#E9EFE1] border border-[#B5D6AC] rounded-xl p-4 mb-4">
+                    <p class="text-sm text-[#4C6B4F]">Evento:</p>
+                    <p class="font-bold text-[#1A281B]">@eventoReclamando.Nombre</p>
+                    <p class="text-sm text-[#6C8A6C]">@FormatearRangoFechas(eventoReclamando.FechaIni, eventoReclamando.FechaFin)</p>
+                </div>
+
+                <label class="text-sm font-bold text-[#1A281B] flex items-center gap-1 mb-2">
+                    💬 Descripción del Problema
+                </label>
+                <textarea @bind="descripcionReclamacion" rows="5"
+                          placeholder="Describe el problema con los resultados del evento..."
+                          class="w-full px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] resize-none"></textarea>
+
+                @if (!string.IsNullOrEmpty(errorReclamacion))
+                {
+                    <p class="text-sm text-red-500 mt-2">@errorReclamacion</p>
+                }
+
+                <div class="mt-5 flex gap-2">
+                    <button @onclick="EnviarReclamacion" disabled="@enviandoReclamacion"
+                            class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
+                        @(enviandoReclamacion ? "Enviando..." : "Enviar Reclamación")
+                    </button>
+                    <button @onclick="CerrarReclamacion" disabled="@enviandoReclamacion"
+                            class="px-6 py-2 border border-[#B5D6AC] rounded-xl font-medium text-[#4C6B4F] hover:bg-[#E9EFE1] disabled:opacity-60">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -122,6 +230,14 @@
     private string fotoMsg = string.Empty;
     private bool fotoError = false;
 
+    private HistorialEventosDTO? historial;
+    private bool cargandoHistorial = true;
+
+    private EventoHistorialItemDTO? eventoReclamando;
+    private string descripcionReclamacion = string.Empty;
+    private string errorReclamacion = string.Empty;
+    private bool enviandoReclamacion = false;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -137,12 +253,113 @@
         catch
         {
             NavigationManager.NavigateTo("/login");
+            return;
         }
         finally
         {
             cargando = false;
         }
+
+        await CargarHistorial();
     }
+
+    private async Task CargarHistorial()
+    {
+        cargandoHistorial = true;
+        try
+        {
+            historial = await Http.GetFromJsonAsync<HistorialEventosDTO>("/api/perfil/historial");
+        }
+        catch
+        {
+            historial = null;
+        }
+        finally
+        {
+            cargandoHistorial = false;
+        }
+    }
+
+    private void AbrirReclamacion(EventoHistorialItemDTO ev)
+    {
+        if (ev.YaReclamado) return;
+        eventoReclamando = ev;
+        descripcionReclamacion = string.Empty;
+        errorReclamacion = string.Empty;
+    }
+
+    private void CerrarReclamacion()
+    {
+        eventoReclamando = null;
+        descripcionReclamacion = string.Empty;
+        errorReclamacion = string.Empty;
+    }
+
+    private async Task EnviarReclamacion()
+    {
+        if (eventoReclamando == null) return;
+        if (string.IsNullOrWhiteSpace(descripcionReclamacion))
+        {
+            errorReclamacion = "Describe el problema antes de enviar.";
+            return;
+        }
+
+        enviandoReclamacion = true;
+        errorReclamacion = string.Empty;
+        try
+        {
+            var res = await Http.PostAsJsonAsync("/api/reclamaciones", new CrearReclamacionRequest
+            {
+                EventoId = eventoReclamando.IdEvento,
+                Descripcion = descripcionReclamacion
+            });
+            if (res.IsSuccessStatusCode)
+            {
+                eventoReclamando.YaReclamado = true;
+                eventoReclamando.EstadoReclamacion = "PENDIENTE";
+                CerrarReclamacion();
+            }
+            else
+            {
+                errorReclamacion = await res.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorReclamacion = $"Error al enviar: {ex.Message}";
+        }
+        finally
+        {
+            enviandoReclamacion = false;
+        }
+    }
+
+    private static string FormatearRangoFechas(DateTime ini, DateTime fin)
+    {
+        var meses = new[] { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+        if (ini.Year == fin.Year && ini.Month == fin.Month)
+            return $"{ini.Day}-{fin.Day} {meses[ini.Month - 1]} {ini.Year}";
+        return $"{ini:dd/MM/yyyy} - {fin:dd/MM/yyyy}";
+    }
+
+    private static string DescribirParticipacion(EventoHistorialItemDTO ev)
+    {
+        if (!ev.Voto && string.IsNullOrEmpty(ev.ProyectoDestacado))
+            return "No votaste en este evento";
+        if (!string.IsNullOrEmpty(ev.ProyectoDestacado) && ev.PosicionProyecto.HasValue)
+            return $"Proyecto \"{ev.ProyectoDestacado}\" - {Ordinal(ev.PosicionProyecto.Value)} lugar";
+        if (!string.IsNullOrEmpty(ev.ProyectoDestacado))
+            return $"Proyecto \"{ev.ProyectoDestacado}\"";
+        return "Participaste votando";
+    }
+
+    private static string Ordinal(int n) => n switch
+    {
+        1 => "1er",
+        2 => "2do",
+        3 => "3er",
+        _ => $"{n}to"
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

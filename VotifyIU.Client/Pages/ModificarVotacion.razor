@@ -52,7 +52,7 @@
                     <!-- Estado actual -->
                     <div class="flex items-center justify-between p-3 bg-[#E9EFE1] rounded-xl">
                         <span class="text-sm text-[#4C6B4F] font-medium">Estado actual</span>
-                        <span class="text-sm font-semibold @(votacionDto.Estado ? "text-green-600" : "text-orange-500")">
+                        <span class="text-sm font-semibold @(votacionDto.Estado ? "text-[#4C6B4F]" : "text-[#90A896]")">
                             @(votacionDto.Estado ? "Activa" : "Pausada")
                         </span>
                     </div>
@@ -80,8 +80,8 @@
                 <button @onclick="HandleTogglePausa" disabled="@isSaving"
                         class="w-full py-3 rounded-xl font-medium transition-all duration-300 border-2 disabled:opacity-60
                                    @(votacionDto.Estado
-                                                           ? "border-orange-400 text-orange-500 hover:bg-orange-50"
-                                                           : "border-green-500 text-green-600 hover:bg-green-50")">
+                                                           ? "border-[#90A896] text-[#6C8A6C] hover:bg-[#E9EFE1]"
+                                                           : "border-[#4C6B4F] text-[#4C6B4F] hover:bg-[#E9EFE1]")">
                     @if (isSaving)
                     {
                         <span>Procesando...</span>

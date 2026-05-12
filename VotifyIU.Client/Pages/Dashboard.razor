@@ -98,25 +98,47 @@
                         {
                             if(ev.RolActual == "ORGANIZADOR" || ev.RolActual == "ENCARGADO")
                             {
-                                <div class="flex gap-2">
-                                    <button @onclick="() => NavigateToEvent(ev.Id)"
-                                            class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
-                                        @(ev.RolActual == "ENCARGADO" ? "Controlar" : "Gestionar")
-                                    </button>
-                                    <button @onclick="() => NavigateToResults(ev.Id)"
-                                            class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
-                                        Resultados
-                                    </button>
-                                </div>
+                                    <div class="flex gap-2">
+                                        <button @onclick="() => NavigateToEvent(ev.Id)"
+                                                class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                            @(ev.Status == "paused" ? "▶ Reanudar" : "Gestionar")
+                                        </button>
+                                        <button @onclick="() => NavigateToResults(ev.Id)"
+                                                class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
+                                            Resultados
+                                        </button>
+                                    </div>
                             }
                             else
                             {
                                 <button @onclick="() => NavigateToEvent(ev.Id)"
-                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md">
                                     @GetPrimaryActionText(ev.RolActual)
                                 </button>
                             }
                         }
+                            else if (ev.Status == "paused")
+                            {
+                                if (ev.RolActual == "ORGANIZADOR" || ev.RolActual == "ENCARGADO")
+                                {
+                                    <div class="flex gap-2">
+                                        <button @onclick="() => NavigateToEvent(ev.Id)"
+                                                class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                            ▶ Reanudar / Gestionar
+                                        </button>
+                                        <button @onclick="() => NavigateToResults(ev.Id)"
+                                                class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
+                                            Resultados
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed">
+                                        Votación pausada
+                                    </button>
+                                }
+                            }
                         else if (ev.Status == "upcoming")
                         {
                             <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed">
@@ -168,6 +190,9 @@
                     {
                         var primera = g.OrderBy(v => v.FechaFin).First();
                         var fechaEvento = g.Max(v => v.FechaFin);
+                        var ahora = DateTime.Now;
+                        bool hayActiva = g.Any(v => v.Estado && v.FechaFin > ahora);
+                        bool hayPendiente = g.Any(v => v.FechaFin > ahora);
                         return new EventModel
                         {
                             Id = g.Key.ToString(),
@@ -177,7 +202,7 @@
                             Description = string.IsNullOrWhiteSpace(primera.Descripcion) ? "Sin descripción" : primera.Descripcion,
                             Date = fechaEvento.ToString("dd/MM/yyyy"),
                             FechaOrden = fechaEvento,
-                            Status = fechaEvento >= DateTime.Today ? "active" : "finished",
+                            Status = hayActiva ? "active" : hayPendiente ? "paused" : "finished",
                             Participants = 0,
                             Projects = 0,
                             RolActual = primera.RolActual
@@ -213,6 +238,7 @@
     {
         "active" => "bg-[#6C8A6C] text-white",
         "upcoming" => "bg-[#B5D6AC] text-[#1A281B]",
+        "paused" => "bg-[#90A896] text-white",
         "finished" => "bg-[#A6AAA9] text-white",
         _ => "bg-gray-300"
     };
@@ -221,6 +247,7 @@
     {
         "active" => "En Curso",
         "upcoming" => "Próximamente",
+        "paused" => "Pausado",
         "finished" => "Finalizado",
         _ => status
     };
@@ -268,7 +295,7 @@
         public string Date { get; set; } = "";
         public DateTime FechaOrden { get; set; }
         public int Participants { get; set; }
-        public string Status { get; set; } = ""; // active, upcoming, finished
+        public string Status { get; set; } = ""; 
         public int Projects { get; set; }
         public string? RolActual { get; set; }
     }

@@ -4,6 +4,23 @@ using Votify.Entities;
 
 namespace Votify.BusinessLogic.Service
 {
+    public class HistorialEventoItem
+    {
+        public Evento Evento { get; set; } = null!;
+        public string? TipoRol { get; set; }
+        public bool Voto { get; set; }
+        public Proyecto? ProyectoDestacado { get; set; }
+        public int? PosicionProyecto { get; set; }
+        public int? TotalProyectos { get; set; }
+    }
+
+    public class HistorialEventosResultado
+    {
+        public int EventosParticipados { get; set; }
+        public int VotosEmitidos { get; set; }
+        public List<HistorialEventoItem> Eventos { get; set; } = new();
+    }
+
     public interface IVotifyService
     {
         // Autenticación
@@ -30,7 +47,7 @@ namespace Votify.BusinessLogic.Service
         void Commit();
 
         // Votaciones
-        int CrearVotacion(string titulo, string? descripcion, DateTime fechaFin, bool activa, bool permiteCompetidoresVotar = false, int pesoJurado = 70, int pesoPublico = 30, List<string>? categorias = null);
+        int CrearVotacion(CrearVotacionRequest request);
         Votacion GetVotacion(int idVotacion);
         IEnumerable<Votacion> GetMisVotaciones();
         IEnumerable<Votacion> GetAllVotaciones(); 
@@ -38,6 +55,7 @@ namespace Votify.BusinessLogic.Service
         void EliminarEvento(int idVotacion);
         void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado);
         void CerrarVotacion(int idVotacion);
+        void TogglePausarVotacion(int idVotacion);
 
         // Roles
         Rol GetRolEnEvento(int idEvento);
@@ -49,5 +67,16 @@ namespace Votify.BusinessLogic.Service
         Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string? usernameCompetidor = null); 
         void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales); 
         void EliminarProyecto(int idProyecto); 
+        // Proyectos
+        Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor);
+        void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales);
+        void EliminarProyecto(int idProyecto);
+
+        // Historial y reclamaciones
+        HistorialEventosResultado GetHistorialDelUsuario();
+        Reclamacion CrearReclamacion(int idEvento, string descripcion);
+        IEnumerable<Reclamacion> GetReclamacionesDelUsuario();
+        IEnumerable<Reclamacion> GetReclamacionesComoOrganizador();
+        Reclamacion ResponderReclamacion(int idReclamacion, string estado, string? respuesta);
     }
 }
