@@ -16,25 +16,35 @@ namespace Votify.Tests
     /// </summary>
     public static class EncargadoCicloVidaTest
     {
-        // ── Constantes de prueba ───────────────────────────────────────────
+        // ── Identificadores fijos del escenario de prueba ──────────────────
 
         private const int IdUsuarioEncargado = 1;
         private const int IdUsuarioOtro      = 2;
         private const int IdEvento           = 10;
         private const int IdVotacion         = 5;
 
+        private const string UsernameEncargado = "encargado_test";
+        private const string PasswordEncargado = "pass123";
+        private const string UsernameOtro      = "otro_test";
+        private const string PasswordOtro      = "pass456";
+
+        // ── Contexto: agrupa el servicio y los repos accedidos por los tests ──
+
+        private sealed record Contexto(
+            VotifyService Service,
+            InMemoryDAL<Votacion> VotacionRepo);
+
         // ── Construcción del servicio con repositorios en memoria ──────────
 
-        private static VotifyService CrearServicio(
-            out InMemoryDAL<Usuario> usuarioRepo,
-            out InMemoryDAL<Votacion> votacionRepo,
-            out InMemoryDAL<EncargadoVotacion> encargadoRepo)
+        private static Contexto CrearContextoConSesion(string username, string password)
         {
-            usuarioRepo   = new InMemoryDAL<Usuario>(u => u.Id);
-            votacionRepo  = new InMemoryDAL<Votacion>(v => v.Id);
-            encargadoRepo = new InMemoryDAL<EncargadoVotacion>(e => e.Id);
+            var usuarioRepo   = new InMemoryDAL<Usuario>(u => u.Id);
+            var votacionRepo  = new InMemoryDAL<Votacion>(v => v.Id);
+            var encargadoRepo = new InMemoryDAL<EncargadoVotacion>(e => e.Id);
 
-            return new VotifyService(
+            PrepararDatos(usuarioRepo, votacionRepo, encargadoRepo);
+
+            var repos = new VotifyRepositories(
                 usuarioRepo,
                 new InMemoryDAL<Voto>(v => v.Id),
                 votacionRepo,
@@ -47,28 +57,28 @@ namespace Votify.Tests
                 new InMemoryDAL<Organizador>(o => o.Id),
                 encargadoRepo,
                 new InMemoryDAL<Reclamacion>(r => r.Id));
-        }
 
-        // ── Datos comunes ──────────────────────────────────────────────────
+            var service = new VotifyService(repos);
+            service.LogIn(username, password);
+
+            return new Contexto(service, votacionRepo);
+        }
 
         private static void PrepararDatos(
             InMemoryDAL<Usuario> usuarioRepo,
             InMemoryDAL<Votacion> votacionRepo,
             InMemoryDAL<EncargadoVotacion> encargadoRepo)
         {
-            // Usuario con rol de encargado
-            usuarioRepo.Insert(new Usuario("encargado_test", "enc@test.com", "pass123", IdUsuarioEncargado)
+            usuarioRepo.Insert(new Usuario(UsernameEncargado, "enc@test.com", PasswordEncargado, IdUsuarioEncargado)
             {
                 roles = new List<Rol>()
             });
 
-            // Usuario sin rol de encargado en el evento
-            usuarioRepo.Insert(new Usuario("otro_test", "otro@test.com", "pass456", IdUsuarioOtro)
+            usuarioRepo.Insert(new Usuario(UsernameOtro, "otro@test.com", PasswordOtro, IdUsuarioOtro)
             {
                 roles = new List<Rol>()
             });
 
-            // Votación activa asociada al evento
             votacionRepo.Insert(new Votacion
             {
                 Id          = IdVotacion,
@@ -80,7 +90,6 @@ namespace Votify.Tests
                 Descripcion = string.Empty
             });
 
-            // Encargado del evento (vinculado al usuario 1)
             encargadoRepo.Insert(new EncargadoVotacion(DateTime.Now, 0)
             {
                 Id        = 1,
@@ -91,122 +100,65 @@ namespace Votify.Tests
 
         // ── Pruebas ────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Un encargado puede cambiar la fecha de fin y el estado de la votación.
-        /// </summary>
-        public static (bool Success, string Message) Test_Encargado_PuedeModificarVotacion()
+        public static (bool Success, string Message) EncargadoPuedeModificarVotacion()
         {
-            try
-            {
-                var service = CrearServicio(out var usuarioRepo, out var votacionRepo, out var encargadoRepo);
-                PrepararDatos(usuarioRepo, votacionRepo, encargadoRepo);
+            var ctx = CrearContextoConSesion(UsernameEncargado, PasswordEncargado);
 
-                service.LogIn("encargado_test", "pass123");
-                service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), false);
+            ctx.Service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), estado: false);
 
-                var votacion = votacionRepo.GetById(IdVotacion);
-                return votacion.Estado == false
-                    ? (true, "El encargado puede modificar la votación (estado actualizado correctamente)")
-                    : (false, "El estado de la votación no cambió tras la modificación");
-            }
-            catch (Exception ex) { return (false, $"Error inesperado: {ex.Message}"); }
+            return ctx.VotacionRepo.GetById(IdVotacion).Estado == false
+                ? (true, "El encargado puede modificar la votación (estado actualizado correctamente)")
+                : (false, "El estado de la votación no cambió tras la modificación");
         }
 
-        /// <summary>
-        /// Un encargado puede cerrar una votación activa (Estado pasa a false).
-        /// </summary>
-        public static (bool Success, string Message) Test_Encargado_PuedeCerrarVotacion()
+        public static (bool Success, string Message) EncargadoPuedeCerrarVotacion()
         {
-            try
-            {
-                var service = CrearServicio(out var usuarioRepo, out var votacionRepo, out var encargadoRepo);
-                PrepararDatos(usuarioRepo, votacionRepo, encargadoRepo);
+            var ctx = CrearContextoConSesion(UsernameEncargado, PasswordEncargado);
 
-                service.LogIn("encargado_test", "pass123");
-                service.CerrarVotacion(IdVotacion);
+            ctx.Service.CerrarVotacion(IdVotacion);
 
-                var votacion = votacionRepo.GetById(IdVotacion);
-                return votacion.Estado == false
-                    ? (true, "El encargado puede cerrar la votación (Estado=false)")
-                    : (false, "La votación sigue activa tras llamar a CerrarVotacion");
-            }
-            catch (Exception ex) { return (false, $"Error inesperado: {ex.Message}"); }
+            return ctx.VotacionRepo.GetById(IdVotacion).Estado == false
+                ? (true, "El encargado puede cerrar la votación (Estado=false)")
+                : (false, "La votación sigue activa tras llamar a CerrarVotacion");
         }
 
-        /// <summary>
-        /// Un usuario sin rol ENCARGADO no puede modificar la votación.
-        /// Debe lanzar ServiceException con mensaje de permisos.
-        /// </summary>
-        public static (bool Success, string Message) Test_UsuarioSinRol_NoPuedeModificarVotacion()
+        public static (bool Success, string Message) UsuarioSinRolNoPuedeModificarVotacion()
         {
-            try
-            {
-                var service = CrearServicio(out var usuarioRepo, out var votacionRepo, out var encargadoRepo);
-                PrepararDatos(usuarioRepo, votacionRepo, encargadoRepo);
+            var ctx = CrearContextoConSesion(UsernameOtro, PasswordOtro);
 
-                service.LogIn("otro_test", "pass456");
-                try
-                {
-                    service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), false);
-                    return (false, "Se esperaba ServiceException por falta de permisos, pero no se lanzó");
-                }
-                catch (ServiceException ex) when (ex.Message.Contains("permisos"))
-                {
-                    return (true, "Acceso denegado correctamente a usuario sin rol de encargado");
-                }
-            }
-            catch (Exception ex) { return (false, $"Error inesperado: {ex.Message}"); }
+            return EsperarFallaDePermisos(
+                () => ctx.Service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), estado: false));
         }
 
-        /// <summary>
-        /// Un usuario sin rol ENCARGADO no puede cerrar la votación.
-        /// Debe lanzar ServiceException con mensaje de permisos.
-        /// </summary>
-        public static (bool Success, string Message) Test_UsuarioSinRol_NoPuedeCerrarVotacion()
+        public static (bool Success, string Message) UsuarioSinRolNoPuedeCerrarVotacion()
+        {
+            var ctx = CrearContextoConSesion(UsernameOtro, PasswordOtro);
+
+            return EsperarFallaDePermisos(() => ctx.Service.CerrarVotacion(IdVotacion));
+        }
+
+        // ── Helper de aserción ─────────────────────────────────────────────
+
+        private static (bool Success, string Message) EsperarFallaDePermisos(Action accionProhibida)
         {
             try
             {
-                var service = CrearServicio(out var usuarioRepo, out var votacionRepo, out var encargadoRepo);
-                PrepararDatos(usuarioRepo, votacionRepo, encargadoRepo);
-
-                service.LogIn("otro_test", "pass456");
-                try
-                {
-                    service.CerrarVotacion(IdVotacion);
-                    return (false, "Se esperaba ServiceException por falta de permisos, pero no se lanzó");
-                }
-                catch (ServiceException ex) when (ex.Message.Contains("permisos"))
-                {
-                    return (true, "Acceso denegado correctamente a usuario sin rol de encargado");
-                }
+                accionProhibida();
+                return (false, "Se esperaba ServiceException por falta de permisos, pero no se lanzó");
             }
-            catch (Exception ex) { return (false, $"Error inesperado: {ex.Message}"); }
+            catch (ServiceException ex) when (ex.Message.Contains("permisos"))
+            {
+                return (true, "Acceso denegado correctamente a usuario sin rol de encargado");
+            }
         }
 
         // ── Runner ─────────────────────────────────────────────────────────
 
-        public static (bool Success, string Message) RunAll()
-        {
-            var pruebas = new (string Nombre, Func<(bool, string)> Prueba)[]
-            {
-                ("Encargado modifica votación",         Test_Encargado_PuedeModificarVotacion),
-                ("Encargado cierra votación",           Test_Encargado_PuedeCerrarVotacion),
-                ("Sin rol no puede modificar",          Test_UsuarioSinRol_NoPuedeModificarVotacion),
-                ("Sin rol no puede cerrar",             Test_UsuarioSinRol_NoPuedeCerrarVotacion),
-            };
-
-            var lineas = new System.Text.StringBuilder();
-            lineas.AppendLine("UT-3938 — Permitir al encargado intervenir en el ciclo de vida de una votación\n");
-            bool globalOk = true;
-
-            foreach (var (nombre, prueba) in pruebas)
-            {
-                var (ok, msg) = prueba();
-                lineas.AppendLine($"  [{(ok ? "OK" : "FAIL")}] {nombre}: {msg}");
-                if (!ok) globalOk = false;
-            }
-
-            return (globalOk, lineas.ToString());
-        }
+        public static (bool Success, string Message) RunAll() => TestRunner.Run(
+            "UT-3938 — Permitir al encargado intervenir en el ciclo de vida de una votación",
+            ("Encargado modifica votación",  EncargadoPuedeModificarVotacion),
+            ("Encargado cierra votación",    EncargadoPuedeCerrarVotacion),
+            ("Sin rol no puede modificar",   UsuarioSinRolNoPuedeModificarVotacion),
+            ("Sin rol no puede cerrar",      UsuarioSinRolNoPuedeCerrarVotacion));
     }
 }

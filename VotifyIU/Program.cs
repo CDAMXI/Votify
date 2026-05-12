@@ -399,12 +399,7 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
     {
         service.RestoreSession(username);
         var usuarioActual = service.GetUsuarioActual();
-
-        // Carga todos los roles del usuario en un único query en lugar de 5 queries por votación
-        var rolesPorEvento = usuarioActual.roles?
-            .GroupBy(r => r.EventoId)
-            .ToDictionary(g => g.Key, g => g.First().TipoRol)
-            ?? new Dictionary<int, string?>();
+        var rolesPorEvento = MapearRolesPorEvento(usuarioActual);
 
         var votaciones = service.GetAllVotaciones().OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
         {
@@ -435,11 +430,7 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
     {
         service.RestoreSession(username);
         var usuarioActual = service.GetUsuarioActual();
-
-        var rolesPorEvento2 = usuarioActual.roles?
-            .GroupBy(r => r.EventoId)
-            .ToDictionary(g => g.Key, g => g.First().TipoRol)
-            ?? new Dictionary<int, string?>();
+        var rolesPorEvento = MapearRolesPorEvento(usuarioActual);
 
         var votaciones = service.GetVotacionesByEvento(idEvento)
             .OrderBy(v => v.FechaFin)
@@ -455,7 +446,7 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
                 Estado = v.Estado,
                 PesoJurado = v.PesoJurado,
                 PesoPublico = v.PesoPublico,
-                RolActual = rolesPorEvento2.TryGetValue(v.EventoId, out var rol2) ? rol2 : null
+                RolActual = rolesPorEvento.TryGetValue(v.EventoId, out var rol) ? rol : null
             })
             .ToList();
 
@@ -1025,6 +1016,16 @@ static string? ValidarPesosResultados(int pesoJurado, int pesoPublico)
         return "Los pesos de jurado y público deben sumar 100";
 
     return null;
+}
+
+// Devuelve un diccionario eventoId → tipoRol cargando todos los roles del usuario en
+// un único acceso (lazy loading de EF), evitando 5 queries por votación al construir DTOs.
+static Dictionary<int, string?> MapearRolesPorEvento(Usuario usuarioActual)
+{
+    return usuarioActual.roles?
+        .GroupBy(r => r.EventoId)
+        .ToDictionary(g => g.Key, g => g.First().TipoRol)
+        ?? new Dictionary<int, string?>();
 }
 
 static bool UsuarioPuedeGestionarResultados(Votacion votacion, Usuario usuarioActual, IDAL<Organizador> organizadorRepo, IDAL<EncargadoVotacion> encargadoRepo)
