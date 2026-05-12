@@ -68,9 +68,9 @@ namespace Votify.BusinessLogic.Service
         void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales); 
         void EliminarProyecto(int idProyecto); 
         // Proyectos
-        Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor);
-        void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales);
-        void EliminarProyecto(int idProyecto);
+        //Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor);
+        //void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales);
+        //void EliminarProyecto(int idProyecto);
 
         // Historial y reclamaciones
         HistorialEventosResultado GetHistorialDelUsuario();

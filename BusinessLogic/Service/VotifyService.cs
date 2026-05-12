@@ -273,7 +273,7 @@ namespace Votify.BusinessLogic.Service
             _encargadoRepository.Insert(encargado);
             Commit();
 
-            var categoriasNormalizadas = (categorias ?? new List<string>())
+            var categoriasNormalizadas = (request.Categorias ?? new List<string>())
                 .Select(DescomponerCategoria)
                 .Where(c => !string.IsNullOrWhiteSpace(c.Nombre))
                 .GroupBy(c => c.Nombre, StringComparer.OrdinalIgnoreCase)

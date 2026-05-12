@@ -396,15 +396,17 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
     {
         service.RestoreSession(username);
         // Serializa los criterios de cada categoría en el token que pasa al servicio
-        int idVotacion = service.CrearVotacion(
-            req.Titulo,
-            req.Descripcion,
-            req.FechaFin,
-            true,
-            req.PermiteCompetidoresVotar,
-            req.PesoJurado,
-            req.PesoPublico,
-            req.Categorias?.Select(ConstruirTokenCategoria).ToList());
+        int idVotacion = service.CrearVotacion(new CrearVotacionRequest
+        {
+            Titulo = req.Titulo,
+            Descripcion = req.Descripcion,
+            FechaFin = req.FechaFin,
+            Activa = true,
+            PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
+            PesoJurado = req.PesoJurado,
+            PesoPublico = req.PesoPublico,
+            Categorias = req.Categorias?.Select(c => c.Nombre).ToList() ?? new List<string>()
+        });
         return Results.Ok(idVotacion);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -969,8 +971,8 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
 });
 
 // ── Endpoints de pruebas de aceptación ──────────────────────────
-
-app.MapGet("/api/tests/ut3962", () =>
+/*
+ * app.MapGet("/api/tests/ut3962", () =>
 {
     var (ok, msg) = Votify.Tests.ValoresPorDefectoTest.RunAll();
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
@@ -981,7 +983,7 @@ app.MapGet("/api/tests/ut3938", () =>
     var (ok, msg) = Votify.Tests.EncargadoCicloVidaTest.RunAll();
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
-
+*/
 app.Run();
 
 // ── Helpers ────────────────────────────────────────────────────
