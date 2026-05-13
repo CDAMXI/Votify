@@ -420,12 +420,7 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
     {
         service.RestoreSession(username);
         var usuarioActual = service.GetUsuarioActual();
-
-        // Carga todos los roles del usuario en un único query en lugar de 5 queries por votación
-        var rolesPorEvento = usuarioActual.roles?
-            .GroupBy(r => r.EventoId)
-            .ToDictionary(g => g.Key, g => g.First().TipoRol)
-            ?? new Dictionary<int, string?>();
+        var rolesPorEvento = MapearRolesPorEvento(usuarioActual);
 
         var votaciones = service.GetAllVotaciones().OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
         {
@@ -455,21 +450,26 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
     {
         service.RestoreSession(username);
         var usuarioActual = service.GetUsuarioActual();
-        var votaciones = service.GetVotacionesByEvento(idEvento).OrderBy(v => v.FechaFin).Select(v => new VotacionDTO
-        {
-            Id = v.Id,
-            IdEvento = v.EventoId,
-            NombreEvento = v.evento?.Nombre ?? string.Empty,
-            Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
-            Descripcion = ObtenerDescripcionVisible(v.Descripcion),
-            FechaIni = v.FechaIni,
-            FechaFin = v.FechaFin,
-            Estado = v.Estado,
-            PesoJurado = v.PesoJurado,
-            PesoPublico = v.PesoPublico,
-            Categorias = ObtenerCategoriasDeVotacion(v),
-            RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
-        }).ToList();
+        var rolesPorEvento = MapearRolesPorEvento(usuarioActual);
+
+        var votaciones = service.GetVotacionesByEvento(idEvento)
+            .OrderBy(v => v.FechaFin)
+            .Select(v => new VotacionDTO
+            {
+                Id = v.Id,
+                IdEvento = v.EventoId,
+                NombreEvento = v.evento?.Nombre ?? string.Empty,
+                Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
+                Descripcion = v.Descripcion,
+                FechaIni = v.FechaIni,
+                FechaFin = v.FechaFin,
+                Estado = v.Estado,
+                PesoJurado = v.PesoJurado,
+                PesoPublico = v.PesoPublico,
+                RolActual = rolesPorEvento.TryGetValue(v.EventoId, out var rol) ? rol : null
+            })
+            .ToList();
+
         return Results.Ok(votaciones);
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -1000,6 +1000,16 @@ static string? ValidarPesosResultados(int pesoJurado, int pesoPublico)
         return "Los pesos de jurado y público deben sumar 100";
 
     return null;
+}
+
+// Devuelve un diccionario eventoId → tipoRol cargando todos los roles del usuario en
+// un único acceso (lazy loading de EF), evitando 5 queries por votación al construir DTOs.
+static Dictionary<int, string?> MapearRolesPorEvento(Usuario usuarioActual)
+{
+    return usuarioActual.roles?
+        .GroupBy(r => r.EventoId)
+        .ToDictionary(g => g.Key, g => g.First().TipoRol)
+        ?? new Dictionary<int, string?>();
 }
 
 static bool UsuarioPuedeGestionarResultados(Votacion votacion, Usuario usuarioActual, IDAL<Organizador> organizadorRepo, IDAL<EncargadoVotacion> encargadoRepo)

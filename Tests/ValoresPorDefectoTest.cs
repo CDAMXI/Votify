@@ -7,17 +7,19 @@ namespace Votify.Tests
     /// Pruebas de aceptación — UT-3962: Dar valores por defecto a las votaciones.
     ///
     /// Criterios verificados:
-    ///   · PesoJurado  = 70  por defecto
-    ///   · PesoPublico = 30  por defecto
+    ///   · PesoJurado  = 70 por defecto
+    ///   · PesoPublico = 30 por defecto
     ///   · PesoJurado + PesoPublico = 100
-    ///   · Titulo      = "Votacion"   por defecto
-    ///   · Descripcion = ""           por defecto
+    ///   · Titulo      = "Votacion" por defecto
+    ///   · Descripcion = ""         por defecto
     /// </summary>
     public static class ValoresPorDefectoTest
     {
-        // ── Helpers ────────────────────────────────────────────────────────
+        private const int PesoJuradoEsperado  = 70;
+        private const int PesoPublicoEsperado = 30;
+        private const string TituloEsperado   = "Votacion";
 
-        private static Votacion CrearVotacion()
+        private static Votacion CrearVotacionPorDefecto()
         {
             var encargado = new EncargadoVotacion(DateTime.Now, 0);
             return new Votacion(DateTime.Now, DateTime.Now.AddDays(7), true, encargado);
@@ -25,107 +27,55 @@ namespace Votify.Tests
 
         // ── Pruebas ────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// El peso asignado al jurado por defecto debe ser 70.
-        /// </summary>
-        public static (bool Success, string Message) Test_PesoJuradoPorDefectoEs70()
+        public static (bool Success, string Message) PesoJuradoPorDefectoEs70()
         {
-            try
-            {
-                var votacion = CrearVotacion();
-                return votacion.PesoJurado == 70
-                    ? (true, "PesoJurado por defecto es 70")
-                    : (false, $"Se esperaba PesoJurado=70, se obtuvo {votacion.PesoJurado}");
-            }
-            catch (Exception ex) { return (false, ex.Message); }
+            int peso = CrearVotacionPorDefecto().PesoJurado;
+            return peso == PesoJuradoEsperado
+                ? (true, $"PesoJurado por defecto es {PesoJuradoEsperado}")
+                : (false, $"Se esperaba PesoJurado={PesoJuradoEsperado}, se obtuvo {peso}");
         }
 
-        /// <summary>
-        /// El peso asignado al público por defecto debe ser 30.
-        /// </summary>
-        public static (bool Success, string Message) Test_PesoPublicoPorDefectoEs30()
+        public static (bool Success, string Message) PesoPublicoPorDefectoEs30()
         {
-            try
-            {
-                var votacion = CrearVotacion();
-                return votacion.PesoPublico == 30
-                    ? (true, "PesoPublico por defecto es 30")
-                    : (false, $"Se esperaba PesoPublico=30, se obtuvo {votacion.PesoPublico}");
-            }
-            catch (Exception ex) { return (false, ex.Message); }
+            int peso = CrearVotacionPorDefecto().PesoPublico;
+            return peso == PesoPublicoEsperado
+                ? (true, $"PesoPublico por defecto es {PesoPublicoEsperado}")
+                : (false, $"Se esperaba PesoPublico={PesoPublicoEsperado}, se obtuvo {peso}");
         }
 
-        /// <summary>
-        /// Los pesos por defecto deben sumar exactamente 100.
-        /// </summary>
-        public static (bool Success, string Message) Test_PesosSuman100()
+        public static (bool Success, string Message) PesosSuman100()
         {
-            try
-            {
-                var votacion = CrearVotacion();
-                int suma = votacion.PesoJurado + votacion.PesoPublico;
-                return suma == 100
-                    ? (true, $"Los pesos por defecto suman 100 ({votacion.PesoJurado}+{votacion.PesoPublico})")
-                    : (false, $"Se esperaba suma=100, se obtuvo {suma}");
-            }
-            catch (Exception ex) { return (false, ex.Message); }
+            var votacion = CrearVotacionPorDefecto();
+            int suma = votacion.PesoJurado + votacion.PesoPublico;
+            return suma == 100
+                ? (true, $"Los pesos por defecto suman 100 ({votacion.PesoJurado}+{votacion.PesoPublico})")
+                : (false, $"Se esperaba suma=100, se obtuvo {suma}");
         }
 
-        /// <summary>
-        /// El título por defecto debe ser "Votacion".
-        /// </summary>
-        public static (bool Success, string Message) Test_TituloPorDefecto()
+        public static (bool Success, string Message) TituloPorDefectoEsVotacion()
         {
-            try
-            {
-                var votacion = CrearVotacion();
-                return votacion.Titulo == "Votacion"
-                    ? (true, "Título por defecto es 'Votacion'")
-                    : (false, $"Se esperaba Titulo='Votacion', se obtuvo '{votacion.Titulo}'");
-            }
-            catch (Exception ex) { return (false, ex.Message); }
+            string titulo = CrearVotacionPorDefecto().Titulo;
+            return titulo == TituloEsperado
+                ? (true, $"Título por defecto es '{TituloEsperado}'")
+                : (false, $"Se esperaba Titulo='{TituloEsperado}', se obtuvo '{titulo}'");
         }
 
-        /// <summary>
-        /// La descripción por defecto debe ser cadena vacía.
-        /// </summary>
-        public static (bool Success, string Message) Test_DescripcionPorDefectoEsVacia()
+        public static (bool Success, string Message) DescripcionPorDefectoEsVacia()
         {
-            try
-            {
-                var votacion = CrearVotacion();
-                return votacion.Descripcion == string.Empty
-                    ? (true, "Descripción por defecto es cadena vacía")
-                    : (false, $"Se esperaba Descripcion='', se obtuvo '{votacion.Descripcion}'");
-            }
-            catch (Exception ex) { return (false, ex.Message); }
+            string descripcion = CrearVotacionPorDefecto().Descripcion;
+            return descripcion == string.Empty
+                ? (true, "Descripción por defecto es cadena vacía")
+                : (false, $"Se esperaba Descripcion='', se obtuvo '{descripcion}'");
         }
 
         // ── Runner ─────────────────────────────────────────────────────────
 
-        public static (bool Success, string Message) RunAll()
-        {
-            var pruebas = new (string Nombre, Func<(bool, string)> Prueba)[]
-            {
-                ("PesoJurado=70",        Test_PesoJuradoPorDefectoEs70),
-                ("PesoPublico=30",       Test_PesoPublicoPorDefectoEs30),
-                ("Pesos suman 100",      Test_PesosSuman100),
-                ("Titulo por defecto",   Test_TituloPorDefecto),
-                ("Descripcion vacia",    Test_DescripcionPorDefectoEsVacia),
-            };
-
-            var lineas = new System.Text.StringBuilder();
-            lineas.AppendLine("UT-3962 — Dar valores por defecto a las votaciones\n");
-            bool globalOk = true;
-
-            foreach (var (nombre, prueba) in pruebas)
-            {
-                var (ok, msg) = prueba();
-                lineas.AppendLine($"  [{(ok ? "OK" : "FAIL")}] {nombre}: {msg}");
-                if (!ok) globalOk = false;
-            }
-
-            return (globalOk, lineas.ToString());
-        }
+        public static (bool Success, string Message) RunAll() => TestRunner.Run(
+            "UT-3962 — Dar valores por defecto a las votaciones",
+            ("PesoJurado=70",          PesoJuradoPorDefectoEs70),
+            ("PesoPublico=30",         PesoPublicoPorDefectoEs30),
+            ("Pesos suman 100",        PesosSuman100),
+            ("Titulo por defecto",     TituloPorDefectoEsVotacion),
+            ("Descripcion vacia",      DescripcionPorDefectoEsVacia));
     }
 }
