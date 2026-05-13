@@ -405,7 +405,10 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
             PesoJurado = req.PesoJurado,
             PesoPublico = req.PesoPublico,
-            Categorias = req.Categorias?.Select(c => c.Nombre).ToList() ?? new List<string>()
+            Categorias = req.Categorias?
+                .Where(c => !string.IsNullOrWhiteSpace(c.Nombre))
+                .Select(ConstruirTokenCategoria)
+                .ToList() ?? new List<string>()
         });
         return Results.Ok(idVotacion);
     }
@@ -460,12 +463,13 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
                 IdEvento = v.EventoId,
                 NombreEvento = v.evento?.Nombre ?? string.Empty,
                 Titulo = string.IsNullOrEmpty(v.Titulo) ? $"Votación #{v.Id}" : v.Titulo,
-                Descripcion = v.Descripcion,
+                Descripcion = ObtenerDescripcionVisible(v.Descripcion),
                 FechaIni = v.FechaIni,
                 FechaFin = v.FechaFin,
                 Estado = v.Estado,
                 PesoJurado = v.PesoJurado,
                 PesoPublico = v.PesoPublico,
+                Categorias = ObtenerCategoriasDeVotacion(v),
                 RolActual = rolesPorEvento.TryGetValue(v.EventoId, out var rol) ? rol : null
             })
             .ToList();
