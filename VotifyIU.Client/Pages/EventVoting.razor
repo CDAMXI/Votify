@@ -25,7 +25,10 @@
                     <h1 class="text-xl font-bold text-[#1A281B]">HackUPC 2026</h1>
                 </div>
                 <div class="flex items-center gap-2 text-[#4C6B4F]">
-                    <span class="font-medium">Proyecto @(currentProjectIndex + 1) de @mockProjects.Count</span>
+                    @if (EstaEnVistaDetalle)
+                    {
+                        <span class="font-medium">Proyecto @(currentProjectIndex + 1) de @mockProjects.Count</span>
+                    }
                 </div>
             </div>
         </div>
@@ -62,15 +65,71 @@
                     </a>
                 </div>
             }
+            else if (!EstaEnVistaDetalle)
+            {
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
+                            <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
+                            <span class="text-sm text-[#4C6B4F]">• Votos realizados: @(Rol == "JURADO" ? $"{votesSubmitted}/3" : $"{votesSubmitted}/{mockProjects.Count}")</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-white rounded-full h-2 overflow-hidden">
+                        <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full transition-all duration-300"
+                             style="width: @(GetProgress() + "%")">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                    <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Proyectos del evento</h2>
+                    <p class="text-[#6C8A6C] mb-6">Selecciona el proyecto que quieras votar. Puedes votar los proyectos en el orden que prefieras.</p>
+
+                    @if (mockProjects.Count == 0)
+                    {
+                        <div class="p-4 bg-[#F8FAF7] border border-[#B5D6AC] rounded-lg text-sm text-[#6C8A6C]">
+                            No hay proyectos disponibles para votar en este evento.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            @foreach (var proyectoLista in mockProjects)
+                            {
+                                bool yaVotado = votedProjects.Contains(proyectoLista.Id);
+                                <button @onclick="() => AbrirProyectoParaVotar(proyectoLista.Id)"
+                                        class="text-left bg-[#F8FAF7] border border-[#B5D6AC]/40 rounded-xl p-5 hover:shadow-md hover:border-[#6C8A6C] transition-all">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <h3 class="text-lg font-bold text-[#1A281B] pr-2">@proyectoLista.Name</h3>
+                                        @if (yaVotado)
+                                        {
+                                            <span class="flex-shrink-0 text-xs font-bold text-white bg-[#70D939] px-2 py-1 rounded-full">★ Votado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="flex-shrink-0 text-xs font-bold text-[#6C8A6C] bg-white border border-[#B5D6AC] px-2 py-1 rounded-full">Sin votar</span>
+                                        }
+                                    </div>
+                                    <p class="text-sm text-[#6C8A6C] mb-2">Equipo: @proyectoLista.Team</p>
+                                    <span class="inline-block px-2 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-xs">
+                                        @proyectoLista.Category
+                                    </span>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
             else
             {
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-4">   
+                        <div class="flex items-center gap-4">
                             <span class="text-sm text-[#4C6B4F]">Progreso de votación</span>
                             <span class="text-sm text-[#4C6B4F]">@votedProjects.Count/@mockProjects.Count proyectos evaluados</span>
                             <span class="text-sm text-[#4C6B4F]">• Votos realizados: @(Rol == "JURADO" ? $"{votesSubmitted}/3" : $"{votesSubmitted}/{mockProjects.Count}")</span>
-                        </div>            
+                        </div>
                     </div>
                     <div class="w-full bg-white rounded-full h-2 overflow-hidden">
                         <div class="bg-gradient-to-r from-[#6C8A6C] to-[#70D939] h-full transition-all duration-300"
@@ -179,14 +238,9 @@
                     </button>
 
                     <div class="mt-4 flex items-center gap-3">
-                        <button @onclick="PreviousProject" disabled="@(currentProjectIndex == 0)"
-                                class="px-4 py-2 border border-[#6C8A6C] text-[#6C8A6C] rounded-lg font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
-                            ← Retroceder
-                        </button>
-                        <div class="flex-1"></div>
-                        <button @onclick="SkipNext"
-                                class="px-4 py-2 bg-white border border-[#B5D6AC] text-[#4C6B4F] rounded-lg font-semibold hover:bg-[#F8FAF7]">
-                            Saltar proyecto
+                        <button @onclick="VolverAListaJurado"
+                                class="px-4 py-2 border border-[#6C8A6C] text-[#6C8A6C] rounded-lg font-semibold hover:bg-[#F8FAF7]">
+                            ← Volver a la lista
                         </button>
                     </div>
                 </div>
@@ -727,6 +781,12 @@
     [Parameter]
     [SupplyParameterFromQuery]
     public string? Rol { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ProyectoId { get; set; }
+
+    private bool EstaEnVistaDetalle => !string.IsNullOrWhiteSpace(ProyectoId)
+        && mockProjects.Any(p => p.Id == ProyectoId);
     private string? errorVoto = null;
     private HashSet<string> editingCriteria = new();
     private int currentProjectIndex = 0;
@@ -1425,23 +1485,15 @@
         votedProjects.Add(currentProject.Id);
         votesSubmitted++;
 
-        if (votesSubmitted >= 3 || IsLastProject)
+        bool todosVotados = mockProjects.All(p => votedProjects.Contains(p.Id));
+        if (votesSubmitted >= 3 || todosVotados)
         {
             await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
             NavigationManager.NavigateTo("/dashboard");
             return;
         }
 
-        if (currentProjectIndex < mockProjects.Count - 1)
-        {
-            currentProjectIndex++;
-            comments = "";
-        }
-        else
-        {
-            await Http.PostAsync($"/api/votos/finalizar/{EventId}", null);
-            NavigationManager.NavigateTo("/dashboard");
-        }
+        VolverAListaJurado();
     }
 
     private async Task FinalizeVotingAsync()
@@ -1454,6 +1506,32 @@
         {
         }
         NavigationManager.NavigateTo("/dashboard");
+    }
+
+    private void AbrirProyectoParaVotar(string proyectoId)
+    {
+        comments = "";
+        errorVoto = null;
+        NavigationManager.NavigateTo($"/event-voting/{EventId}?Rol={Rol}&ProyectoId={proyectoId}");
+    }
+
+    private void VolverAListaJurado()
+    {
+        comments = "";
+        errorVoto = null;
+        NavigationManager.NavigateTo($"/event-voting/{EventId}?Rol={Rol}");
+    }
+
+    private void SincronizarIndiceConProyectoId()
+    {
+        if (string.IsNullOrWhiteSpace(ProyectoId)) return;
+        int idx = mockProjects.FindIndex(p => p.Id == ProyectoId);
+        if (idx >= 0) currentProjectIndex = idx;
+    }
+
+    protected override void OnParametersSet()
+    {
+        SincronizarIndiceConProyectoId();
     }
 
     private async Task SkipNext()
