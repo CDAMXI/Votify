@@ -18,5 +18,7 @@ namespace Votify.shared
         public int PesoJuradoAplicado { get; set; }
         public int PesoPublicoAplicado { get; set; }
         public int Rank { get; set; }
+        public bool TieneImagen { get; set; }
+        public List<string> Comentarios { get; set; } = new();
     }
 }

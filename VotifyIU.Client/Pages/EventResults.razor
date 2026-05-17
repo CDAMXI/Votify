@@ -258,265 +258,136 @@
                 </div>
             }
         }
-        else if (Rol == "JURADO" || Rol == "ORGANIZADOR" || Rol == "ENCARGADO")
+        else if (Rol == "JURADO" || Rol == "PUBLICO" || Rol == "COMPETIDOR" || (PuedeGestionarResultados && tabActiva == "resultados"))
         {
-            @if (PuedeGestionarResultados)
+            @if (cargandoResultados)
             {
-                @if (cargandoResultados)
-                {
-                    <div class="flex justify-center items-center py-24">
-                        <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                <div class="flex justify-center items-center py-24">
+                    <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            }
+            else if (!esVotacionFinalizada)
+            {
+                <div class="bg-white rounded-2xl shadow-lg p-8 text-center text-[#6C8A6C]">
+                    <p class="text-3xl mb-2">⏳</p>
+                    <p class="text-xl font-bold text-[#1A281B] mb-2">La votación sigue en curso</p>
+                    <p>El ranking final estará disponible cuando esta votación termine.</p>
+                </div>
+            }
+            else if (!resultadosReales.Any())
+            {
+                <div class="bg-white rounded-2xl shadow-lg p-8 text-center text-[#A6AAA9]">
+                    <p class="text-4xl mb-3">📭</p>
+                    <p class="text-lg font-medium">No hay proyectos registrados en esta votación.</p>
+                </div>
+            }
+            else
+            {
+                <div class="bg-white rounded-2xl shadow-xl p-8 mb-8 text-center">
+                    <h2 class="text-3xl font-bold text-[#1A281B] mb-2">Ranking final</h2>
+                    <p class="text-[#6C8A6C] mb-8">@nombreEvento · @nombreVotacion</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                        @foreach (var proyecto in resultadosReales.Take(3))
+                        {
+                            <div class="relative @(proyecto.Rank == 1 ? "md:order-2" : proyecto.Rank == 2 ? "md:order-1" : "md:order-3")">
+                                <div class="rounded-xl p-6 bg-gradient-to-br @GetRankColor(proyecto.Rank) text-white shadow-lg text-center h-full">
+                                    <div class="text-4xl mb-2">@(proyecto.Rank == 1 ? "🥇" : proyecto.Rank == 2 ? "🥈" : "🥉")</div>
+                                    <div class="text-4xl font-black mb-1">#@proyecto.Rank</div>
+                                    <h3 class="text-xl font-bold mb-1">@proyecto.Nombre</h3>
+                                    <p class="text-sm opacity-90 mb-3">@proyecto.Competidor</p>
+                                    <div class="text-3xl font-black">@proyecto.Media.ToString("0.00")</div>
+                                    <div class="text-xs opacity-75">puntuación</div>
+                                </div>
+                            </div>
+                        }
                     </div>
-                }
-                else if (!resultadosReales.Any())
+
+                    <h3 class="text-xl font-bold text-[#1A281B] mb-4">Clasificación completa</h3>
+                    <div class="space-y-3 max-w-4xl mx-auto">
+                        @foreach (var proyecto in resultadosReales)
+                        {
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30 text-center sm:text-left">
+                                <div class="w-11 h-11 rounded-full bg-gradient-to-br @GetRankColor(proyecto.Rank) flex items-center justify-center text-white font-bold text-sm flex-shrink-0 mx-auto sm:mx-0">
+                                    #@proyecto.Rank
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-bold text-[#1A281B]">@proyecto.Nombre</p>
+                                    <p class="text-sm text-[#6C8A6C]">@proyecto.Competidor</p>
+                                </div>
+                                <div class="text-2xl font-black text-[#6C8A6C]">@proyecto.Media.ToString("0.00")</div>
+                                <button @onclick="() => AbrirDetalleProyectoAsync(proyecto)"
+                                        class="px-4 py-2 rounded-lg bg-[#6C8A6C] hover:bg-[#4C6B4F] text-white text-sm font-semibold transition-colors">
+                                    Visualizar proyecto
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </main>
+</div>
+
+@if (mostrandoDetalleProyecto && proyectoDetalleSeleccionado != null)
+{
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto text-center p-8">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-[#1A281B]">@nombreEvento</h2>
+                <p class="text-sm text-[#6C8A6C]">@nombreVotacion</p>
+            </div>
+
+            <h3 class="text-3xl font-black text-[#1A281B] mb-1">@proyectoDetalleSeleccionado.Nombre</h3>
+            <p class="text-[#6C8A6C] font-medium mb-4">Participante: @proyectoDetalleSeleccionado.Competidor</p>
+
+            @if (cargandoDetalleImagen)
+            {
+                <div class="flex justify-center py-8">
+                    <div class="w-8 h-8 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(imagenDetalleDataUrl))
+            {
+                <div class="mb-6 flex justify-center">
+                    <img src="@imagenDetalleDataUrl" alt="Imagen del proyecto" class="max-h-64 rounded-xl border border-[#B5D6AC]" />
+                </div>
+            }
+
+            <p class="text-[#4C6B4F] mb-6 whitespace-pre-wrap">@proyectoDetalleSeleccionado.Descripcion</p>
+
+            <div class="bg-[#F8FAF7] rounded-xl p-4 mb-6 border border-[#B5D6AC]/30">
+                <p class="text-lg text-[#1A281B] font-bold">Posición #@proyectoDetalleSeleccionado.Rank · Puntuación @proyectoDetalleSeleccionado.Media.ToString("0.00")</p>
+            </div>
+
+            <div class="text-left">
+                <h4 class="text-lg font-bold text-[#1A281B] mb-3 text-center">Comentarios</h4>
+                @if (proyectoDetalleSeleccionado.Comentarios?.Any() == true)
                 {
-                    <div class="bg-white rounded-2xl shadow-lg p-8 text-center text-[#A6AAA9]">
-                        <p class="text-4xl mb-3">📭</p>
-                        <p class="text-lg font-medium">No hay proyectos registrados en este evento.</p>
+                    <div class="space-y-2">
+                        @foreach (var comentario in proyectoDetalleSeleccionado.Comentarios)
+                        {
+                            <div class="bg-[#F8FAF7] rounded-lg border border-[#B5D6AC]/30 px-4 py-3 text-[#4C6B4F]">
+                                @comentario
+                            </div>
+                        }
                     </div>
                 }
                 else
                 {
-                    var promedio = resultadosReales.Where(r => r.NumVotos > 0).Any()
-                        ? Math.Round(resultadosReales.Where(r => r.NumVotos > 0).Average(r => r.Media), 2)
-                        : 0.0;
-
-                    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-[#E9EFE1]">
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                            <div>
-                                <h2 class="text-xl font-bold text-[#1A281B]">Configuración de resultados</h2>
-                                <p class="text-sm text-[#6C8A6C] mt-1">
-                                    Experto @configuracionResultados.PesoJurado% · Popular @configuracionResultados.PesoPublico%
-                                </p>
-                            </div>
-                            <button @onclick="AbrirConfiguracion"
-                                    class="px-5 py-2 rounded-xl bg-[#6C8A6C] hover:bg-[#4C6B4F] text-white font-semibold transition-colors">
-                                Ajustar
-                            </button>
-                        </div>
-                        @if (configuracionResultados.PesoJurado == 0)
-                        {
-                            <p class="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                                El voto experto está anulado. El ranking se corrige usando solo voto popular.
-                            </p>
-                        }
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🏆</div>
-                            <div>
-                                <p class="text-sm text-[#6C8A6C]">Proyectos</p>
-                                <p class="text-2xl font-bold text-[#1A281B]">@resultadosReales.Count</p>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">🗳️</div>
-                            <div>
-                                <p class="text-sm text-[#6C8A6C]">Votos totales</p>
-                                <p class="text-2xl font-bold text-[#1A281B]">@resultadosReales.Sum(r => r.NumVotos)</p>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 shadow-sm flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C8A6C] to-[#70D939] flex items-center justify-center text-white font-bold">📈</div>
-                            <div>
-                                <p class="text-sm text-[#6C8A6C]">Promedio ajustado</p>
-                                <p class="text-2xl font-bold text-[#1A281B]">@promedio</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if (resultadosReales.Count >= 3)
-                    {
-                        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                            <h2 class="text-2xl font-bold text-[#1A281B] mb-6">Proyectos ganadores</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                @foreach (var proyecto in resultadosReales.Take(3))
-                                {
-                                    <div class="relative @(proyecto.Rank == 1 ? "md:order-2" : proyecto.Rank == 2 ? "md:order-1" : "md:order-3")">
-                                        <div class="rounded-xl p-6 bg-gradient-to-br @GetRankColor(proyecto.Rank) text-white shadow-lg">
-                                            <div class="flex justify-between items-start mb-4">
-                                                <div class="text-2xl">@(proyecto.Rank == 1 ? "🥇" : proyecto.Rank == 2 ? "🥈" : "🥉")</div>
-                                                <div class="text-4xl font-black">#@proyecto.Rank</div>
-                                            </div>
-                                            <h3 class="text-xl font-bold mb-1">@proyecto.Nombre</h3>
-                                            @if (!string.IsNullOrEmpty(proyecto.Competidor))
-                                            {
-                                                <p class="text-sm opacity-90 mb-3">@proyecto.Competidor</p>
-                                            }
-                                            <div class="flex items-center justify-between pt-4 border-t border-white/20 font-bold">
-                                                <span class="text-sm">Puntuación ajustada</span>
-                                                <span class="text-2xl">@proyecto.Media.ToString("0.00")</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    <div class="space-y-4">
-                        <h2 class="text-2xl font-bold text-[#1A281B] mb-4">Ranking completo</h2>
-                        @foreach (var proyecto in resultadosReales)
-                        {
-                            <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30">
-                                <div class="flex flex-col lg:flex-row lg:items-center gap-5">
-                                    <div class="flex items-center gap-5 flex-1">
-                                        <div class="w-14 h-14 rounded-full bg-gradient-to-br @GetRankColor(proyecto.Rank) flex items-center justify-center text-white flex-shrink-0 font-bold text-xl shadow-md">
-                                            #@proyecto.Rank
-                                        </div>
-                                        <div class="flex-1">
-                                            <h3 class="text-xl font-bold text-[#1A281B]">@proyecto.Nombre</h3>
-                                            @if (!string.IsNullOrEmpty(proyecto.Competidor))
-                                            {
-                                                <p class="text-sm text-[#6C8A6C]">@proyecto.Competidor</p>
-                                            }
-                                            @if (!string.IsNullOrEmpty(proyecto.Descripcion))
-                                            {
-                                                <p class="text-sm text-[#A6AAA9] mt-1 line-clamp-2">@proyecto.Descripcion</p>
-                                            }
-                                            <p class="text-xs text-[#A6AAA9] mt-2">
-                                                Jurado @proyecto.MediaJurado.ToString("0.00") (@proyecto.NumVotosJurado) ·
-                                                Popular @proyecto.MediaPopular.ToString("0.00") (@proyecto.NumVotosPopular) ·
-                                                Bruta @proyecto.MediaBruta.ToString("0.00")
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="text-right flex-shrink-0">
-                                        <div class="text-4xl font-black text-[#6C8A6C]">@proyecto.Media.ToString("0.00")</div>
-                                        <div class="text-sm text-[#A6AAA9]">@proyecto.NumVotos votos</div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    @foreach (var project in mockResults.Take(3))
-                    {
-                        <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30 flex items-center gap-4">
-                            <div class="w-14 h-14 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white font-bold text-xl shadow-md">#@project.Rank</div>
-                            <div>
-                                <h3 class="font-bold text-[#1A281B]">@project.Name</h3>
-                                <p class="text-[#6C8A6C] text-sm">@project.Team</p>
-                                <p class="text-2xl font-black text-[#6C8A6C]">@project.TotalScore</p>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <div class="space-y-4">
-                    @foreach (var project in mockResults)
-                    {
-                        <div class="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-[#B5D6AC]/30">
-                            <div class="flex items-center gap-6">
-                                <div class="w-14 h-14 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white font-bold text-xl shadow-md">#@project.Rank</div>
-                                <div class="flex-1">
-                                    <h3 class="text-xl font-bold text-[#1A281B]">@project.Name</h3>
-                                    <p class="text-[#6C8A6C]">@project.Team · @project.Category</p>
-                                </div>
-                                <div class="text-4xl font-black text-[#6C8A6C]">@project.TotalScore</div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        }
-        else if (Rol == "PUBLICO")
-        {
-            <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                <h2 class="text-2xl font-bold text-[#1A281B] mb-6">Clasificación final</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    @foreach (var project in mockResults.Take(3))
-                    {
-                        <div class="relative @(project.Rank == 1 ? "md:order-2" : project.Rank == 2 ? "md:order-1" : "md:order-3")">
-                            <div class="rounded-xl p-6 bg-gradient-to-br @GetRankColor(project.Rank) text-white shadow-lg text-center">
-                                <div class="text-4xl mb-2">@(project.Rank == 1 ? "🥇" : project.Rank == 2 ? "🥈" : "🥉")</div>
-                                <h3 class="text-xl font-bold mb-1">@project.Name</h3>
-                                <p class="text-sm opacity-90 mb-4">@project.Team</p>
-                                <div class="text-3xl font-black">@project.TotalScore</div>
-                                <div class="text-xs opacity-75 mt-1">puntos</div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <h3 class="text-lg font-bold text-[#1A281B] mb-4">Ranking completo</h3>
-                <div class="space-y-3">
-                    @foreach (var project in mockResults)
-                    {
-                        <div class="flex items-center gap-4 p-4 bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-br @GetRankColor(project.Rank) flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                                #@project.Rank
-                            </div>
-                            <div class="flex-1">
-                                <p class="font-bold text-[#1A281B]">@project.Name</p>
-                                <p class="text-sm text-[#6C8A6C]">@project.Team · @project.Category</p>
-                            </div>
-                            <div class="text-2xl font-black text-[#6C8A6C]">@project.TotalScore</div>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-        else if (Rol == "COMPETIDOR")
-        {
-            var myProject = mockResults[0];
-
-            <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 class="text-3xl font-bold text-[#1A281B]">@myProject.Name</h2>
-                        <p class="text-[#6C8A6C]">@myProject.Team</p>
-                        <span class="inline-block px-3 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-xs font-bold mt-2">@myProject.Category</span>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-sm text-[#6C8A6C] mb-1">Tu puntuación</div>
-                        <div class="text-5xl font-black text-[#6C8A6C]">@myProject.TotalScore</div>
-                        <div class="text-sm text-[#A6AAA9]">/10</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6 bg-[#F8FAF7] p-4 rounded-lg">
-                    <div class="text-center">
-                        <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Innovación</div>
-                        <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Innovation</div>
-                    </div>
-                    <div class="text-center border-l border-[#B5D6AC]/30">
-                        <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Técnica</div>
-                        <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Technical</div>
-                    </div>
-                    <div class="text-center border-l border-[#B5D6AC]/30">
-                        <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Impacto</div>
-                        <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Impact</div>
-                    </div>
-                    <div class="text-center border-l border-[#B5D6AC]/30">
-                        <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Presentación</div>
-                        <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Presentation</div>
-                    </div>
-                    <div class="text-center border-l border-[#B5D6AC]/30">
-                        <div class="text-[10px] uppercase font-bold text-[#6C8A6C]">Diseño</div>
-                        <div class="font-bold text-[#1A281B]">@myProject.CriteriaScores.Design</div>
-                    </div>
-                </div>
-
-                @if (myProject.Comments.Any())
-                {
-                    <div class="bg-[#EFEFEE] rounded-lg p-4">
-                        <p class="text-xs font-bold text-[#4C6B4F] mb-2 uppercase tracking-wider">Feedback recibido:</p>
-                        <ul class="space-y-1">
-                            @foreach (var comment in myProject.Comments)
-                            {
-                                <li class="text-sm text-[#6C8A6C]">" @comment "</li>
-                            }
-                        </ul>
-                    </div>
+                    <p class="text-center text-[#A6AAA9]">Sin comentarios disponibles.</p>
                 }
             </div>
-        }
-    </main>
-</div>
+
+            <div class="mt-8">
+                <button @onclick="CerrarDetalleProyecto"
+                        class="px-6 py-3 rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white font-bold hover:opacity-90 transition-opacity">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @if (mostrandoConfiguracion && PuedeGestionarResultados)
 {
@@ -608,6 +479,7 @@
 
     private string tabActiva = "resultados";
     private string nombreEvento = "Evento";
+    private string nombreVotacion = "Votación";
     private MonitorVotacionDTO? monitor;
     private List<ProyectoResultadoDTO> resultadosReales = new();
     private ConfiguracionResultadosDTO configuracionResultados = new();
@@ -621,6 +493,11 @@
     private bool mostrarConfirmEliminarEvento = false;
     private bool eliminandoEvento = false;
     private string? errorEliminarEvento;
+    private bool esVotacionFinalizada;
+    private ProyectoResultadoDTO? proyectoDetalleSeleccionado;
+    private bool mostrandoDetalleProyecto;
+    private bool cargandoDetalleImagen;
+    private string? imagenDetalleDataUrl;
 
     private bool PuedeGestionarResultados => Rol == "ENCARGADO" || Rol == "ORGANIZADOR";
     private int SumaPesosActual => configuracionResultados.PesoJurado + configuracionResultados.PesoPublico;
@@ -636,16 +513,14 @@
         if (int.TryParse(EventId, out var idVotacion))
         {
             await CargarNombreEventoAsync(idVotacion);
+            await CargarEstadoVotacionAsync(idVotacion);
         }
+
+        await CargarResultadosRealesAsync();
 
         if (PuedeGestionarResultados)
         {
-            await CargarResultadosRealesAsync();
             await CargarConfiguracionAsync();
-        }
-        else
-        {
-            cargandoResultados = false;
         }
     }
 
@@ -654,12 +529,29 @@
         try
         {
             var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{idVotacion}");
-            if (votacion != null && !string.IsNullOrWhiteSpace(votacion.Titulo))
-                nombreEvento = votacion.Titulo;
+            if (votacion != null)
+            {
+                nombreEvento = string.IsNullOrWhiteSpace(votacion.NombreEvento) ? "Evento" : votacion.NombreEvento;
+                nombreVotacion = string.IsNullOrWhiteSpace(votacion.Titulo) ? $"Votación #{votacion.Id}" : votacion.Titulo;
+            }
         }
         catch
         {
             nombreEvento = "Evento";
+            nombreVotacion = "Votación";
+        }
+    }
+
+    private async Task CargarEstadoVotacionAsync(int idVotacion)
+    {
+        try
+        {
+            var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{idVotacion}");
+            esVotacionFinalizada = votacion != null && votacion.FechaFin <= DateTime.Now;
+        }
+        catch
+        {
+            esVotacionFinalizada = false;
         }
     }
 
@@ -691,6 +583,45 @@
         {
             configuracionResultados = new ConfiguracionResultadosDTO();
         }
+    }
+
+    private async Task AbrirDetalleProyectoAsync(ProyectoResultadoDTO proyecto)
+    {
+        proyectoDetalleSeleccionado = proyecto;
+        mostrandoDetalleProyecto = true;
+        imagenDetalleDataUrl = null;
+
+        if (!proyecto.TieneImagen)
+            return;
+
+        cargandoDetalleImagen = true;
+        try
+        {
+            var response = await Http.GetAsync($"/api/proyectos/{EventId}/{proyecto.Id}/imagen");
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                if (bytes.Length > 0)
+                {
+                    imagenDetalleDataUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                }
+            }
+        }
+        catch
+        {
+            imagenDetalleDataUrl = null;
+        }
+        finally
+        {
+            cargandoDetalleImagen = false;
+        }
+    }
+
+    private void CerrarDetalleProyecto()
+    {
+        mostrandoDetalleProyecto = false;
+        proyectoDetalleSeleccionado = null;
+        imagenDetalleDataUrl = null;
     }
 
     private async Task AbrirMonitorAsync()

@@ -32,10 +32,19 @@
             </p>
         </div>
 
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-[#1A281B]">Eventos Disponibles</h2>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <div class="flex items-center gap-2 bg-white/70 p-1 rounded-xl border border-[#B5D6AC] w-fit">
+                <button @onclick='() => CambiarFiltroEventos("disponibles")'
+                        class='px-4 py-2 rounded-lg text-sm font-medium transition-all @(filtroEventos == "disponibles" ? "bg-[#6C8A6C] text-white shadow" : "text-[#4C6B4F] hover:bg-[#E9EFE1]")'>
+                    Eventos Disponibles
+                </button>
+                <button @onclick='() => CambiarFiltroEventos("finalizados")'
+                        class='px-4 py-2 rounded-lg text-sm font-medium transition-all @(filtroEventos == "finalizados" ? "bg-[#6C8A6C] text-white shadow" : "text-[#4C6B4F] hover:bg-[#E9EFE1]")'>
+                    Eventos Finalizados
+                </button>
+            </div>
             <button @onclick="IrACrearVotacion"
-                    class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white px-5 py-2 rounded-xl font-medium shadow-md transition-all">
+                    class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white px-5 py-2 rounded-xl font-medium shadow-md transition-all w-fit">
                 + Crear Evento
             </button>
         </div>
@@ -46,18 +55,18 @@
                 <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
             </div>
         }
-        else if (!mockEvents.Any())
+        else if (!eventosFiltrados.Any())
         {
             <div class="bg-white rounded-2xl shadow p-10 text-center text-[#6C8A6C]">
-                <p class="text-lg font-medium">No hay eventos disponibles.</p>
-                <p class="text-sm mt-1">Crea uno con el botón de arriba.</p>
+                <p class="text-lg font-medium">@(filtroEventos == "finalizados" ? "No hay eventos finalizados." : "No hay eventos disponibles.")</p>
+                <p class="text-sm mt-1">@(filtroEventos == "finalizados" ? "Aquí verás los resultados cuando termine un evento." : "Crea uno con el botón de arriba.")</p>
             </div>
         }
         else
         {
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @foreach (var ev in mockEvents)
+            @foreach (var ev in eventosFiltrados)
             {
                 <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-[#B5D6AC]/30">
                     <div class="p-6 flex flex-col h-full">
@@ -163,6 +172,7 @@
 @code {
     private string? fotoPerfil;
     private bool cargando = true;
+    private string filtroEventos = "disponibles";
 
     protected override async Task OnInitializedAsync()
     {
@@ -284,6 +294,16 @@
         "PUBLICO" => "Público",
         _ => "Sin rol"
     };
+
+    private IEnumerable<EventModel> eventosFiltrados =>
+        filtroEventos == "finalizados"
+            ? mockEvents.Where(e => e.Status == "finished")
+            : mockEvents.Where(e => e.Status != "finished");
+
+    private void CambiarFiltroEventos(string filtro)
+    {
+        filtroEventos = filtro;
+    }
 
     private List<EventModel> mockEvents = new();
 

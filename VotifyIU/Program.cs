@@ -1203,6 +1203,13 @@ static ProyectoResultadoDTO BuildProjectResult(Proyecto proyecto, List<Voto> vot
     double? mediaPopular = votosPopular.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPopular) : null;
     double mediaAjustada = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(mediaJurado, mediaPopular, votacion.PesoJurado, votacion.PesoPublico);
 
+    var comentarios = votosProyecto
+        .Where(v => !string.IsNullOrWhiteSpace(v.Comentario))
+        .Select(v => v.Comentario.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Take(6)
+        .ToList();
+
     return new ProyectoResultadoDTO
     {
         Id = proyecto.Id,
@@ -1219,7 +1226,9 @@ static ProyectoResultadoDTO BuildProjectResult(Proyecto proyecto, List<Voto> vot
         NumVotosJurado = votosJurado.Count,
         NumVotosPopular = votosPopular.Count,
         PesoJuradoAplicado = votacion.PesoJurado,
-        PesoPublicoAplicado = votacion.PesoPublico
+        PesoPublicoAplicado = votacion.PesoPublico,
+        TieneImagen = !string.IsNullOrWhiteSpace(proyecto.FotoProyecto),
+        Comentarios = comentarios
     };
 }
 
