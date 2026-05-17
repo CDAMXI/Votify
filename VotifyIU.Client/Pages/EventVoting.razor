@@ -232,7 +232,7 @@
                             <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
                         </div>
                     </div>
-                    <button @onclick="SubmitCurrentVote"
+                    <button @onclick="AbrirConfirmacionVoto"
                             class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
                         Enviar voto
                     </button>
@@ -244,6 +244,65 @@
                         </button>
                     </div>
                 </div>
+
+                @if (mostrandoConfirmacionVoto)
+                {
+                    var proyectoConfirmacion = mockProjects[currentProjectIndex];
+                    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                            <div class="p-6 border-b border-[#B5D6AC]">
+                                <h3 class="text-xl font-bold text-[#1A281B]">Confirmar voto</h3>
+                                <p class="text-sm text-[#6C8A6C] mt-1">Revisa tu evaluación de <span class="font-semibold">@proyectoConfirmacion.Name</span> antes de enviarla.</p>
+                            </div>
+                            <div class="p-6 space-y-3">
+                                @foreach (var criterion in mockCriteria)
+                                {
+                                    <div class="flex items-center justify-between bg-[#F8FAF7] rounded-lg px-4 py-3">
+                                        <span class="text-sm font-medium text-[#1A281B]">@criterion.Name</span>
+                                        <span class="text-lg font-bold text-[#6C8A6C]">@GetScore(criterion.Id)<span class="text-sm text-[#A6AAA9]">/10</span></span>
+                                    </div>
+                                }
+                                <div class="flex items-center justify-between bg-gradient-to-r from-[#6C8A6C] to-[#70D939] rounded-lg px-4 py-3 text-white">
+                                    <span class="text-sm font-bold">Puntuación total ponderada</span>
+                                    <span class="text-xl font-bold">@CalculateTotalScore()/10</span>
+                                </div>
+                                <div class="pt-2">
+                                    <p class="text-xs font-semibold text-[#4C6B4F] mb-1">Comentario</p>
+                                    <p class="text-sm text-[#1A281B] bg-[#F8FAF7] rounded-lg px-4 py-3 border border-[#B5D6AC]/40 whitespace-pre-wrap">
+                                        @(string.IsNullOrWhiteSpace(comments) ? "(sin comentario)" : comments)
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="p-6 border-t border-[#B5D6AC] flex flex-col sm:flex-row gap-3">
+                                <button @onclick="CerrarConfirmacionVoto"
+                                        class="flex-1 px-4 py-3 border border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-semibold hover:bg-[#F8FAF7]">
+                                    Cancelar
+                                </button>
+                                <button @onclick="ConfirmarYEnviarVoto" disabled="@enviandoVoto"
+                                        class="flex-1 px-4 py-3 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50">
+                                    @(enviandoVoto ? "Enviando..." : "Confirmar y enviar")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (mostrandoExitoVoto)
+                {
+                    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full text-center p-8">
+                            <div class="w-16 h-16 rounded-full bg-[#E9EFE1] flex items-center justify-center mx-auto mb-4">
+                                <span class="text-4xl">✅</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-[#1A281B] mb-2">Voto registrado</h3>
+                            <p class="text-[#6C8A6C] mb-6">Tu evaluación se ha guardado correctamente.</p>
+                            <button @onclick="CerrarExitoYContinuar"
+                                    class="w-full px-4 py-3 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold hover:opacity-90">
+                                Continuar
+                            </button>
+                        </div>
+                    </div>
+                }
             }
         }
         else if (Rol == "COMPETIDOR")
@@ -787,6 +846,10 @@
 
     private bool EstaEnVistaDetalle => !string.IsNullOrWhiteSpace(ProyectoId)
         && mockProjects.Any(p => p.Id == ProyectoId);
+
+    private bool mostrandoConfirmacionVoto = false;
+    private bool mostrandoExitoVoto = false;
+    private bool enviandoVoto = false;
     private string? errorVoto = null;
     private HashSet<string> editingCriteria = new();
     private int currentProjectIndex = 0;
@@ -1484,7 +1547,38 @@
 
         votedProjects.Add(currentProject.Id);
         votesSubmitted++;
+        mostrandoExitoVoto = true;
+    }
 
+    private void AbrirConfirmacionVoto()
+    {
+        errorVoto = null;
+        mostrandoConfirmacionVoto = true;
+    }
+
+    private void CerrarConfirmacionVoto()
+    {
+        mostrandoConfirmacionVoto = false;
+    }
+
+    private async Task ConfirmarYEnviarVoto()
+    {
+        if (enviandoVoto) return;
+        enviandoVoto = true;
+        try
+        {
+            await SubmitCurrentVote();
+        }
+        finally
+        {
+            enviandoVoto = false;
+            mostrandoConfirmacionVoto = false;
+        }
+    }
+
+    private async Task CerrarExitoYContinuar()
+    {
+        mostrandoExitoVoto = false;
         bool todosVotados = mockProjects.All(p => votedProjects.Contains(p.Id));
         if (votesSubmitted >= 3 || todosVotados)
         {
@@ -1492,7 +1586,6 @@
             NavigationManager.NavigateTo("/dashboard");
             return;
         }
-
         VolverAListaJurado();
     }
 
