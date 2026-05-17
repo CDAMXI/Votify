@@ -1,0 +1,64 @@
+@inject NavigationManager Nav
+@inject VotifyIU.Client.Services.INavigationHistoryService Historial
+@implements IDisposable
+
+@if (_visible)
+{
+    <button type="button" @onclick="Volver" disabled="@_volviendo"
+            class="@CssClass">
+        <span class="mr-2">←</span> @Text
+    </button>
+}
+
+@code {
+    [Parameter] public string Text { get; set; } = "Volver";
+    [Parameter] public string CssClass { get; set; } =
+        "fixed top-7 left-4 z-50 flex items-center text-[#6C8A6C] bg-white/90 backdrop-blur hover:bg-[#E9EFE1] px-4 py-2 rounded-lg shadow-md border border-[#B5D6AC]/40 transition-colors disabled:opacity-50";
+    [Parameter] public string Fallback { get; set; } = "/dashboard";
+
+    // Rutas donde el botón "Volver" carece de sentido (puntos de entrada de la app).
+    private static readonly HashSet<string> RutasOcultas =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "/",
+            "/dashboard",
+            "/login",
+            "/registro",
+            "/recuperar-password",
+            "/reset-password"
+        };
+
+    private bool _volviendo = false;
+    private bool _visible = true;
+
+    protected override void OnInitialized()
+    {
+        ActualizarVisibilidad(Nav.Uri);
+        Nav.LocationChanged += AlCambiarRuta;
+    }
+
+    private void AlCambiarRuta(object? sender, LocationChangedEventArgs e)
+    {
+        ActualizarVisibilidad(e.Location);
+        _volviendo = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ActualizarVisibilidad(string url)
+    {
+        var path = new Uri(url, UriKind.Absolute).AbsolutePath;
+        _visible = !RutasOcultas.Contains(path);
+    }
+
+    private void Volver()
+    {
+        if (_volviendo) return;
+        _volviendo = true;
+
+        var destino = Historial.Pop() ?? Fallback;
+        Historial.SuprimirProximoPush();
+        Nav.NavigateTo(destino);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= AlCambiarRuta;
+}

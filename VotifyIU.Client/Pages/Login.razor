@@ -4,6 +4,7 @@
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
+@inject INavigationHistoryService Historial
 @inject HttpClient Http
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E9EFE1] via-[#B5D6AC] to-[#90A896]">
@@ -109,7 +110,10 @@
         }
 
         if (loginOk)
+        {
+            Historial.Clear();
             NavigationManager.NavigateTo("/dashboard", forceLoad: true);
+        }
     }
 
     public class UserLoginDTO

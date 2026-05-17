@@ -1,4 +1,38 @@
 @using VotifyIU.Client.Components
+@using VotifyIU.Client.Services
 @inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject INavigationHistoryService Historial
+@implements IDisposable
+
+<BackButton />
 @Body
 <AiChatWidget />
+
+@code {
+    private string? _urlAnterior;
+
+    protected override void OnInitialized()
+    {
+        _urlAnterior = Nav.Uri;
+        Nav.LocationChanged += AlCambiarDeRuta;
+    }
+
+    private void AlCambiarDeRuta(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (Historial.DeberiaIgnorarProximoPush())
+        {
+            // El usuario pulsó "Volver": no reapilamos la ruta de la que salimos.
+        }
+        else if (_urlAnterior is not null && _urlAnterior != e.Location)
+        {
+            Historial.Push(_urlAnterior);
+        }
+        _urlAnterior = e.Location;
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= AlCambiarDeRuta;
+    }
+}
