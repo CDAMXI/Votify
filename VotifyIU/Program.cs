@@ -438,7 +438,7 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
             PesoJurado = v.PesoJurado,
             PesoPublico = v.PesoPublico,
             Categorias = ObtenerCategoriasDeVotacion(v),
-            RolActual = service.GetTipoRolDeUsuario(usuarioActual.Id, v.EventoId)
+            RolActual = rolesPorEvento.TryGetValue(v.EventoId, out var rol) ? rol : null
         }).ToList();
         return Results.Ok(votaciones);
     }
@@ -900,7 +900,7 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
 
 // ── Endpoint de IA ──────────────────────────────────────────────
 
-app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHttpClientFactory httpFactory, IVotifyService service, HttpContext http) =>
+app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHttpClientFactory httpFactory, IVotifyService service, IDAL<Votacion> votacionRepo, IDAL<Proyecto> proyectoRepo, IDAL<Competidor> competidorRepo, IDAL<Voto> votoRepo, HttpContext http) =>
 {
     var apiKey = config["GeminiApiKey"] ?? "";
     if (string.IsNullOrEmpty(apiKey)) return Results.Problem("API key no configurada.");
@@ -908,12 +908,16 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
     var geminiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={apiKey}";
 
     var eventosContexto = "";
+    var comentariosContexto = "";
     var username = ObtenerUsernameAutenticado(http);
     if (username != null)
     {
         try
         {
             service.RestoreSession(username);
+            var usuarioActual = service.GetUsuarioActual();
+
+            // ── Contexto de eventos ──
             var votaciones = service.GetMisVotaciones().ToList();
             if (votaciones.Any())
             {
@@ -927,6 +931,55 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
             {
                 eventosContexto = "\n\nEl usuario no tiene eventos creados actualmente.";
             }
+
+            // ── Contexto de comentarios del jurado (si es competidor) ──
+            if (usuarioActual != null)
+            {
+                var competidorIds = competidorRepo
+                    .GetWhere(c => c.UsuarioId == usuarioActual.Id)
+                    .Select(c => c.Id)
+                    .ToHashSet();
+
+                if (competidorIds.Count > 0)
+                {
+                    var proyectosCompetidor = proyectoRepo
+                        .GetWhere(p => competidorIds.Contains(p.CompetidorId))
+                        .ToList();
+
+                    var comentarios = proyectosCompetidor
+                        .SelectMany(p => (p.votos ?? Enumerable.Empty<Voto>())
+                            .Where(v => !string.IsNullOrWhiteSpace(v.Comentario)))
+                        .OrderByDescending(v => v.Fecha)
+                        .Select(v => v.Comentario.Trim())
+                        .Distinct()
+                        .ToList();
+
+                    if (comentarios.Count == 0)
+                    {
+                        var proyectoIds = proyectosCompetidor.Select(p => p.Id).ToHashSet();
+                        comentarios = votoRepo.GetWhere(v =>
+                                proyectoIds.Contains(v.ProyectoId) &&
+                                !string.IsNullOrWhiteSpace(v.Comentario))
+                            .OrderByDescending(v => v.Fecha)
+                            .Select(v => v.Comentario.Trim())
+                            .Distinct()
+                            .ToList();
+                    }
+
+                    if (comentarios.Any())
+                    {
+                        var comentariosStr = string.Join("\n- ", comentarios);
+                        comentariosContexto = $"\n\nComentarios del jurado sobre los proyectos del usuario:\n- {comentariosStr}\n\n" +
+                            $"Si el usuario te pide sintetizar estos comentarios, genera UN único mensaje constructivo dirigido al competidor, " +
+                            $"hablando del 'jurado' en plural sin mencionar quién dijo qué específicamente. Sé conciso y útil.";
+                    }
+                    else
+                    {
+                        comentariosContexto = "\n\nEl usuario es competidor pero aún no tiene comentarios del jurado sobre sus proyectos. " +
+                            "Si te pide sintetizarlos, dile claramente que todavía no ha recibido ningún comentario, en lugar de decir que no tienes acceso.";
+                    }
+                }
+            }
         }
         catch { }
     }
@@ -935,7 +988,8 @@ app.MapPost("/api/ai/chat", async (AiChatRequest req, IConfiguration config, IHt
         "Eres el asistente de Votify, una plataforma para gestionar votaciones en hackathones, ferias de innovación y concursos. " +
         "Ayuda a los usuarios con dudas sobre cómo votar, crear eventos, gestionar proyectos y usar el sistema. " +
         "Responde siempre en español, de forma concisa y útil. Si no sabes algo, dilo claramente." +
-        eventosContexto;
+        eventosContexto +
+        comentariosContexto;
 
     var contents = new List<object>();
     foreach (var turn in req.History)
