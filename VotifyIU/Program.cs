@@ -445,6 +445,46 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
+app.MapGet("/api/dashboard/eventos-resumen", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+
+        var resumen = service.GetAllVotaciones()
+            .GroupBy(v => v.EventoId)
+            .Select(g =>
+            {
+                var evento = g.Select(v => v.evento).FirstOrDefault(e => e != null);
+                var proyectos = (evento?.proyectos ?? Enumerable.Empty<Proyecto>()).ToList();
+
+                var competidoresUnicos = proyectos
+                    .Select(p => p.competidor?.usuario?.Username)
+                    .Where(u => !string.IsNullOrWhiteSpace(u))
+                    .Select(u => u!.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+
+                return new EventoResumenDashboardDTO
+                {
+                    IdEvento = g.Key,
+                    ProjectsCount = proyectos.Count,
+                    ParticipantsCount = competidoresUnicos
+                };
+            })
+            .ToList();
+
+        return Results.Ok(resumen);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
+    }
+});
+
 app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);

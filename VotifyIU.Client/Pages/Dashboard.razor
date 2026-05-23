@@ -192,6 +192,9 @@
         try
         {
             var votaciones = await Http.GetFromJsonAsync<List<VotacionDTO>>("/api/votaciones");
+            var resumenes = await Http.GetFromJsonAsync<List<EventoResumenDashboardDTO>>("/api/dashboard/eventos-resumen") ?? new List<EventoResumenDashboardDTO>();
+            var resumenPorEvento = resumenes.ToDictionary(r => r.IdEvento);
+
             if (votaciones != null)
             {
                 mockEvents = votaciones
@@ -203,18 +206,20 @@
                         var ahora = DateTime.Now;
                         bool hayActiva = g.Any(v => v.Estado && v.FechaFin > ahora);
                         bool hayPendiente = g.Any(v => v.FechaFin > ahora);
+                        resumenPorEvento.TryGetValue(g.Key, out var resumen);
+
                         return new EventModel
                         {
                             Id = g.Key.ToString(),
                             Name = string.IsNullOrWhiteSpace(primera.NombreEvento)
-                                ? (string.IsNullOrWhiteSpace(primera.Titulo) ? $"Evento #{g.Key}" : primera.Titulo)
+                                ? $"Evento #{g.Key}"
                                 : primera.NombreEvento,
-                            Description = string.IsNullOrWhiteSpace(primera.Descripcion) ? "Sin descripción" : primera.Descripcion,
+                            Description = string.IsNullOrWhiteSpace(primera.Descripcion) ? "El evento no tiene descripcion" : primera.Descripcion,
                             Date = fechaEvento.ToString("dd/MM/yyyy"),
                             FechaOrden = fechaEvento,
                             Status = hayActiva ? "active" : hayPendiente ? "paused" : "finished",
-                            Participants = 0,
-                            Projects = 0,
+                            Participants = resumen?.ParticipantsCount ?? 0,
+                            Projects = resumen?.ProjectsCount ?? 0,
                             RolActual = primera.RolActual
                         };
                     })
@@ -315,7 +320,7 @@
         public string Date { get; set; } = "";
         public DateTime FechaOrden { get; set; }
         public int Participants { get; set; }
-        public string Status { get; set; } = ""; 
+        public string Status { get; set; } = "";
         public int Projects { get; set; }
         public string? RolActual { get; set; }
     }
