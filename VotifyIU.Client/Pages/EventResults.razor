@@ -364,21 +364,50 @@
             </div>
 
             <div class="text-left">
-                <h4 class="text-lg font-bold text-[#1A281B] mb-3 text-center">Comentarios</h4>
-                @if (proyectoDetalleSeleccionado.Comentarios?.Any() == true)
+                <div class="flex items-center justify-center gap-2 rounded-xl border border-[#B5D6AC] bg-[#E9EFE1] px-4 py-3 mb-4">
+                    <Icon Name="chat" CssClass="w-5 h-5 text-[#4C6B4F]" />
+                    <h4 class="text-lg font-bold text-[#1A281B]">Comentarios Populares (@TotalComentariosPopulares)</h4>
+                </div>
+
+                @if (cargandoComentariosPopulares)
                 {
-                    <div class="space-y-2">
-                        @foreach (var comentario in proyectoDetalleSeleccionado.Comentarios)
+                    <div class="flex justify-center py-8">
+                        <div class="w-8 h-8 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                }
+                else if (comentariosPopulares.Comentarios.Any())
+                {
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button @onclick='() => CambiarCategoriaComentarios("Todos")'
+                                class="@GetCategoriaComentarioClass("Todos")">
+                            Todos
+                        </button>
+                        @foreach (var categoria in comentariosPopulares.Categorias)
                         {
-                            <div class="bg-[#F8FAF7] rounded-lg border border-[#B5D6AC]/30 px-4 py-3 text-[#4C6B4F]">
-                                @comentario
+                            <button @onclick="() => CambiarCategoriaComentarios(categoria)"
+                                    class="@GetCategoriaComentarioClass(categoria)">
+                                @categoria
+                            </button>
+                        }
+                    </div>
+
+                    <div class="space-y-3 max-h-80 overflow-y-auto pr-2">
+                        @foreach (var comentario in ComentariosPopularesFiltrados)
+                        {
+                            <div class="bg-[#F8FAF7] rounded-xl border border-[#B5D6AC]/30 px-4 py-3 text-[#1A281B]">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                    <span class="text-[#6C8A6C] font-semibold">@MostrarAutor(comentario)</span>
+                                    <span class="@GetEtiquetaCategoriaClass(comentario.Categoria)">@comentario.Categoria</span>
+                                </div>
+                                <p class="text-[#1A281B] leading-relaxed">@comentario.Texto</p>
+                                <p class="text-[#A6AAA9] text-sm mt-3">@comentario.Fecha.ToString("yyyy-MM-dd HH:mm")</p>
                             </div>
                         }
                     </div>
                 }
                 else
                 {
-                    <p class="text-center text-[#A6AAA9]">Sin comentarios disponibles.</p>
+                    <p class="text-center text-[#A6AAA9]">Sin comentarios populares disponibles.</p>
                 }
             </div>
 
@@ -501,9 +530,17 @@
     private bool mostrandoDetalleProyecto;
     private bool cargandoDetalleImagen;
     private string? imagenDetalleDataUrl;
+    private ComentariosPopularesDTO comentariosPopulares = new();
+    private bool cargandoComentariosPopulares;
+    private string categoriaComentariosActiva = "Todos";
 
     private bool PuedeGestionarResultados => Rol == "ENCARGADO" || Rol == "ORGANIZADOR";
     private int SumaPesosActual => configuracionResultados.PesoJurado + configuracionResultados.PesoPublico;
+    private int TotalComentariosPopulares => comentariosPopulares.Comentarios.Count;
+    private IEnumerable<ComentarioPopularDTO> ComentariosPopularesFiltrados =>
+        categoriaComentariosActiva == "Todos"
+            ? comentariosPopulares.Comentarios
+            : comentariosPopulares.Comentarios.Where(c => c.Categoria == categoriaComentariosActiva);
 
     protected override async Task OnInitializedAsync()
     {
@@ -593,30 +630,54 @@
         proyectoDetalleSeleccionado = proyecto;
         mostrandoDetalleProyecto = true;
         imagenDetalleDataUrl = null;
+        comentariosPopulares = new ComentariosPopularesDTO();
+        categoriaComentariosActiva = "Todos";
 
-        if (!proyecto.TieneImagen)
-            return;
+        var comentariosTask = CargarComentariosPopularesAsync(proyecto.Id);
 
-        cargandoDetalleImagen = true;
-        try
+        if (proyecto.TieneImagen)
         {
-            var response = await Http.GetAsync($"/api/proyectos/{EventId}/{proyecto.Id}/imagen");
-            if (response.IsSuccessStatusCode)
+            cargandoDetalleImagen = true;
+            try
             {
-                var bytes = await response.Content.ReadAsByteArrayAsync();
-                if (bytes.Length > 0)
+                var response = await Http.GetAsync($"/api/proyectos/{EventId}/{proyecto.Id}/imagen");
+                if (response.IsSuccessStatusCode)
                 {
-                    imagenDetalleDataUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                    var bytes = await response.Content.ReadAsByteArrayAsync();
+                    if (bytes.Length > 0)
+                    {
+                        imagenDetalleDataUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                    }
                 }
             }
+            catch
+            {
+                imagenDetalleDataUrl = null;
+            }
+            finally
+            {
+                cargandoDetalleImagen = false;
+            }
+        }
+
+        await comentariosTask;
+    }
+
+    private async Task CargarComentariosPopularesAsync(int idProyecto)
+    {
+        cargandoComentariosPopulares = true;
+        try
+        {
+            comentariosPopulares = await Http.GetFromJsonAsync<ComentariosPopularesDTO>(
+                $"/api/resultados/{EventId}/proyectos/{idProyecto}/comentarios-populares") ?? new ComentariosPopularesDTO();
         }
         catch
         {
-            imagenDetalleDataUrl = null;
+            comentariosPopulares = new ComentariosPopularesDTO();
         }
         finally
         {
-            cargandoDetalleImagen = false;
+            cargandoComentariosPopulares = false;
         }
     }
 
@@ -625,6 +686,8 @@
         mostrandoDetalleProyecto = false;
         proyectoDetalleSeleccionado = null;
         imagenDetalleDataUrl = null;
+        comentariosPopulares = new ComentariosPopularesDTO();
+        categoriaComentariosActiva = "Todos";
     }
 
     private async Task AbrirMonitorAsync()
@@ -812,6 +875,45 @@
         3 => "from-orange-400 to-orange-600",
         _ => "from-[#6C8A6C] to-[#4C6B4F]"
     };
+
+    private void CambiarCategoriaComentarios(string categoria)
+    {
+        categoriaComentariosActiva = categoria;
+    }
+
+    private string MostrarAutor(ComentarioPopularDTO comentario)
+    {
+        var autor = string.IsNullOrWhiteSpace(comentario.Autor)
+            ? comentario.TipoRol
+            : comentario.Autor;
+
+        return string.IsNullOrWhiteSpace(autor) ? "@usuario" : $"@{autor.Trim().TrimStart('@')}";
+    }
+
+    private string GetCategoriaComentarioClass(string categoria)
+    {
+        string baseClass = "px-3 py-1 rounded-lg border text-sm font-semibold transition-colors";
+        return categoriaComentariosActiva == categoria
+            ? $"{baseClass} bg-[#6C8A6C] text-white border-[#6C8A6C]"
+            : $"{baseClass} {GetCategoriaColorClass(categoria)}";
+    }
+
+    private string GetEtiquetaCategoriaClass(string categoria)
+        => $"px-3 py-1 rounded-lg border text-sm font-bold whitespace-nowrap {GetCategoriaColorClass(categoria)}";
+
+    private static string GetCategoriaColorClass(string categoria)
+    {
+        return (categoria ?? string.Empty).Trim().ToUpperInvariant() switch
+        {
+            "POSITIVO" => "bg-green-50 text-green-700 border-green-200",
+            "MEJORA" => "bg-orange-50 text-orange-700 border-orange-200",
+            "TECNICO" or "TÃ‰CNICO" => "bg-blue-50 text-blue-700 border-blue-200",
+            "DISEÃ‘O" or "DISEÑO" => "bg-purple-50 text-purple-700 border-purple-200",
+            "IMPACTO" => "bg-teal-50 text-teal-700 border-teal-200",
+            "PRESENTACION" or "PRESENTACIÃ“N" or "PRESENTACIÓN" => "bg-yellow-50 text-yellow-700 border-yellow-200",
+            _ => "bg-[#E9EFE1] text-[#4C6B4F] border-[#B5D6AC]"
+        };
+    }
 
     private static readonly Dictionary<string, List<ProjectResult>> resultadosPorEvento = new()
     {

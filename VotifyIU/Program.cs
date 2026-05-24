@@ -39,6 +39,13 @@ builder.Services.AddScoped<VotifyRepositories>();
 builder.Services.AddScoped<IVotifyService, VotifyService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IComentarioPopularClassifier>(sp =>
+{
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var apiKey = sp.GetRequiredService<IConfiguration>()["GeminiApiKey"] ?? string.Empty;
+    return new GeminiComentarioPopularClassifier(httpFactory.CreateClient(), apiKey);
+});
+builder.Services.AddScoped<ComentariosPopularesAgrupador>();
 
 var app = builder.Build();
 
@@ -830,6 +837,41 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votac
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
 });
 
+// ── Endpoint de comentarios populares ───────────────────────────
+
+app.MapGet("/api/resultados/{idVotacion}/proyectos/{idProyecto}/comentarios-populares", async (
+    int idVotacion,
+    int idProyecto,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Proyecto> proyectoRepo,
+    IDAL<Voto> votoRepo,
+    ComentariosPopularesAgrupador agrupador,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        var votacion = votacionRepo.GetById(idVotacion);
+        if (votacion == null) return Results.NotFound("VotaciÃ³n no encontrada");
+
+        var proyecto = proyectoRepo.GetById(idProyecto);
+        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+        if (proyecto.EventoId != votacion.EventoId || !ProyectoPerteneceAVotacion(proyecto, votacion))
+            return Results.BadRequest("El proyecto no pertenece a esta votaciÃ³n");
+
+        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion && v.ProyectoId == idProyecto).ToList();
+        var resultado = await agrupador.AgruparAsync(votos, http.RequestAborted);
+        return Results.Ok(MapComentariosPopulares(resultado));
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
+    }
+});
+
 // ── Endpoint de monitoreo ───────────────────────────────────────
 
 app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, IDAL<Jurado> juradoRepo, IDAL<Publico> publicoRepo, IDAL<Competidor> competidorRepo, IDAL<Usuario> usuarioRepo, HttpContext http) =>
@@ -1084,6 +1126,12 @@ app.MapGet("/api/tests/ut3938", () =>
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 
+app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
+{
+    var (ok, msg) = Votify.Tests.ComentariosPopularesIATest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
 app.Run();
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -1233,6 +1281,23 @@ static ReclamacionDTO MapReclamacion(Reclamacion reclamacion, string solicitante
         Estado = reclamacion.Estado ?? Reclamacion.EstadoPendiente,
         RespuestaOrganizador = reclamacion.RespuestaOrganizador,
         FechaRespuesta = reclamacion.FechaRespuesta
+    };
+}
+
+static ComentariosPopularesDTO MapComentariosPopulares(ResultadoComentariosPopulares resultado)
+{
+    return new ComentariosPopularesDTO
+    {
+        Categorias = resultado.Categorias,
+        Comentarios = resultado.Comentarios.Select(c => new ComentarioPopularDTO
+        {
+            Id = c.Id,
+            Autor = c.Autor,
+            Texto = c.Texto,
+            Fecha = c.Fecha,
+            TipoRol = c.TipoRol,
+            Categoria = c.Categoria
+        }).ToList()
     };
 }
 
