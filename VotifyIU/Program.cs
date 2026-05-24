@@ -39,6 +39,13 @@ builder.Services.AddScoped<VotifyRepositories>();
 builder.Services.AddScoped<IVotifyService, VotifyService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IComentarioPopularClassifier>(sp =>
+{
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var apiKey = sp.GetRequiredService<IConfiguration>()["GeminiApiKey"] ?? string.Empty;
+    return new GeminiComentarioPopularClassifier(httpFactory.CreateClient(), apiKey);
+});
+builder.Services.AddScoped<ComentariosPopularesAgrupador>();
 
 var app = builder.Build();
 
@@ -273,7 +280,13 @@ app.MapGet("/api/perfil", (IVotifyService service, HttpContext http) =>
     {
         service.RestoreSession(username);
         var (user, email, foto) = service.GetPerfil();
-        return Results.Ok(new { Username = user, Email = email, FotoPerfil = foto });
+        return Results.Ok(new
+        {
+            Username = user,
+            Email = email,
+            FotoPerfil = foto,
+            NotificacionesNoLeidas = service.GetCantidadNotificacionesNoLeidas()
+        });
     }
     catch (ServiceException) { return Results.Unauthorized(); }
 });
@@ -420,6 +433,10 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
             PesoJurado = req.PesoJurado,
             PesoPublico = req.PesoPublico,
+            CodigoEncargado = req.CodigoEncargado,
+            CodigoJurado = req.CodigoJurado,
+            CorreosEncargados = req.CorreosEncargados,
+            CorreosJurados = req.CorreosJurados,
             Categorias = req.Categorias?
                 .Where(c => !string.IsNullOrWhiteSpace(c.Nombre))
                 .Select(ConstruirTokenCategoria)
@@ -596,7 +613,7 @@ app.MapPost("/api/eventos/{idEvento}/rol", (int idEvento, AsignarRolEventoReques
     try
     {
         service.RestoreSession(username);
-        service.AsignarRolEnEvento(req.TipoRol, idEvento);
+        service.AsignarRolEnEvento(req.TipoRol, idEvento, req.CodigoAcceso);
         return Results.Ok(new RolEventoResponse(idEvento, req.TipoRol.Trim().ToUpperInvariant()));
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -841,6 +858,41 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votac
         return Results.Ok(resultados);
     }
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+// ── Endpoint de comentarios populares ───────────────────────────
+
+app.MapGet("/api/resultados/{idVotacion}/proyectos/{idProyecto}/comentarios-populares", async (
+    int idVotacion,
+    int idProyecto,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Proyecto> proyectoRepo,
+    IDAL<Voto> votoRepo,
+    ComentariosPopularesAgrupador agrupador,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        var votacion = votacionRepo.GetById(idVotacion);
+        if (votacion == null) return Results.NotFound("VotaciÃ³n no encontrada");
+
+        var proyecto = proyectoRepo.GetById(idProyecto);
+        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+        if (proyecto.EventoId != votacion.EventoId || !ProyectoPerteneceAVotacion(proyecto, votacion))
+            return Results.BadRequest("El proyecto no pertenece a esta votaciÃ³n");
+
+        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion && v.ProyectoId == idProyecto).ToList();
+        var resultado = await agrupador.AgruparAsync(votos, http.RequestAborted);
+        return Results.Ok(MapComentariosPopulares(resultado));
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
+    }
 });
 
 // ── Endpoint de monitoreo ───────────────────────────────────────
@@ -1097,6 +1149,12 @@ app.MapGet("/api/tests/ut3938", () =>
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 
+app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
+{
+    var (ok, msg) = Votify.Tests.ComentariosPopularesIATest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
 app.Run();
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -1249,6 +1307,23 @@ static ReclamacionDTO MapReclamacion(Reclamacion reclamacion, string solicitante
     };
 }
 
+static ComentariosPopularesDTO MapComentariosPopulares(ResultadoComentariosPopulares resultado)
+{
+    return new ComentariosPopularesDTO
+    {
+        Categorias = resultado.Categorias,
+        Comentarios = resultado.Comentarios.Select(c => new ComentarioPopularDTO
+        {
+            Id = c.Id,
+            Autor = c.Autor,
+            Texto = c.Texto,
+            Fecha = c.Fecha,
+            TipoRol = c.TipoRol,
+            Categoria = c.Categoria
+        }).ToList()
+    };
+}
+
 static ProyectoResultadoDTO BuildProjectResult(Proyecto proyecto, List<Voto> votosProyecto, Votacion votacion)
 {
     var votosJurado = votosProyecto.Where(ResultadosVotacionCalculator.EsVotoExperto).ToList();
@@ -1368,7 +1443,7 @@ record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
-record AsignarRolEventoRequest(string TipoRol);
+record AsignarRolEventoRequest(string TipoRol, string? CodigoAcceso);
 record RolEventoResponse(int IdEvento, string? Rol);
 record AiChatRequest(List<AiChatTurn> History, string Message);
 record AiChatTurn(string Role, string Content);

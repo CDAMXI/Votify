@@ -47,6 +47,7 @@ namespace Votify.Persistence
         public DbSet<Dashboard> Dashboards { get; set; }
         public DbSet<HojaRuta> HojasRuta { get; set; }
         public DbSet<Reclamacion> Reclamaciones { get; set; }
+        public DbSet<Notificacion> Notificaciones { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
@@ -62,6 +63,7 @@ namespace Votify.Persistence
             ConfigureDashboard(modelBuilder);
             ConfigureHojaRuta(modelBuilder);
             ConfigureReclamacion(modelBuilder);
+            ConfigureNotificacion(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
         }
@@ -101,6 +103,8 @@ namespace Votify.Persistence
             modelBuilder.Entity<Evento>().Property(e => e.FechaIni).HasColumnName("fecha_inicio");
             modelBuilder.Entity<Evento>().Property(e => e.FechaFin).HasColumnName("fecha_fin");
             modelBuilder.Entity<Evento>().Property(e => e.PermiteCompetidoresVotar).HasColumnName("permite_competidores_votar");
+            modelBuilder.Entity<Evento>().Property(e => e.codigoJurado).HasColumnName("codigo_jurado");
+            modelBuilder.Entity<Evento>().Property(e => e.codigoEncargado).HasColumnName("codigo_encargado");
 
             modelBuilder.Entity<Evento>()
                 .HasRequired(e => e.organizador)
@@ -307,6 +311,31 @@ namespace Votify.Persistence
                 .HasRequired(r => r.usuario)
                 .WithMany()
                 .HasForeignKey(r => r.UsuarioId)
+                .WillCascadeOnDelete(false);
+        }
+
+        private static void ConfigureNotificacion(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Notificacion>().ToTable("notificacion");
+            modelBuilder.Entity<Notificacion>().HasKey(n => n.Id);
+            modelBuilder.Entity<Notificacion>().Property(n => n.Id).HasColumnName("id");
+            modelBuilder.Entity<Notificacion>().Property(n => n.RemitenteId).HasColumnName("id_remitente");
+            modelBuilder.Entity<Notificacion>().Property(n => n.DestinatarioId).HasColumnName("id_destinatario");
+            modelBuilder.Entity<Notificacion>().Property(n => n.Asunto).HasColumnName("asunto").IsRequired();
+            modelBuilder.Entity<Notificacion>().Property(n => n.Mensaje).HasColumnName("mensaje").IsRequired();
+            modelBuilder.Entity<Notificacion>().Property(n => n.FechaCreacion).HasColumnName("fecha_creacion");
+            modelBuilder.Entity<Notificacion>().Property(n => n.Leida).HasColumnName("leida");
+
+            modelBuilder.Entity<Notificacion>()
+                .HasRequired(n => n.remitente)
+                .WithMany(u => u.notificacionesEnviadas)
+                .HasForeignKey(n => n.RemitenteId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Notificacion>()
+                .HasRequired(n => n.destinatario)
+                .WithMany(u => u.notificacionesRecibidas)
+                .HasForeignKey(n => n.DestinatarioId)
                 .WillCascadeOnDelete(false);
         }
 

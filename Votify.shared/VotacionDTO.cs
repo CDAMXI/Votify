@@ -22,6 +22,8 @@ namespace Votify.shared
         public string CodigoJurado { get; set; } = string.Empty;
         public int PesoJurado { get; set; } = 70;
         public int PesoPublico { get; set; } = 30;
+        public List<string> CorreosEncargados { get; set; } = new();
+        public List<string> CorreosJurados { get; set; } = new();
         public List<CategoriaBaremoDTO> Categorias { get; set; } = new();
     }
 }

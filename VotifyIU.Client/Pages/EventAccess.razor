@@ -53,9 +53,7 @@
                     <div class="grid gap-4 md:grid-cols-3">
                         @foreach (var opcion in opcionesRol)
                         {
-                            <button @onclick="() => SeleccionarRol(opcion.Tipo)"
-                                    disabled="@asignando"
-                                    class="text-left rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6 hover:border-[#6C8A6C] hover:bg-[#E9EFE1] transition-colors disabled:opacity-60">
+                            <div class="rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6">
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="w-12 h-12 rounded-xl bg-[#6C8A6C]/15 flex items-center justify-center text-[#4C6B4F]">
                                         <Icon Name="@IconoParaRol(opcion.Tipo)" CssClass="w-6 h-6" />
@@ -66,8 +64,30 @@
                                     }
                                 </div>
                                 <p class="text-lg font-bold text-[#1A281B] mb-2">@opcion.Titulo</p>
-                                <p class="text-sm text-[#6C8A6C]">@opcion.Descripcion</p>
-                            </button>
+                                <p class="text-sm text-[#6C8A6C] mb-3">@opcion.Descripcion</p>
+
+                                @if (RolRequiereCodigo(opcion.Tipo))
+                                {
+                                    <input value="@GetCodigoRol(opcion.Tipo)"
+                                           @oninput="e => SetCodigoRol(opcion.Tipo, e.Value?.ToString() ?? string.Empty)"
+                                           placeholder="Código de acceso"
+                                           disabled="@asignando"
+                                           class="w-full h-10 rounded-md border bg-white border-[#B5D6AC] px-3 text-sm font-mono focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] mb-2" />
+                                    <button @onclick="() => SeleccionarRol(opcion.Tipo, GetCodigoRol(opcion.Tipo))"
+                                            disabled="@asignando"
+                                            class="w-full rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-2 font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
+                                        Entrar
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button @onclick="() => SeleccionarRol(opcion.Tipo)"
+                                            disabled="@asignando"
+                                            class="w-full rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-2 font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
+                                        Entrar
+                                    </button>
+                                }
+                            </div>
                         }
                     </div>
 
@@ -130,6 +150,7 @@
     private string? errorAsignacion;
     private string? rolActual;
     private List<VotacionDTO> votacionesEvento = new();
+    private readonly Dictionary<string, string> codigosRol = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly List<OpcionRol> opcionesRol = new()
     {
@@ -223,14 +244,20 @@
         }
     }
 
-    private async Task SeleccionarRol(string tipoRol)
+    private async Task SeleccionarRol(string tipoRol, string? codigoAcceso = null)
     {
         errorAsignacion = null;
         asignando = true;
 
         try
         {
-            var response = await Http.PostAsJsonAsync($"/api/eventos/{EventId}/rol", new { TipoRol = tipoRol });
+            if (RolRequiereCodigo(tipoRol) && string.IsNullOrWhiteSpace(codigoAcceso))
+            {
+                errorAsignacion = $"Debes introducir el código de {(tipoRol == "JURADO" ? "jurado" : "encargado")}.";
+                return;
+            }
+
+            var response = await Http.PostAsJsonAsync($"/api/eventos/{EventId}/rol", new { TipoRol = tipoRol, CodigoAcceso = codigoAcceso });
             if (!response.IsSuccessStatusCode)
             {
                 errorAsignacion = await response.Content.ReadAsStringAsync();
@@ -250,6 +277,12 @@
             asignando = false;
         }
     }
+
+    private string GetCodigoRol(string tipoRol)
+        => codigosRol.TryGetValue(tipoRol, out var codigo) ? codigo : string.Empty;
+
+    private void SetCodigoRol(string tipoRol, string value)
+        => codigosRol[tipoRol] = value;
 
     private void IrADestino(int idVotacion)
     {

@@ -16,6 +16,15 @@
                 <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
                     Cerrar Sesión
                 </a>
+                <a href="/notificaciones" class="relative flex items-center justify-center w-12 h-12 rounded-full border-2 border-[#6C8A6C] text-[#6C8A6C] hover:border-[#4C6B4F] hover:bg-[#E9EFE1] transition-colors flex-shrink-0">
+                    <Icon Name="bell" CssClass="w-6 h-6" />
+                    @if (notificacionesNoLeidas > 0)
+                    {
+                        <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            @(notificacionesNoLeidas > 99 ? "99+" : notificacionesNoLeidas.ToString())
+                        </span>
+                    }
+                </a>
                 <a href="/perfil" class="block w-12 h-12 rounded-full overflow-hidden border-2 border-[#6C8A6C] hover:border-[#4C6B4F] transition-colors flex-shrink-0">
                     <img src="@(string.IsNullOrEmpty(fotoPerfil) ? "imagenes/NoImageProfilePicture.png" : fotoPerfil)"
                          alt="Mi perfil" class="w-full h-full object-cover" />
@@ -176,6 +185,7 @@
     private string? fotoPerfil;
     private bool cargando = true;
     private string filtroEventos = "disponibles";
+    private int notificacionesNoLeidas;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,6 +199,7 @@
             }
             var res = await perfilRes.Content.ReadFromJsonAsync<PerfilDTO>();
             fotoPerfil = res?.FotoPerfil;
+            notificacionesNoLeidas = res?.NotificacionesNoLeidas ?? 0;
         }
         catch { }
 
@@ -240,6 +251,7 @@
     private class PerfilDTO
     {
         public string? FotoPerfil { get; set; }
+        public int NotificacionesNoLeidas { get; set; }
     }
 
     private void NavigateToEvent(string id)
