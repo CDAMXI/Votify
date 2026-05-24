@@ -354,6 +354,51 @@ app.MapGet("/api/perfil/historial", (IVotifyService service, HttpContext http) =
 
 // ── Endpoints de notificaciones ─────────────────────────────────
 
+app.MapPost("/api/eventos/{idEvento}/mensaje", (int idEvento, EnviarMensajeEventoRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.EnviarMensajeOrganizadorEnEvento(idEvento, req.Asunto, req.Mensaje);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPost("/api/eventos/{idEvento}/invitar-jurado", (int idEvento, InvitarPorEmailRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.InvitarUsuarioEnEventoPorEmail(idEvento, req.Email, "JURADO");
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPost("/api/eventos/{idEvento}/invitar-encargado", (int idEvento, InvitarPorEmailRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.InvitarUsuarioEnEventoPorEmail(idEvento, req.Email, "ENCARGADO");
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
 app.MapGet("/api/notificaciones/recibidas", (IVotifyService service, HttpContext http) =>
 {
     string? username = ObtenerUsernameAutenticado(http);
@@ -697,7 +742,7 @@ app.MapPost("/api/votaciones/{id}/cerrar", (int id, IVotifyService service, Http
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
 });
 
-// ── Endpoint guardar voto ────────────────────────────────────────
+// ── Endpoint guardar voto ├───────────────────────────────────────
 
 app.MapPost("/api/votos/guardar", (GuardarVotoRequest req, IVotifyService service, HttpContext http) =>
 {
@@ -1517,3 +1562,5 @@ record GuardarVotoRequest(int VotacionId, int ProyectoId, double Puntuacion, str
 record CrearProyectoRequest(string Nombre, string? Descripcion, string? UsernameCompetidor);
 record ModificarProyectoRequest(string Nombre, string? Descripcion, List<string>? ParticipantesAdicionales);
 record UpdateProyectoFotoRequest(string Base64Foto);
+record EnviarMensajeEventoRequest(string Asunto, string Mensaje);
+record InvitarPorEmailRequest(string Email);

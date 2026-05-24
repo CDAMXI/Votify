@@ -27,6 +27,17 @@
             </button>
         </div>
 
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button @onclick='() => CambiarPestana("lista")'
+                    class='px-4 py-2 rounded-xl font-medium text-sm transition-all @(pestanaActiva == "lista" ? "bg-[#6C8A6C] text-white shadow" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")'>
+                Lista
+            </button>
+            <button @onclick='() => CambiarPestana("mensaje")'
+                    class='px-4 py-2 rounded-xl font-medium text-sm transition-all @(pestanaActiva == "mensaje" ? "bg-[#6C8A6C] text-white shadow" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")'>
+                Mensaje
+            </button>
+        </div>
+
         @if (vistaActiva == "recibidas")
         {
             <div class="flex flex-wrap gap-2 mb-6">
@@ -60,7 +71,7 @@
                 <p class="text-lg font-medium">No hay notificaciones en esta vista.</p>
             </div>
         }
-        else
+        else if (pestanaActiva == "lista")
         {
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
                 <section class="space-y-4">
@@ -99,7 +110,7 @@
                                         <button type="button"
                                                 @onclick='() => LeerMensajeAsync(notificacion)'
                                                 class="px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-[#6C8A6C] text-white hover:bg-[#4C6B4F] shadow">
-                                            @(vistaActiva == "recibidas" && !notificacion.Leida ? "Leer mensaje" : "Ver mensaje")
+                                            Ver mensaje
                                         </button>
                                     </div>
                                 </div>
@@ -124,53 +135,78 @@
                 </section>
 
                 <aside class="lg:sticky lg:top-6 self-start">
-                    @if (NotificacionSeleccionada is null)
-                    {
-                        <div class="bg-white rounded-2xl shadow-lg border border-[#B5D6AC]/30 p-6 text-center text-[#6C8A6C]">
-                            <p class="font-medium">Pulsa en <strong>Leer mensaje</strong> para abrir una notificación.</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <article class="bg-white rounded-2xl shadow-xl border border-[#B5D6AC]/30 overflow-hidden">
-                            <div class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] px-6 py-5 text-white">
-                                <p class="text-xs uppercase tracking-[0.2em] opacity-80">Detalle de notificación</p>
-                                <h2 class="mt-1 text-2xl font-bold leading-tight">@NotificacionSeleccionada.Asunto</h2>
-                            </div>
-
-                            <div class="p-6 space-y-5">
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
-                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Remitente</p>
-                                        <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.RemitenteUsername</p>
-                                    </div>
-                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
-                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Destinatario</p>
-                                        <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.DestinatarioUsername</p>
-                                    </div>
-                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
-                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Fecha</p>
-                                        <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.FechaCreacion.ToString("dd/MM/yyyy")</p>
-                                        <p class="text-sm text-[#6C8A6C]">@NotificacionSeleccionada.FechaCreacion.ToString("HH:mm")</p>
-                                    </div>
-                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
-                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Estado</p>
-                                        <span class="inline-flex mt-2 items-center rounded-full px-3 py-1 text-xs font-bold @(NotificacionSeleccionada.Leida ? "bg-[#E9EFE1] text-[#4C6B4F]" : "bg-amber-100 text-amber-700")">
-                                            @(NotificacionSeleccionada.Leida ? "Leída" : "No leída")
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p class="text-sm font-semibold text-[#1A281B] mb-3">Mensaje</p>
-                                    <div class="rounded-2xl border border-[#E0EAD9] bg-[#FCFDFC] p-5 text-[#4C6B4F] leading-relaxed whitespace-pre-wrap">
-                                        @NotificacionSeleccionada.Mensaje
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    }
+                    <div class="bg-white rounded-2xl shadow-lg border border-[#B5D6AC]/30 p-6 text-center text-[#6C8A6C]">
+                        <p class="font-medium">Pulsa en <strong>Ver mensaje</strong> para abrir una notificación.</p>
+                    </div>
                 </aside>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl shadow-xl border border-[#B5D6AC]/30 overflow-hidden">
+                @if (NotificacionSeleccionada is null)
+                {
+                    <div class="p-6 text-center text-[#6C8A6C]">
+                        <p class="font-medium">No hay ningún mensaje seleccionado.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] px-6 py-5 text-white flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.2em] opacity-80">Detalle de notificación</p>
+                            <h2 class="mt-1 text-2xl font-bold leading-tight">@NotificacionSeleccionada.Asunto</h2>
+                        </div>
+                        <button type="button"
+                                @onclick='() => pestanaActiva = "lista"'
+                                class="px-4 py-2 rounded-xl bg-white/15 border border-white/30 text-sm font-semibold hover:bg-white/25 transition-colors">
+                            Volver a la lista
+                        </button>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Remitente</p>
+                                <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.RemitenteUsername</p>
+                            </div>
+                            <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Destinatario</p>
+                                <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.DestinatarioUsername</p>
+                            </div>
+                            <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                <p class="text-xs uppercase tracking-wide text-[#6C6A6C]">Fecha</p>
+                                <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.FechaCreacion.ToString("dd/MM/yyyy")</p>
+                                <p class="text-sm text-[#6C8A6C]">@NotificacionSeleccionada.FechaCreacion.ToString("HH:mm")</p>
+                            </div>
+                            <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Estado</p>
+                                <span class="inline-flex mt-2 items-center rounded-full px-3 py-1 text-xs font-bold @(NotificacionSeleccionada.Leida ? "bg-[#E9EFE1] text-[#4C6B4F]" : "bg-amber-100 text-amber-700")">
+                                    @(NotificacionSeleccionada.Leida ? "Leída" : "No leída")
+                                </span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-semibold text-[#1A281B] mb-3">Mensaje</p>
+                            <div class="rounded-2xl border border-[#E0EAD9] bg-[#FCFDFC] p-5 text-[#4C6B4F] leading-relaxed whitespace-pre-wrap">
+                                @NotificacionSeleccionada.Mensaje
+                            </div>
+                        </div>
+
+                        @if (!NotificacionSeleccionada.Leida)
+                        {
+                            <div class="flex justify-end">
+                                <button type="button"
+                                        @onclick="MarcarSeleccionadaComoLeidaAsync"
+                                        disabled="@guardando"
+                                        class="px-5 py-2 rounded-xl bg-[#6C8A6C] text-white font-semibold hover:bg-[#4C6B4F] transition-colors disabled:opacity-60">
+                                    Marcar como leído
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         }
     </main>
@@ -182,6 +218,7 @@
     private bool cargando = true;
     private bool guardando = false;
     private string vistaActiva = "recibidas";
+    private string pestanaActiva = "lista";
     private string filtroRecibidas = "no-leidas";
     private string? mensajeEstado;
     private int paginaRecibidasNoLeidas = 1;
@@ -257,6 +294,12 @@
         vistaActiva = vista;
         mensajeEstado = null;
         notificacionSeleccionadaId = null;
+        pestanaActiva = "lista";
+    }
+
+    private void CambiarPestana(string pestana)
+    {
+        pestanaActiva = pestana;
     }
 
     private void CambiarFiltroRecibidas(string filtro)
@@ -268,6 +311,7 @@
         mensajeEstado = null;
         notificacionSeleccionadaId = null;
         PaginaActual = 1;
+        pestanaActiva = "lista";
     }
 
     private void CambiarPagina(int delta)
@@ -279,39 +323,40 @@
     {
         notificacionSeleccionadaId = notificacion.Id;
         mensajeEstado = null;
+        pestanaActiva = "mensaje";
+    }
 
-        if (vistaActiva == "recibidas" && !notificacion.Leida)
+    private async Task MarcarSeleccionadaComoLeidaAsync()
+    {
+        if (guardando || NotificacionSeleccionada is null || NotificacionSeleccionada.Leida)
+            return;
+
+        guardando = true;
+        try
         {
-            if (guardando)
-                return;
-
-            guardando = true;
-            try
+            var response = await Http.PutAsync($"/api/notificaciones/{NotificacionSeleccionada.Id}/leida", null);
+            if (response.IsSuccessStatusCode)
             {
-                var response = await Http.PutAsync($"/api/notificaciones/{notificacion.Id}/leida", null);
-                if (response.IsSuccessStatusCode)
-                {
-                    notificacion.Leida = true;
-                    mensajeEstado = "La notificación se marcó como leída.";
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    NavigationManager.NavigateTo("/login", forceLoad: true);
-                    return;
-                }
-                else
-                {
-                    mensajeEstado = "No se pudo marcar la notificación como leída.";
-                }
+                NotificacionSeleccionada.Leida = true;
+                mensajeEstado = "La notificación se marcó como leída.";
             }
-            catch
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+            else
             {
                 mensajeEstado = "No se pudo marcar la notificación como leída.";
             }
-            finally
-            {
-                guardando = false;
-            }
+        }
+        catch
+        {
+            mensajeEstado = "No se pudo marcar la notificación como leída.";
+        }
+        finally
+        {
+            guardando = false;
         }
     }
 

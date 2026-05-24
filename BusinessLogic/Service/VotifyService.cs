@@ -657,6 +657,121 @@ namespace Votify.BusinessLogic.Service
             }
         }
 
+        public void EnviarMensajeOrganizadorEnEvento(int idEvento, string asunto, string mensaje)
+        {
+            RequireUsuarioLogueado();
+            if (_notificacionRepository == null)
+                throw new ServiceException("No hay notificaciones disponibles");
+
+            Evento evento = _eventoRepository.GetById(idEvento);
+            if (evento == null)
+                throw new ServiceException("El evento no existe");
+
+            if (!UsuarioEsOrganizadorEnEvento(idEvento))
+                throw new ServiceException("Solo el organizador puede enviar mensajes desde aquí");
+
+            asunto = (asunto ?? string.Empty).Trim();
+            mensaje = (mensaje ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(asunto))
+                throw new ServiceException("El asunto no puede estar vacío");
+
+            if (string.IsNullOrWhiteSpace(mensaje))
+                throw new ServiceException("El mensaje no puede estar vacío");
+
+            var destinatarioIds = _juradoRepository.GetWhere(r => r.EventoId == idEvento).Select(r => r.UsuarioId)
+                .Concat(_publicoRepository.GetWhere(r => r.EventoId == idEvento).Select(r => r.UsuarioId))
+                .Concat(_competidorRepository.GetWhere(r => r.EventoId == idEvento).Select(r => r.UsuarioId))
+                .Concat(_encargadoRepository.GetWhere(r => r.EventoId == idEvento).Select(r => r.UsuarioId))
+                .Concat(_organizadorRepository.GetWhere(r => r.EventoId == idEvento).Select(r => r.UsuarioId))
+                .Where(uid => uid != usuario!.Id)
+                .Distinct()
+                .ToList();
+
+            if (!destinatarioIds.Any())
+                return;
+
+            foreach (var destinatarioId in destinatarioIds)
+            {
+                var destinatario = _usuarioRepository.GetById(destinatarioId);
+                if (destinatario == null)
+                    continue;
+
+                _notificacionRepository.Insert(new Notificacion
+                {
+                    RemitenteId = usuario!.Id,
+                    DestinatarioId = destinatario.Id,
+                    Asunto = asunto,
+                    Mensaje = mensaje,
+                    FechaCreacion = DateTime.Now,
+                    Leida = false,
+                    remitente = usuario,
+                    destinatario = destinatario
+                });
+            }
+
+            Commit();
+        }
+
+        public void InvitarUsuarioEnEventoPorEmail(int idEvento, string email, string tipoRol)
+        {
+            RequireUsuarioLogueado();
+            if (_notificacionRepository == null)
+                throw new ServiceException("No hay notificaciones disponibles");
+
+            Evento evento = _eventoRepository.GetById(idEvento);
+            if (evento == null)
+                throw new ServiceException("El evento no existe");
+
+            if (!UsuarioEsOrganizadorEnEvento(idEvento))
+                throw new ServiceException("Solo el organizador puede invitar usuarios desde aquí");
+
+            email = (email ?? string.Empty).Trim();
+            tipoRol = (tipoRol ?? string.Empty).Trim().ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ServiceException("El correo no puede estar vacío");
+
+            if (tipoRol != "JURADO" && tipoRol != "ENCARGADO")
+                throw new ServiceException("Tipo de invitación no válido");
+
+            var destinatario = _usuarioRepository.GetWhere(u => u.Email.ToLower() == email.ToLower()).FirstOrDefault();
+            if (destinatario == null)
+                throw new ServiceException("No existe ningún usuario con ese correo");
+
+            string codigoAcceso = tipoRol == "JURADO"
+                ? (evento.codigoJurado?.Trim() ?? string.Empty)
+                : (evento.codigoEncargado?.Trim() ?? string.Empty);
+
+            if (string.IsNullOrWhiteSpace(codigoAcceso))
+                throw new ServiceException(tipoRol == "JURADO"
+                    ? "El evento no tiene código de jurado configurado"
+                    : "El evento no tiene código de encargado configurado");
+
+            string rolTexto = tipoRol == "JURADO" ? "jurado" : "encargado";
+            string asunto = $"Invitación como {rolTexto} en {evento.Nombre}";
+            string mensaje = $"De: {usuario.Username}, {usuario.Email}\n\n" +
+                             $"Estimado/a usuario/a,\n\n" +
+                             $"Le invitamos a participar en el evento {evento.Nombre} como {rolTexto}.\n" +
+                             $"El código de acceso asociado a este rol es: {codigoAcceso}\n\n" +
+                             $"Esperamos contar con su participación.\n\n" +
+                             $"Reciba un cordial saludo.";
+
+            _notificacionRepository.Insert(new Notificacion
+            {
+                RemitenteId = usuario.Id,
+                DestinatarioId = destinatario.Id,
+                Asunto = asunto,
+                Mensaje = mensaje,
+                FechaCreacion = DateTime.Now,
+                Leida = false,
+                remitente = usuario,
+                destinatario = destinatario
+            });
+
+            Commit();
+        }
+
         private void CrearInvitacionesPorCorreo(Evento evento, CrearVotacionRequest request, string nombreEvento)
         {
             if (_notificacionRepository == null || usuario == null)

@@ -80,5 +80,7 @@ namespace Votify.BusinessLogic.Service
         IEnumerable<Notificacion> GetNotificacionesEnviadas();
         int GetCantidadNotificacionesNoLeidas();
         void MarcarNotificacionComoLeida(int idNotificacion);
+        void EnviarMensajeOrganizadorEnEvento(int idEvento, string asunto, string mensaje);
+        void InvitarUsuarioEnEventoPorEmail(int idEvento, string email, string tipoRol);
     }
 }

@@ -111,6 +111,96 @@
                     <p class="text-[#6C8A6C] mb-4">
                         @(string.IsNullOrWhiteSpace(DescripcionEvento) ? "El evento no tiene descripcion" : DescripcionEvento)
                     </p>
+
+                    @if (string.Equals(rolActual, "ORGANIZADOR", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="mb-8 rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6">
+                            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-[#6C8A6C]">Acciones de organización</p>
+                                    <h2 class="text-2xl font-bold text-[#1A281B] mt-1">Gestionar mensajes e invitaciones</h2>
+                                    <p class="text-sm text-[#6C8A6C] mt-1">Puedes enviar un mensaje general o invitar por correo a jurados y encargados.</p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button @onclick='() => MostrarAccionOrganizador("mensaje")'
+                                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-5 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                                        Enviar mensaje
+                                    </button>
+                                    <button @onclick='() => MostrarAccionOrganizador("jurado")'
+                                            class="bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] px-5 py-3 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                                        Invitar jurado
+                                    </button>
+                                    <button @onclick='() => MostrarAccionOrganizador("encargado")'
+                                            class="bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] px-5 py-3 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                                        Invitar encargado
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (accionOrganizadorActiva == "mensaje")
+                            {
+                                <EditForm Model="@mensajeEvento" OnValidSubmit="EnviarMensajeOrganizadorAsync">
+                                    <div class="mt-6 space-y-4 bg-white rounded-2xl shadow p-6 border border-[#E9EFE1]">
+                                        <div class="space-y-1">
+                                            <label class="text-sm font-medium text-[#4C6B4F]">Asunto</label>
+                                            <InputText @bind-Value="mensajeEvento.Asunto" disabled="@enviandoMensaje" class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-sm font-medium text-[#4C6B4F]">Mensaje</label>
+                                            <textarea @bind="mensajeEvento.Mensaje" disabled="@enviandoMensaje" rows="5" class="w-full rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] resize-none"></textarea>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(errorMensajeOrganizador))
+                                        {
+                                            <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">@errorMensajeOrganizador</div>
+                                        }
+                                        <div class="flex justify-end gap-3 pt-2">
+                                            <button type="button" @onclick='() => accionOrganizadorActiva = null' class="px-5 py-2 rounded-xl border-2 border-[#6C8A6C] text-[#6C8A6C] font-bold hover:bg-[#E9EFE1] transition-colors">Cancelar</button>
+                                            <button type="submit" disabled="@enviandoMensaje" class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-60">Enviar</button>
+                                        </div>
+                                    </div>
+                                </EditForm>
+                            }
+                            else if (accionOrganizadorActiva == "jurado")
+                            {
+                                <EditForm Model="@invitacionJurado" OnValidSubmit="InvitarJuradoAsync">
+                                    <div class="mt-6 space-y-4 bg-white rounded-2xl shadow p-6 border border-[#E9EFE1]">
+                                        <div class="space-y-1">
+                                            <label class="text-sm font-medium text-[#4C6B4F]">Correo electrónico</label>
+                                            <InputText @bind-Value="invitacionJurado.Email" disabled="@enviandoInvitacion" placeholder="correo@ejemplo.com" class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(errorInvitacionJurado))
+                                        {
+                                            <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">@errorInvitacionJurado</div>
+                                        }
+                                        <div class="flex justify-end gap-3 pt-2">
+                                            <button type="button" @onclick='() => accionOrganizadorActiva = null' class="px-5 py-2 rounded-xl border-2 border-[#6C8A6C] text-[#6C8A6C] font-bold hover:bg-[#E9EFE1] transition-colors">Cancelar</button>
+                                            <button type="submit" disabled="@enviandoInvitacion" class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-60">Invitar</button>
+                                        </div>
+                                    </div>
+                                </EditForm>
+                            }
+                            else if (accionOrganizadorActiva == "encargado")
+                            {
+                                <EditForm Model="@invitacionEncargado" OnValidSubmit="InvitarEncargadoAsync">
+                                    <div class="mt-6 space-y-4 bg-white rounded-2xl shadow p-6 border border-[#E9EFE1]">
+                                        <div class="space-y-1">
+                                            <label class="text-sm font-medium text-[#4C6B4F]">Correo electrónico</label>
+                                            <InputText @bind-Value="invitacionEncargado.Email" disabled="@enviandoInvitacion" placeholder="correo@ejemplo.com" class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(errorInvitacionEncargado))
+                                        {
+                                            <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">@errorInvitacionEncargado</div>
+                                        }
+                                        <div class="flex justify-end gap-3 pt-2">
+                                            <button type="button" @onclick='() => accionOrganizadorActiva = null' class="px-5 py-2 rounded-xl border-2 border-[#6C8A6C] text-[#6C8A6C] font-bold hover:bg-[#E9EFE1] transition-colors">Cancelar</button>
+                                            <button type="submit" disabled="@enviandoInvitacion" class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-60">Invitar</button>
+                                        </div>
+                                    </div>
+                                </EditForm>
+                            }
+                        </div>
+                    }
+
                     <p class="text-[#4C6B4F] mb-8">
                         Selecciona a qué votación quieres entrar.
                     </p>
@@ -146,11 +236,20 @@
 
     private bool cargando = true;
     private bool asignando = false;
+    private bool enviandoMensaje = false;
+    private bool enviandoInvitacion = false;
     private string? error;
     private string? errorAsignacion;
+    private string? errorMensajeOrganizador;
+    private string? errorInvitacionJurado;
+    private string? errorInvitacionEncargado;
     private string? rolActual;
     private List<VotacionDTO> votacionesEvento = new();
     private readonly Dictionary<string, string> codigosRol = new(StringComparer.OrdinalIgnoreCase);
+    private string? accionOrganizadorActiva;
+    private MensajeOrganizadorModel mensajeEvento = new();
+    private InvitacionEmailModel invitacionJurado = new();
+    private InvitacionEmailModel invitacionEncargado = new();
 
     private readonly List<OpcionRol> opcionesRol = new()
     {
@@ -278,6 +377,125 @@
         }
     }
 
+    private async Task EnviarMensajeOrganizadorAsync()
+    {
+        errorMensajeOrganizador = null;
+        enviandoMensaje = true;
+
+        try
+        {
+            if (!int.TryParse(EventId, out var idEvento))
+            {
+                errorMensajeOrganizador = "El identificador del evento no es válido.";
+                return;
+            }
+
+            var response = await Http.PostAsJsonAsync($"/api/eventos/{idEvento}/mensaje", new
+            {
+                Asunto = mensajeEvento.Asunto,
+                Mensaje = mensajeEvento.Mensaje
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                mensajeEvento = new MensajeOrganizadorModel();
+                accionOrganizadorActiva = null;
+                errorMensajeOrganizador = null;
+            }
+            else
+            {
+                errorMensajeOrganizador = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorMensajeOrganizador))
+                    errorMensajeOrganizador = "No se pudo enviar el mensaje.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensajeOrganizador = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            enviandoMensaje = false;
+        }
+    }
+
+    private void MostrarAccionOrganizador(string accion)
+    {
+        accionOrganizadorActiva = accionOrganizadorActiva == accion ? null : accion;
+    }
+
+    private async Task InvitarJuradoAsync()
+    {
+        errorInvitacionJurado = null;
+        enviandoInvitacion = true;
+
+        try
+        {
+            if (!int.TryParse(EventId, out var idEvento))
+            {
+                errorInvitacionJurado = "El identificador del evento no es válido.";
+                return;
+            }
+
+            var response = await Http.PostAsJsonAsync($"/api/eventos/{idEvento}/invitar-jurado", new { Email = invitacionJurado.Email });
+            if (response.IsSuccessStatusCode)
+            {
+                invitacionJurado = new InvitacionEmailModel();
+                accionOrganizadorActiva = null;
+            }
+            else
+            {
+                errorInvitacionJurado = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorInvitacionJurado))
+                    errorInvitacionJurado = "No se pudo enviar la invitación.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorInvitacionJurado = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            enviandoInvitacion = false;
+        }
+    }
+
+    private async Task InvitarEncargadoAsync()
+    {
+        errorInvitacionEncargado = null;
+        enviandoInvitacion = true;
+
+        try
+        {
+            if (!int.TryParse(EventId, out var idEvento))
+            {
+                errorInvitacionEncargado = "El identificador del evento no es válido.";
+                return;
+            }
+
+            var response = await Http.PostAsJsonAsync($"/api/eventos/{idEvento}/invitar-encargado", new { Email = invitacionEncargado.Email });
+            if (response.IsSuccessStatusCode)
+            {
+                invitacionEncargado = new InvitacionEmailModel();
+                accionOrganizadorActiva = null;
+            }
+            else
+            {
+                errorInvitacionEncargado = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorInvitacionEncargado))
+                    errorInvitacionEncargado = "No se pudo enviar la invitación.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorInvitacionEncargado = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            enviandoInvitacion = false;
+        }
+    }
+
     private string GetCodigoRol(string tipoRol)
         => codigosRol.TryGetValue(tipoRol, out var codigo) ? codigo : string.Empty;
 
@@ -304,5 +522,16 @@
         public string Tipo { get; set; } = string.Empty;
         public string Titulo { get; set; } = string.Empty;
         public string Descripcion { get; set; } = string.Empty;
+    }
+
+    private sealed class MensajeOrganizadorModel
+    {
+        public string Asunto { get; set; } = string.Empty;
+        public string Mensaje { get; set; } = string.Empty;
+    }
+
+    private sealed class InvitacionEmailModel
+    {
+        public string Email { get; set; } = string.Empty;
     }
 }
