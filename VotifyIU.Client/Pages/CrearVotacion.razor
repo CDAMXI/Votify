@@ -30,7 +30,7 @@
                     <div class="mx-6 mt-6 p-3 bg-red-100 text-red-700 rounded-xl text-sm border border-red-200">
                         ⚠️ @errorMessage
                     </div>
-                } f
+                }
 
                 <!-- ── Sección: Información del Evento ── -->
                 <div class="p-6 space-y-4">
@@ -61,9 +61,10 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label class="text-sm font-medium text-[#4C6B4F]">Fecha de inicio</label>
-                            <InputDate @bind-Value:get="votacionDto.FechaIni"
-                                       @bind-Value:set="OnFechaIniChanged"
-                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            <FlatpickrInput @bind-Value:get="votacionDto.FechaIni"
+                                            @bind-Value:set="OnFechaIniChanged"
+                                            MinDate="DateTime.Today"
+                                            CssClass="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] cursor-pointer" />
                             @if (!string.IsNullOrEmpty(errorFechaIni))
                             {
                                 <p class="text-xs text-[#A04040]">@errorFechaIni</p>
@@ -71,9 +72,10 @@
                         </div>
                         <div class="space-y-1">
                             <label class="text-sm font-medium text-[#4C6B4F]">Fecha de fin</label>
-                            <InputDate @bind-Value:get="votacionDto.FechaFin"
-                                       @bind-Value:set="OnFechaFinChanged"
-                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            <FlatpickrInput @bind-Value:get="votacionDto.FechaFin"
+                                            @bind-Value:set="OnFechaFinChanged"
+                                            MinDate="DateTime.Today"
+                                            CssClass="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] cursor-pointer" />
                             @if (!string.IsNullOrEmpty(errorFechaFin))
                             {
                                 <p class="text-xs text-[#A04040]">@errorFechaFin</p>
