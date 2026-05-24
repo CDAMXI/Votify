@@ -20,7 +20,10 @@
             <div></div>
             <div class="flex items-center justify-center gap-4">
                 <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-                <h1 class="text-xl font-bold text-[#1A281B]">@NombreEventoActual</h1>
+                <div class="text-center">
+                    <h1 class="text-xl font-bold text-[#1A281B]">Evento: @NombreEventoActual</h1>
+                    <p class="text-sm font-medium text-[#6C8A6C]">Votación: @NombreVotacionActual</p>
+                </div>
             </div>
             <div class="flex justify-end items-center gap-2 text-[#4C6B4F]">
                 @if (EstaEnVistaDetalle)
@@ -947,9 +950,12 @@
     private string busquedaParticipante = "";
     private string editParticipanteLeader = "";
     private string CategoriaActual => votacionActual?.Titulo ?? "esta categoría";
-    private string NombreEventoActual => string.IsNullOrWhiteSpace(votacionActual?.NombreEvento)
-        ? string.Empty
-        : votacionActual!.NombreEvento;
+    private string NombreEventoActual => !string.IsNullOrWhiteSpace(votacionActual?.NombreEvento)
+        ? votacionActual.NombreEvento
+        : "";
+    private string NombreVotacionActual => !string.IsNullOrWhiteSpace(votacionActual?.Titulo)
+        ? votacionActual.Titulo
+        : "";
 
     private void VolverAtras()
     {

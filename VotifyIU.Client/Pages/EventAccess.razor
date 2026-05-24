@@ -88,6 +88,9 @@
                 <div class="bg-white rounded-2xl shadow-xl p-10">
                     <p class="text-sm font-bold uppercase tracking-wide text-[#6C8A6C] mb-3">Votaciones del evento</p>
                     <h1 class="text-3xl font-bold text-[#1A281B] mb-3">@TituloEvento</h1>
+                    <p class="text-[#6C8A6C] mb-4">
+                        @(string.IsNullOrWhiteSpace(DescripcionEvento) ? "El evento no tiene descripcion" : DescripcionEvento)
+                    </p>
                     <p class="text-[#4C6B4F] mb-8">
                         Selecciona a qué votación quieres entrar.
                     </p>
@@ -99,10 +102,6 @@
                                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                     <div>
                                         <p class="text-lg font-bold text-[#1A281B]">@v.Titulo</p>
-                                        @if (!string.IsNullOrWhiteSpace(v.Descripcion))
-                                        {
-                                            <p class="text-sm text-[#6C8A6C] mt-1">@v.Descripcion</p>
-                                        }
                                         <p class="text-xs mt-2 @GetEstadoVotacionClase(v)">@GetEstadoVotacionTexto(v)</p>
                                     </div>
                                     <button @onclick="() => IrADestino(v.Id)"
@@ -143,6 +142,8 @@
     private string TituloEvento => votacionesEvento.FirstOrDefault()?.NombreEvento
         ?? votacionesEvento.FirstOrDefault()?.Titulo
         ?? "Evento";
+
+    private string? DescripcionEvento => votacionesEvento.FirstOrDefault()?.Descripcion;
 
     private static string IconoParaRol(string tipo) => tipo switch
     {
