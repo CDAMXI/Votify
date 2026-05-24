@@ -8,13 +8,13 @@
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-                    <h1 class="text-xl font-bold text-[#1A281B]">Resultados - @nombreEvento</h1>
-                </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-3 items-center">
+            <div></div>
+            <div class="flex items-center justify-center gap-4">
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+                <h1 class="text-xl font-bold text-[#1A281B]">Resultados - @nombreEvento</h1>
             </div>
+            <div></div>
         </div>
     </header>
 
@@ -24,8 +24,11 @@
             <!-- Eliminar evento -->
             <div class="flex justify-end mb-4">
                 <button @onclick="() => mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento"
-                        class="border border-red-400 text-red-500 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
-                    🗑 Eliminar evento
+                        class="inline-flex items-center gap-2 border border-red-400 text-red-600 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                    </svg>
+                    Eliminar evento
                 </button>
             </div>
             @if (mostrarConfirmEliminarEvento)

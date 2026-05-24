@@ -1,0 +1,155 @@
+@page "/manual"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@layout EmptyLayout
+
+<div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
+    <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-3 items-center">
+            <div></div>
+            <div class="flex items-center justify-center gap-4">
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+            </div>
+            <div></div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+
+        <!-- Introducción -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-3xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="book" CssClass="w-7 h-7 text-[#6C8A6C]" />
+                Manual de Usuario
+            </h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                Bienvenido a la guía completa de <strong>Votify</strong>, tu plataforma inteligente para gestionar y participar en votaciones de hackathones y eventos competitivos.
+            </p>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                Aquí encontrarás toda la información necesaria para aprovechar al máximo todas las funcionalidades de la plataforma.
+            </p>
+        </section>
+
+        <!-- ¿Qué es Votify? -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="info-circle" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                ¿Qué es Votify?
+            </h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                Votify es una plataforma diseñada para transformar la manera en que se evalúan proyectos en eventos competitivos. Pasamos de un simple conteo de votos a una experiencia inmersiva de evaluación analítica que beneficia a organizadores, jurados, competidores y público.
+            </p>
+        </section>
+
+        <!-- Primeros Pasos -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="lightbulb" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Primeros Pasos
+            </h2>
+            <ol class="list-decimal list-inside space-y-2 text-[#4C6B4F] leading-relaxed">
+                <li><strong>Regístrate</strong> con tu correo electrónico y crea una contraseña.</li>
+                <li><strong>Inicia sesión</strong> con tus credenciales.</li>
+                <li>En el <strong>Dashboard</strong> verás los eventos disponibles y finalizados.</li>
+                <li>Entra a un evento y elige tu rol para participar.</li>
+            </ol>
+        </section>
+
+        <!-- Roles -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="users" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Roles en un evento
+            </h2>
+            <div class="grid gap-4 md:grid-cols-2">
+                <div class="bg-[#F8FAF7] rounded-xl p-4 border border-[#B5D6AC]/40">
+                    <p class="font-bold text-[#1A281B] flex items-center gap-2 mb-2">
+                        <Icon Name="trophy" CssClass="w-5 h-5 text-[#6C8A6C]" />
+                        Competidor
+                    </p>
+                    <p class="text-sm text-[#4C6B4F]">Participas presentando un proyecto al evento.</p>
+                </div>
+                <div class="bg-[#F8FAF7] rounded-xl p-4 border border-[#B5D6AC]/40">
+                    <p class="font-bold text-[#1A281B] flex items-center gap-2 mb-2">
+                        <Icon Name="award" CssClass="w-5 h-5 text-[#6C8A6C]" />
+                        Jurado
+                    </p>
+                    <p class="text-sm text-[#4C6B4F]">Evalúas los proyectos. Requiere código de acceso.</p>
+                </div>
+                <div class="bg-[#F8FAF7] rounded-xl p-4 border border-[#B5D6AC]/40">
+                    <p class="font-bold text-[#1A281B] flex items-center gap-2 mb-2">
+                        <Icon Name="users" CssClass="w-5 h-5 text-[#6C8A6C]" />
+                        Público
+                    </p>
+                    <p class="text-sm text-[#4C6B4F]">Observas y votas como asistente del evento.</p>
+                </div>
+                <div class="bg-[#F8FAF7] rounded-xl p-4 border border-[#B5D6AC]/40">
+                    <p class="font-bold text-[#1A281B] flex items-center gap-2 mb-2">
+                        <Icon Name="shield" CssClass="w-5 h-5 text-[#6C8A6C]" />
+                        Encargado de Votación
+                    </p>
+                    <p class="text-sm text-[#4C6B4F]">Controlas el ciclo de vida de la votación (pausar, cerrar, modificar).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cómo votar -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="check-circle" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Cómo votar un proyecto
+            </h2>
+            <ol class="list-decimal list-inside space-y-2 text-[#4C6B4F] leading-relaxed">
+                <li>Entra al evento desde el <strong>Dashboard</strong> y selecciona el rol de jurado o público.</li>
+                <li>Verás la <strong>lista de proyectos</strong> con un badge "★ Votado" o "Sin votar".</li>
+                <li>Pulsa el proyecto que quieras evaluar para abrir el panel de votación.</li>
+                <li>Ajusta los <strong>sliders</strong> de cada criterio (de 0 a 10) y añade un comentario opcional.</li>
+                <li>Pulsa <strong>"Enviar voto"</strong> y revisa el resumen antes de confirmar.</li>
+            </ol>
+        </section>
+
+        <!-- Crear evento -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="calendar" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Crear un evento
+            </h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                Desde el Dashboard pulsa <strong>"+ Crear Evento"</strong>. Define título, fechas, categorías y criterios de evaluación. Una vez creado, podrás compartir el evento con jurados y participantes.
+            </p>
+        </section>
+
+        <!-- Perfil -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="user" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Mi Perfil
+            </h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                En "Mi Perfil" puedes cambiar tu foto, tu correo electrónico y tu contraseña. También consultas tus estadísticas (eventos participados, votos emitidos) y tu historial de eventos.
+            </p>
+        </section>
+
+        <!-- Asistente IA -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="chat" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Asistente IA
+            </h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                Desde el Dashboard, abre el botón <strong>"Asistente IA"</strong> (esquina inferior derecha) para consultar dudas, gestionar tu cuenta o solicitar una <strong>síntesis de los comentarios del jurado</strong> sobre tus proyectos.
+            </p>
+        </section>
+
+        <!-- Navegación -->
+        <section class="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+            <h2 class="text-2xl font-bold text-[#1A281B] flex items-center gap-3">
+                <Icon Name="question-mark" CssClass="w-6 h-6 text-[#6C8A6C]" />
+                Navegación
+            </h2>
+            <p class="text-[#4C6B4F] leading-relaxed">
+                El botón <strong>← Volver</strong> (esquina superior izquierda) te lleva a la página anterior. El botón <strong>?</strong> (esquina inferior izquierda) abre este manual en cualquier momento.
+            </p>
+        </section>
+
+    </main>
+</div>

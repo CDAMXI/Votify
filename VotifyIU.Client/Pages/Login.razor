@@ -30,7 +30,10 @@
             <EditForm Model="@loginDto" OnValidSubmit="HandleSubmit" class="space-y-6">
 
                 <div class="space-y-2">
-                    <label for="username" class="text-[#4C6B4F]">Usuario</label>
+                    <label for="username" class="text-[#4C6B4F] flex items-center gap-2">
+                        <Icon Name="user" CssClass="w-4 h-4 text-[#6C8A6C]" />
+                        Usuario
+                    </label>
                     <InputText id="username"
                                @bind-Value="loginDto.Username"
                                placeholder="Ingresa tu usuario"
@@ -40,7 +43,10 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label for="password" class="text-[#4C6B4F]">Contraseña</label>
+                    <label for="password" class="text-[#4C6B4F] flex items-center gap-2">
+                        <Icon Name="lock" CssClass="w-4 h-4 text-[#6C8A6C]" />
+                        Contraseña
+                    </label>
                     <InputText type="password"
                                id="password"
                                @bind-Value="loginDto.Password"

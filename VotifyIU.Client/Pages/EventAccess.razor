@@ -56,6 +56,15 @@
                             <button @onclick="() => SeleccionarRol(opcion.Tipo)"
                                     disabled="@asignando"
                                     class="text-left rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6 hover:border-[#6C8A6C] hover:bg-[#E9EFE1] transition-colors disabled:opacity-60">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-12 h-12 rounded-xl bg-[#6C8A6C]/15 flex items-center justify-center text-[#4C6B4F]">
+                                        <Icon Name="@IconoParaRol(opcion.Tipo)" CssClass="w-6 h-6" />
+                                    </div>
+                                    @if (RolRequiereCodigo(opcion.Tipo))
+                                    {
+                                        <Icon Name="lock" CssClass="w-4 h-4 text-[#A6AAA9]" />
+                                    }
+                                </div>
                                 <p class="text-lg font-bold text-[#1A281B] mb-2">@opcion.Titulo</p>
                                 <p class="text-sm text-[#6C8A6C]">@opcion.Descripcion</p>
                             </button>
@@ -134,6 +143,18 @@
     private string TituloEvento => votacionesEvento.FirstOrDefault()?.NombreEvento
         ?? votacionesEvento.FirstOrDefault()?.Titulo
         ?? "Evento";
+
+    private static string IconoParaRol(string tipo) => tipo switch
+    {
+        "ENCARGADO" => "shield",
+        "JURADO" => "award",
+        "PUBLICO" => "users",
+        "COMPETIDOR" => "trophy",
+        _ => "user"
+    };
+
+    private static bool RolRequiereCodigo(string tipo) =>
+        tipo == "ENCARGADO" || tipo == "JURADO";
 
     private string TextoAccion => string.Equals(Dest, "results", StringComparison.OrdinalIgnoreCase)
         ? "Ver resultados"
