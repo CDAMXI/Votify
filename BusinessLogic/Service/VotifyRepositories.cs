@@ -20,7 +20,8 @@ namespace Votify.BusinessLogic.Service
             IDAL<Competidor> competidores,
             IDAL<Organizador> organizadores,
             IDAL<EncargadoVotacion> encargados,
-            IDAL<Reclamacion> reclamaciones)
+            IDAL<Reclamacion> reclamaciones,
+            IDAL<Notificacion>? notificaciones = null)
         {
             Usuarios = usuarios;
             Votos = votos;
@@ -34,6 +35,7 @@ namespace Votify.BusinessLogic.Service
             Organizadores = organizadores;
             Encargados = encargados;
             Reclamaciones = reclamaciones;
+            Notificaciones = notificaciones;
         }
 
         public IDAL<Usuario> Usuarios { get; }
@@ -48,5 +50,6 @@ namespace Votify.BusinessLogic.Service
         public IDAL<Organizador> Organizadores { get; }
         public IDAL<EncargadoVotacion> Encargados { get; }
         public IDAL<Reclamacion> Reclamaciones { get; }
+        public IDAL<Notificacion>? Notificaciones { get; }
     }
 }
