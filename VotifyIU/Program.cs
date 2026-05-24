@@ -265,7 +265,13 @@ app.MapGet("/api/perfil", (IVotifyService service, HttpContext http) =>
     {
         service.RestoreSession(username);
         var (user, email, foto) = service.GetPerfil();
-        return Results.Ok(new { Username = user, Email = email, FotoPerfil = foto });
+        return Results.Ok(new
+        {
+            Username = user,
+            Email = email,
+            FotoPerfil = foto,
+            NotificacionesNoLeidas = service.GetCantidadNotificacionesNoLeidas()
+        });
     }
     catch (ServiceException) { return Results.Unauthorized(); }
 });
@@ -414,6 +420,8 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             PesoPublico = req.PesoPublico,
             CodigoEncargado = req.CodigoEncargado,
             CodigoJurado = req.CodigoJurado,
+            CorreosEncargados = req.CorreosEncargados,
+            CorreosJurados = req.CorreosJurados,
             Categorias = req.Categorias?
                 .Where(c => !string.IsNullOrWhiteSpace(c.Nombre))
                 .Select(ConstruirTokenCategoria)

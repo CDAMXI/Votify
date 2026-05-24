@@ -30,6 +30,7 @@ namespace Votify.BusinessLogic.Service
         private readonly IDAL<Organizador> _organizadorRepository;
         private readonly IDAL<EncargadoVotacion> _encargadoRepository;
         private readonly IDAL<Reclamacion> _reclamacionRepository;
+        private readonly IDAL<Notificacion>? _notificacionRepository;
 
         public VotifyService(VotifyRepositories repositories)
         {
@@ -45,6 +46,7 @@ namespace Votify.BusinessLogic.Service
             _organizadorRepository = repositories.Organizadores;
             _encargadoRepository = repositories.Encargados;
             _reclamacionRepository = repositories.Reclamaciones;
+            _notificacionRepository = repositories.Notificaciones;
         }
 
         // Delegamos el Commit global a cualquier repositorio temporalmente 
@@ -313,6 +315,8 @@ namespace Votify.BusinessLogic.Service
             }
 
             Commit();
+
+            CrearInvitacionesPorCorreo(evento, request, nombre);
 
             return votacionesCreadas.First().Id;
         }
@@ -601,12 +605,96 @@ namespace Votify.BusinessLogic.Service
             votacion.Estado = !votacion.Estado;
             Commit();
         }
-        // ── Helpers privados ────────────────────────────────────────────────
 
-        private void CargarRolDeUsuario(Usuario user)
+        public IEnumerable<Notificacion> GetNotificacionesRecibidas()
         {
-            Rol? rolRecuperado = user.roles?.FirstOrDefault();
-            rol = rolRecuperado;
+            RequireUsuarioLogueado();
+            if (_notificacionRepository == null)
+                return Enumerable.Empty<Notificacion>();
+
+            return _notificacionRepository.GetWhere(n => n.DestinatarioId == usuario!.Id)
+                .OrderByDescending(n => n.FechaCreacion)
+                .ToList();
+        }
+
+        public IEnumerable<Notificacion> GetNotificacionesEnviadas()
+        {
+            RequireUsuarioLogueado();
+            if (_notificacionRepository == null)
+                return Enumerable.Empty<Notificacion>();
+
+            return _notificacionRepository.GetWhere(n => n.RemitenteId == usuario!.Id)
+                .OrderByDescending(n => n.FechaCreacion)
+                .ToList();
+        }
+
+        public int GetCantidadNotificacionesNoLeidas()
+        {
+            RequireUsuarioLogueado();
+            if (_notificacionRepository == null)
+                return 0;
+
+            return _notificacionRepository.GetWhere(n => n.DestinatarioId == usuario!.Id && !n.Leida).Count();
+        }
+
+        private void CrearInvitacionesPorCorreo(Evento evento, CrearVotacionRequest request, string nombreEvento)
+        {
+            if (_notificacionRepository == null || usuario == null)
+                return;
+
+            CrearInvitacionesParaRol(request.CorreosJurados, "jurado", request.CodigoJurado?.Trim() ?? string.Empty, nombreEvento);
+            CrearInvitacionesParaRol(request.CorreosEncargados, "encargado", request.CodigoEncargado?.Trim() ?? string.Empty, nombreEvento);
+            Commit();
+        }
+
+        private void CrearInvitacionesParaRol(IEnumerable<string>? correos, string rolDestino, string codigo, string nombreEvento)
+        {
+            if (_notificacionRepository == null || usuario == null || string.IsNullOrWhiteSpace(codigo) || correos == null)
+                return;
+
+            var remitenteNombre = usuario.Username?.Trim() ?? "Organización del evento";
+            var remitenteCorreo = usuario.Email?.Trim() ?? "sin-correo";
+            var asunto = $"Invitación a {nombreEvento}";
+
+            foreach (var correo in correos
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var destinatario = _usuarioRepository.GetWhere(u => u.Email == correo).FirstOrDefault();
+                if (destinatario == null)
+                    continue;
+
+                var mensaje = $"De: {remitenteNombre}, {remitenteCorreo}\n\n" +
+                              $"Estimado/a usuario/a,\n\n" +
+                              $"Nos complace invitarle a participar en el evento {nombreEvento} con el rol de {rolDestino}.\n" +
+                              $"El código de acceso asociado a este rol es: {codigo}\n\n" +
+                              $"Esperamos contar con su participación.\n\n" +
+                              $"Reciba un cordial saludo.";
+
+                _notificacionRepository.Insert(new Notificacion
+                {
+                    RemitenteId = usuario.Id,
+                    DestinatarioId = destinatario.Id,
+                    Asunto = asunto,
+                    Mensaje = mensaje,
+                    FechaCreacion = DateTime.Now,
+                    Leida = false,
+                    remitente = usuario,
+                    destinatario = destinatario
+                });
+            }
+        }
+        // ── Helpers privados ────────────────────────────────────────────────
+        private void CargarRolDeUsuario(Usuario usuario)
+        {
+            int uid = usuario.Id;
+            rol =
+                (Rol?)_juradoRepository.GetWhere(r => r.UsuarioId == uid).FirstOrDefault() ??
+                (Rol?)_publicoRepository.GetWhere(r => r.UsuarioId == uid).FirstOrDefault() ??
+                (Rol?)_competidorRepository.GetWhere(r => r.UsuarioId == uid).FirstOrDefault() ??
+                (Rol?)_organizadorRepository.GetWhere(r => r.UsuarioId == uid).FirstOrDefault() ??
+                (Rol?)_encargadoRepository.GetWhere(r => r.UsuarioId == uid).FirstOrDefault();
         }
 
         private void RequireUsuarioLogueado()
@@ -617,8 +705,8 @@ namespace Votify.BusinessLogic.Service
 
         private void ValidarLongitudComentario(string? comentario)
         {
-            if (comentario != null && comentario.Length > MaxLongitudComentario)
-                throw new ServiceException($"El comentario no puede superar los {MaxLongitudComentario} caracteres");
+            if (!string.IsNullOrEmpty(comentario) && comentario.Length > MaxLongitudComentario)
+                throw new ServiceException($"El comentario no puede tener más de {MaxLongitudComentario} caracteres");
         }
 
         private void ValidarPesosResultados(int pesoJurado, int pesoPublico)
@@ -632,19 +720,114 @@ namespace Votify.BusinessLogic.Service
 
         private Votacion ObtenerVotacionOFallar(int idVotacion)
         {
-            Votacion votacion = _votacionRepository.GetById(idVotacion);
+            Votacion? votacion = _votacionRepository.GetById(idVotacion);
             if (votacion == null)
-                throw new ServiceException("La votación no existe");
+                throw new ServiceException("La votación no existe o ha sido eliminada");
             return votacion;
         }
 
         private Proyecto ObtenerProyectoOFallar(int idProyecto)
         {
-            Proyecto proyecto = _proyectoRepository.GetById(idProyecto);
+            Proyecto? proyecto = _proyectoRepository.GetById(idProyecto);
             if (proyecto == null)
-                throw new ServiceException("El proyecto no existe");
+                throw new ServiceException("El proyecto no existe o ha sido eliminado");
             return proyecto;
         }
+
+        private Evento ObtenerEventoDeVotacionOFallar(Votacion votacion)
+        {
+            Evento? evento = _eventoRepository.GetById(votacion.EventoId);
+            if (evento == null)
+                throw new ServiceException("El evento asociado a esta votación no existe");
+            return evento;
+        }
+
+        private bool UsuarioPuedeGestionarVotacion(Votacion votacion)
+        {
+            if (votacion.Encargado == null) return false;
+            int uid = usuario!.Id;
+            return votacion.Encargado.UsuarioId == uid;
+        }
+
+        private bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)
+        {
+            string prefijoCategoria = PrefijoCategoriaProyecto;
+            string categoriaProyecto = (prefijoCategoria + proyecto.Id).ToLowerInvariant();
+
+            return votacion.Descripcion?.Contains(categoriaProyecto) == true;
+        }
+
+        private (string Nombre, string? CriteriosCodificados) DescomponerCategoria(string categoria)
+        {
+            if (!categoria.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase))
+                return (categoria, null);
+
+            string nombre = categoria.Substring(PrefijoCategoriaProyecto.Length);
+            return (nombre, string.Empty);
+        }
+
+        private string ConstruirDescripcionVotacion(string descripcionBase, string? criteriosCodificados)
+        {
+            if (string.IsNullOrWhiteSpace(criteriosCodificados))
+                return descripcionBase.Trim();
+
+            string descripcionCriterios = $"{PrefijoCriteriosDescripcion}{criteriosCodificados}";
+            return (descripcionBase + "\n" + descripcionCriterios).Trim();
+        }
+
+        private string ObtenerCategoriaDeVotacion(Votacion votacion)
+        {
+            string? descripcion = votacion.Descripcion;
+            if (string.IsNullOrWhiteSpace(descripcion))
+                return string.Empty;
+
+            string prefijo = PrefijoCategoriaProyecto;
+            int inicio = descripcion.IndexOf(prefijo, StringComparison.OrdinalIgnoreCase);
+            if (inicio < 0) return string.Empty;
+
+            int fin = descripcion.IndexOf('\n', inicio);
+            if (fin < 0) fin = descripcion.Length;
+
+            string lineaCategoria = descripcion.Substring(inicio, fin - inicio);
+            return lineaCategoria.Substring(prefijo.Length).Trim();
+        }
+
+        private string ObtenerCategoriaDeProyecto(Proyecto proyecto)
+        {
+            string? descripcion = proyecto.evento?.Descripcion;
+            if (string.IsNullOrWhiteSpace(descripcion))
+                return string.Empty;
+
+            string prefijo = PrefijoCategoriaProyecto;
+            int inicio = descripcion.IndexOf(prefijo, StringComparison.OrdinalIgnoreCase);
+            if (inicio < 0) return string.Empty;
+
+            int fin = descripcion.IndexOf('\n', inicio);
+            if (fin < 0) fin = descripcion.Length;
+
+            string lineaCategoria = descripcion.Substring(inicio, fin - inicio);
+            return lineaCategoria.Substring(prefijo.Length).Trim();
+        }
+
+        private string ConstruirParticipantesAdicionales(string categoria, IEnumerable<string> usernames)
+        {
+            var valores = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(categoria))
+                valores.Add($"{PrefijoCategoriaProyecto}{categoria.Trim()}");
+
+            valores.AddRange(usernames
+                .Select(u => u.Trim())
+                .Where(u => !string.IsNullOrWhiteSpace(u) && !u.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase)));
+
+            return string.Join(",", valores.Distinct(StringComparer.OrdinalIgnoreCase));
+        }
+
+        private bool UsuarioEsOrganizadorEnEvento(int idEvento)
+            => _organizadorRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == idEvento).Any();
+
+        private bool UsuarioEsEncargadoEnEvento(int idEvento)
+            => _encargadoRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == idEvento).Any();
 
         public void EliminarEvento(int idVotacion)
         {
@@ -652,7 +835,7 @@ namespace Votify.BusinessLogic.Service
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
 
             bool esOrganizador = UsuarioEsOrganizadorEnEvento(votacion.EventoId);
-            bool esEncargado = _encargadoRepository.GetWhere(e => e.UsuarioId == usuario!.Id && e.EventoId == votacion.EventoId).Any();
+            bool esEncargado = UsuarioEsEncargadoEnEvento(votacion.EventoId);
 
             if (!esOrganizador && !esEncargado)
                 throw new ServiceException("No tienes permisos para eliminar este evento");
@@ -665,229 +848,53 @@ namespace Votify.BusinessLogic.Service
             Commit();
         }
 
-        private Evento ObtenerEventoDeVotacionOFallar(Votacion votacion)
-        {
-            if (votacion.evento == null)
-                throw new ServiceException("La votación no está asociada a ningún evento");
-            return votacion.evento;
-        }
-
-        private bool UsuarioPuedeGestionarVotacion(Votacion votacion)
-            => UsuarioEsOrganizadorEnEvento(votacion.EventoId) || UsuarioEsEncargadoEnEvento(votacion.EventoId);
-
-        private bool UsuarioEsEncargadoEnEvento(int eventoId)
-            => _encargadoRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
-
-        private bool UsuarioEsOrganizadorEnEvento(int eventoId)
-            => _organizadorRepository.GetWhere(r => r.UsuarioId == usuario!.Id && r.EventoId == eventoId).Any();
-
-        private static string ObtenerCategoriaDeVotacion(Votacion votacion)
-            => votacion.Titulo?.Trim() ?? string.Empty;
-
-        private static string ObtenerCategoriaDeProyecto(Proyecto proyecto)
-        {
-            if (string.IsNullOrWhiteSpace(proyecto.ParticipantesAdicionales))
-                return string.Empty;
-
-            return proyecto.ParticipantesAdicionales
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Trim())
-                .FirstOrDefault(p => p.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase))?
-                .Substring(PrefijoCategoriaProyecto.Length)
-                .Trim()
-                ?? string.Empty;
-        }
-
-        private static IEnumerable<string> ObtenerParticipantesProyecto(string? participantesAdicionales)
-        {
-            if (string.IsNullOrWhiteSpace(participantesAdicionales))
-                return Enumerable.Empty<string>();
-
-            return participantesAdicionales
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p) && !p.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private static string ConstruirParticipantesAdicionales(string categoria, IEnumerable<string> participantes)
-        {
-            var valores = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(categoria))
-                valores.Add($"{PrefijoCategoriaProyecto}{categoria.Trim()}");
-
-            valores.AddRange(participantes
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p) && !p.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase)));
-
-            return string.Join(",", valores.Distinct(StringComparer.OrdinalIgnoreCase));
-        }
-
-        private static bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)
-        {
-            var categoriaProyecto = ObtenerCategoriaDeProyecto(proyecto);
-            if (string.IsNullOrWhiteSpace(categoriaProyecto))
-                return true;
-
-            return string.Equals(categoriaProyecto, ObtenerCategoriaDeVotacion(votacion), StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static (string Nombre, string? CriteriosCodificados) DescomponerCategoria(string categoria)
-        {
-            if (string.IsNullOrWhiteSpace(categoria))
-                return (string.Empty, null);
-
-            var valor = categoria.Trim();
-            int idx = valor.IndexOf(PrefijoCriteriosCategoria, StringComparison.Ordinal);
-            if (idx < 0)
-                return (valor, null);
-
-            string nombre = valor[..idx].Trim();
-            string metadata = valor[(idx + PrefijoCriteriosCategoria.Length)..].Trim();
-            return (nombre, string.IsNullOrWhiteSpace(metadata) ? null : metadata);
-        }
-
-        private static string ConstruirDescripcionVotacion(string descripcionVisible, string? criteriosCodificados)
-        {
-            string visible = descripcionVisible?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(criteriosCodificados))
-                return visible;
-
-            return string.IsNullOrWhiteSpace(visible)
-                ? $"{PrefijoCriteriosDescripcion}{criteriosCodificados}"
-                : $"{visible}{PrefijoCriteriosDescripcion}{criteriosCodificados}";
-        }
-
-        // ── Historial de eventos del usuario ────────────────────────────
-
         public HistorialEventosResultado GetHistorialDelUsuario()
         {
             RequireUsuarioLogueado();
             int uid = usuario!.Id;
 
-            var roles = _rolRepository.GetWhere(r => r.UsuarioId == uid).ToList();
-            var rolIdsUsuario = roles.Select(r => r.Id).ToHashSet();
-            var eventoIds = roles.Select(r => r.EventoId).Distinct().ToList();
+            var rolesUsuario = _rolRepository.GetWhere(r => r.UsuarioId == uid).ToList();
+            var eventoIds = rolesUsuario.Select(r => r.EventoId).Distinct().ToList();
+            var votosUsuario = _votoRepository.GetWhere(v => rolesUsuario.Select(r => r.Id).Contains(v.VotanteId)).ToList();
+            var eventos = _eventoRepository.GetWhere(e => eventoIds.Contains(e.IdEvento)).ToList();
+            var proyectos = _proyectoRepository.GetWhere(p => eventoIds.Contains(p.EventoId)).ToList();
 
-            if (!eventoIds.Any())
-                return new HistorialEventosResultado();
-
-            var eventos = _eventoRepository.GetWhere(e => eventoIds.Contains(e.IdEvento))
-                .OrderByDescending(e => e.FechaIni)
-                .ToList();
-
-            var votosUsuario = _votoRepository.GetWhere(v => rolIdsUsuario.Contains(v.VotanteId)).ToList();
-            int totalVotosEmitidos = votosUsuario.Count;
-
-            var items = new List<HistorialEventoItem>();
-            foreach (var evento in eventos)
+            var items = eventos.Select(e => new HistorialEventoItem
             {
-                var rolEnEvento = roles.FirstOrDefault(r => r.EventoId == evento.IdEvento);
-                var item = new HistorialEventoItem
-                {
-                    Evento = evento,
-                    TipoRol = rolEnEvento?.TipoRol
-                };
-
-                var proyectosEvento = _proyectoRepository.GetWhere(p => p.EventoId == evento.IdEvento).ToList();
-                item.TotalProyectos = proyectosEvento.Count;
-
-                Proyecto? proyectoDestacado = null;
-                if (rolEnEvento is Competidor)
-                {
-                    proyectoDestacado = proyectosEvento.FirstOrDefault(p => p.CompetidorId == rolEnEvento.Id);
-                }
-
-                var votosEnEvento = votosUsuario
-                    .Where(v => v.votacion?.EventoId == evento.IdEvento)
-                    .ToList();
-                item.Voto = votosEnEvento.Any();
-
-                if (proyectoDestacado == null && item.Voto)
-                {
-                    int idMejorVotado = votosEnEvento.OrderByDescending(v => v.Valor).First().ProyectoId;
-                    proyectoDestacado = proyectosEvento.FirstOrDefault(p => p.Id == idMejorVotado);
-                }
-
-                if (proyectoDestacado != null)
-                {
-                    item.ProyectoDestacado = proyectoDestacado;
-                    item.PosicionProyecto = CalcularPosicionProyecto(proyectoDestacado, proyectosEvento);
-                }
-
-                items.Add(item);
-            }
+                Evento = e,
+                TipoRol = rolesUsuario.FirstOrDefault(r => r.EventoId == e.IdEvento)?.TipoRol,
+                Voto = votosUsuario.Any(v => v.votacion != null ? v.votacion.EventoId == e.IdEvento : false),
+                ProyectoDestacado = proyectos.FirstOrDefault(p => p.EventoId == e.IdEvento && p.competidor?.UsuarioId == uid),
+                PosicionProyecto = null,
+                TotalProyectos = proyectos.Count(p => p.EventoId == e.IdEvento)
+            }).ToList();
 
             return new HistorialEventosResultado
             {
-                EventosParticipados = eventos.Count,
-                VotosEmitidos = totalVotosEmitidos,
+                EventosParticipados = items.Count,
+                VotosEmitidos = votosUsuario.Count,
                 Eventos = items
             };
         }
 
-        private int? CalcularPosicionProyecto(Proyecto proyecto, List<Proyecto> proyectosEvento)
-        {
-            if (!proyectosEvento.Any()) return null;
-
-            var votacionesEvento = _votacionRepository.GetWhere(v => v.EventoId == proyecto.EventoId).ToList();
-            if (!votacionesEvento.Any()) return null;
-
-            var votacionPrincipal = votacionesEvento.OrderByDescending(v => v.FechaFin).First();
-            var votosVotacion = _votoRepository.GetWhere(v => v.VotacionId == votacionPrincipal.Id).ToList();
-
-            var ranking = proyectosEvento
-                .Select(p =>
-                {
-                    var votosP = votosVotacion.Where(v => v.ProyectoId == p.Id).ToList();
-                    var votosJ = votosP.Where(ResultadosVotacionCalculator.EsVotoExperto).ToList();
-                    var votosPop = votosP.Where(ResultadosVotacionCalculator.EsVotoPopular).ToList();
-                    double? mediaJ = votosJ.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosJ) : null;
-                    double? mediaPop = votosPop.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPop) : null;
-                    double media = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(
-                        mediaJ, mediaPop, votacionPrincipal.PesoJurado, votacionPrincipal.PesoPublico);
-                    return new { p.Id, Media = media };
-                })
-                .OrderByDescending(x => x.Media)
-                .Select((x, i) => new { x.Id, Posicion = i + 1 })
-                .ToList();
-
-            return ranking.FirstOrDefault(x => x.Id == proyecto.Id)?.Posicion;
-        }
-
-        // ── Reclamaciones ───────────────────────────────────────────────
-
         public Reclamacion CrearReclamacion(int idEvento, string descripcion)
         {
             RequireUsuarioLogueado();
-
-            string descripcionLimpia = (descripcion ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(descripcionLimpia))
-                throw new ServiceException("La descripción de la reclamación no puede estar vacía");
-            if (descripcionLimpia.Length > 2000)
-                throw new ServiceException("La descripción no puede superar los 2000 caracteres");
-
-            Evento evento = _eventoRepository.GetById(idEvento);
+            var evento = _eventoRepository.GetById(idEvento);
             if (evento == null)
                 throw new ServiceException("El evento no existe");
 
-            Rol? rolEnEvento = BuscarRolEnEvento(idEvento);
-            if (rolEnEvento == null)
-                throw new ServiceException("Solo puedes reclamar en eventos en los que has participado");
-
-            int uid = usuario!.Id;
-            bool yaReclamado = _reclamacionRepository.GetWhere(r =>
-                r.EventoId == idEvento &&
-                r.UsuarioId == uid &&
-                r.Estado == Reclamacion.EstadoPendiente).Any();
-            if (yaReclamado)
-                throw new ServiceException("Ya tienes una reclamación pendiente para este evento");
-
-            Reclamacion reclamacion = new Reclamacion(idEvento, uid, descripcionLimpia)
+            var reclamacion = new Reclamacion
             {
+                EventoId = idEvento,
+                UsuarioId = usuario!.Id,
+                Descripcion = descripcion?.Trim() ?? string.Empty,
+                FechaCreacion = DateTime.Now,
+                Estado = Reclamacion.EstadoPendiente,
                 evento = evento,
-                usuario = usuario
+                usuario = usuario!
             };
+
             _reclamacionRepository.Insert(reclamacion);
             Commit();
             return reclamacion;
@@ -896,8 +903,7 @@ namespace Votify.BusinessLogic.Service
         public IEnumerable<Reclamacion> GetReclamacionesDelUsuario()
         {
             RequireUsuarioLogueado();
-            int uid = usuario!.Id;
-            return _reclamacionRepository.GetWhere(r => r.UsuarioId == uid)
+            return _reclamacionRepository.GetWhere(r => r.UsuarioId == usuario!.Id)
                 .OrderByDescending(r => r.FechaCreacion)
                 .ToList();
         }
@@ -905,14 +911,11 @@ namespace Votify.BusinessLogic.Service
         public IEnumerable<Reclamacion> GetReclamacionesComoOrganizador()
         {
             RequireUsuarioLogueado();
-            int uid = usuario!.Id;
-            var eventoIds = _organizadorRepository.GetWhere(o => o.UsuarioId == uid)
-                .Select(o => o.EventoId)
-                .Distinct()
+            var eventosOrganizados = _eventoRepository.GetWhere(e => e.OrganizadorId == usuario!.Id)
+                .Select(e => e.IdEvento)
                 .ToList();
-            if (!eventoIds.Any()) return Enumerable.Empty<Reclamacion>();
 
-            return _reclamacionRepository.GetWhere(r => eventoIds.Contains(r.EventoId))
+            return _reclamacionRepository.GetWhere(r => eventosOrganizados.Contains(r.EventoId))
                 .OrderByDescending(r => r.FechaCreacion)
                 .ToList();
         }
@@ -920,19 +923,16 @@ namespace Votify.BusinessLogic.Service
         public Reclamacion ResponderReclamacion(int idReclamacion, string estado, string? respuesta)
         {
             RequireUsuarioLogueado();
-            Reclamacion reclamacion = _reclamacionRepository.GetById(idReclamacion);
+            var reclamacion = _reclamacionRepository.GetById(idReclamacion);
             if (reclamacion == null)
                 throw new ServiceException("La reclamación no existe");
 
-            if (!UsuarioEsOrganizadorEnEvento(reclamacion.EventoId))
-                throw new ServiceException("No eres el organizador de este evento");
+            var evento = _eventoRepository.GetById(reclamacion.EventoId);
+            if (evento == null || evento.OrganizadorId != usuario!.Id)
+                throw new ServiceException("No tienes permisos para responder esta reclamación");
 
-            string estadoNormalizado = (estado ?? string.Empty).Trim().ToUpperInvariant();
-            if (estadoNormalizado != Reclamacion.EstadoResuelta && estadoNormalizado != Reclamacion.EstadoRechazada)
-                throw new ServiceException("Estado inválido. Debe ser RESUELTA o RECHAZADA");
-
-            reclamacion.Estado = estadoNormalizado;
-            reclamacion.RespuestaOrganizador = string.IsNullOrWhiteSpace(respuesta) ? null : respuesta!.Trim();
+            reclamacion.Estado = estado?.Trim().ToUpperInvariant() ?? Reclamacion.EstadoPendiente;
+            reclamacion.RespuestaOrganizador = respuesta?.Trim();
             reclamacion.FechaRespuesta = DateTime.Now;
             Commit();
             return reclamacion;

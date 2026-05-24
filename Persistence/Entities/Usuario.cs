@@ -18,6 +18,8 @@ namespace Votify.Entities
         //Relaciones
         public virtual ICollection<Rol> roles { get; set; }
         public virtual ICollection<Evento> eventos { get; set; }
+        public virtual ICollection<Notificacion> notificacionesRecibidas { get; set; }
+        public virtual ICollection<Notificacion> notificacionesEnviadas { get; set; }
         public virtual ICollection<String> notification { get; set; }
         public virtual ICollection<String> sentMessages { get; set; }
     }
