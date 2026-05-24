@@ -79,5 +79,6 @@ namespace Votify.BusinessLogic.Service
         IEnumerable<Notificacion> GetNotificacionesRecibidas();
         IEnumerable<Notificacion> GetNotificacionesEnviadas();
         int GetCantidadNotificacionesNoLeidas();
+        void MarcarNotificacionComoLeida(int idNotificacion);
     }
 }

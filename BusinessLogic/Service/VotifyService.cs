@@ -637,6 +637,26 @@ namespace Votify.BusinessLogic.Service
             return _notificacionRepository.GetWhere(n => n.DestinatarioId == usuario!.Id && !n.Leida).Count();
         }
 
+        public void MarcarNotificacionComoLeida(int idNotificacion)
+        {
+            RequireUsuarioLogueado();
+            if (_notificacionRepository == null)
+                throw new ServiceException("No hay notificaciones disponibles");
+
+            var notificacion = _notificacionRepository.GetById(idNotificacion);
+            if (notificacion == null)
+                throw new ServiceException("Notificación no encontrada");
+
+            if (notificacion.DestinatarioId != usuario!.Id)
+                throw new ServiceException("No puedes modificar esta notificación");
+
+            if (!notificacion.Leida)
+            {
+                notificacion.Leida = true;
+                Commit();
+            }
+        }
+
         private void CrearInvitacionesPorCorreo(Evento evento, CrearVotacionRequest request, string nombreEvento)
         {
             if (_notificacionRepository == null || usuario == null)

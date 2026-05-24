@@ -17,11 +17,11 @@
 
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-wrap gap-2 mb-6">
-            <button @onclick='() => vistaActiva = "recibidas"'
+            <button @onclick='() => CambiarVista("recibidas")'
                     class='px-5 py-2 rounded-xl font-medium text-sm transition-all @(vistaActiva == "recibidas" ? "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white shadow-md" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")'>
                 Recibidos
             </button>
-            <button @onclick='() => vistaActiva = "enviadas"'
+            <button @onclick='() => CambiarVista("enviadas")'
                     class='px-5 py-2 rounded-xl font-medium text-sm transition-all @(vistaActiva == "enviadas" ? "bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white shadow-md" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")'>
                 Enviados
             </button>
@@ -30,14 +30,21 @@
         @if (vistaActiva == "recibidas")
         {
             <div class="flex flex-wrap gap-2 mb-6">
-                <button @onclick='() => filtroRecibidas = "no-leidas"'
+                <button @onclick='() => CambiarFiltroRecibidas("no-leidas")'
                         class='px-4 py-2 rounded-xl font-medium text-sm transition-all @(filtroRecibidas == "no-leidas" ? "bg-[#6C8A6C] text-white shadow" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")'>
-                    No leídos
+                    No leídos <span class="ml-1 text-xs opacity-80">(@recibidas.Count(n => !n.Leida))</span>
                 </button>
-                <button @onclick='() => filtroRecibidas = "leidas"'
+                <button @onclick='() => CambiarFiltroRecibidas("leidas")'
                         class='px-4 py-2 rounded-xl font-medium text-sm transition-all @(filtroRecibidas == "leidas" ? "bg-[#6C8A6C] text-white shadow" : "bg-white text-[#6C8A6C] border border-[#B5D6AC] hover:bg-[#E9EFE1]")'>
-                    Leídos
+                    Leídos <span class="ml-1 text-xs opacity-80">(@recibidas.Count(n => n.Leida))</span>
                 </button>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(mensajeEstado))
+        {
+            <div class="mb-6 rounded-2xl border border-[#B5D6AC] bg-white/90 px-4 py-3 text-sm text-[#4C6B4F] shadow-sm">
+                @mensajeEstado
             </div>
         }
 
@@ -47,7 +54,7 @@
                 <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
             </div>
         }
-        else if (!notificacionesFiltradas.Any())
+        else if (!NotificacionesActuales.Any())
         {
             <div class="bg-white rounded-2xl shadow p-10 text-center text-[#6C8A6C]">
                 <p class="text-lg font-medium">No hay notificaciones en esta vista.</p>
@@ -55,50 +62,176 @@
         }
         else
         {
-            <div class="space-y-4">
-                @foreach (var notificacion in notificacionesFiltradas)
-                {
-                    <div class="bg-white rounded-2xl shadow-lg p-6 border border-[#B5D6AC]/30">
-                        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-3">
-                            <div>
-                                <h2 class="text-lg font-bold text-[#1A281B]">@notificacion.Asunto</h2>
-                                <p class="text-sm text-[#6C8A6C]">
-                                    @(vistaActiva == "recibidas" ? $"De: {notificacion.RemitenteUsername}" : $"Para: {notificacion.DestinatarioUsername}")
-                                </p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-[#A6AAA9]">@notificacion.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</p>
-                                @if (vistaActiva == "recibidas")
-                                {
-                                    <span class="inline-block mt-1 px-2 py-1 rounded-full text-xs font-bold @(notificacion.Leida ? "bg-[#E9EFE1] text-[#4C6B4F]" : "bg-amber-100 text-amber-700")">
-                                        @(notificacion.Leida ? "Leído" : "No leído")
-                                    </span>
-                                }
-                            </div>
-                        </div>
-                        <p class="text-[#4C6B4F] whitespace-pre-wrap">@notificacion.Mensaje</p>
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+                <section class="space-y-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <p class="text-sm font-medium text-[#4C6B4F]">
+                            Mostrando @NotificacionesVisibles.Count() de @NotificacionesActuales.Count() notificaciones
+                        </p>
+                        <p class="text-sm text-[#6C8A6C]">
+                            Página @PaginaActual de @TotalPaginas
+                        </p>
                     </div>
-                }
+
+                    <div class="space-y-4">
+                        @foreach (var notificacion in NotificacionesVisibles)
+                        {
+                            <article class="rounded-2xl border p-5 shadow-lg transition-all @(notificacionSeleccionadaId == notificacion.Id ? "border-[#6C8A6C] ring-2 ring-[#6C8A6C]/20 bg-[#F7FAF4]" : "border-[#B5D6AC]/30 bg-white")">
+                                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <h2 class="text-lg font-bold text-[#1A281B] truncate">@notificacion.Asunto</h2>
+                                            @if (vistaActiva == "recibidas")
+                                            {
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold @(notificacion.Leida ? "bg-[#E9EFE1] text-[#4C6B4F]" : "bg-amber-100 text-amber-700")">
+                                                    @(notificacion.Leida ? "Leído" : "No leído")
+                                                </span>
+                                            }
+                                        </div>
+                                        <p class="mt-1 text-sm text-[#6C8A6C]">
+                                            @(vistaActiva == "recibidas" ? $"De: {notificacion.RemitenteUsername}" : $"Para: {notificacion.DestinatarioUsername}")
+                                        </p>
+                                        <p class="mt-3 text-sm text-[#4C6B4F] line-clamp-2 whitespace-pre-wrap">@notificacion.Mensaje</p>
+                                        <p class="mt-3 text-xs text-[#A6AAA9]">@notificacion.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</p>
+                                    </div>
+
+                                    <div class="shrink-0 flex flex-col gap-2 md:items-end">
+                                        <button type="button"
+                                                @onclick='() => LeerMensajeAsync(notificacion)'
+                                                class="px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-[#6C8A6C] text-white hover:bg-[#4C6B4F] shadow">
+                                            @(vistaActiva == "recibidas" && !notificacion.Leida ? "Leer mensaje" : "Ver mensaje")
+                                        </button>
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3 pt-2">
+                        <button type="button"
+                                @onclick="() => CambiarPagina(-1)"
+                                disabled="@(PaginaActual == 1)"
+                                class="px-4 py-2 rounded-xl border text-sm font-medium transition-all @(PaginaActual == 1 ? "bg-white/60 text-[#A6AAA9] border-[#DDE4D4] cursor-not-allowed" : "bg-white text-[#6C8A6C] border-[#B5D6AC] hover:bg-[#E9EFE1]")">
+                            Anterior
+                        </button>
+                        <button type="button"
+                                @onclick="() => CambiarPagina(1)"
+                                disabled="@(PaginaActual == TotalPaginas)"
+                                class="px-4 py-2 rounded-xl border text-sm font-medium transition-all @(PaginaActual == TotalPaginas ? "bg-white/60 text-[#A6AAA9] border-[#DDE4D4] cursor-not-allowed" : "bg-white text-[#6C8A6C] border-[#B5D6AC] hover:bg-[#E9EFE1]")">
+                            Siguiente
+                        </button>
+                    </div>
+                </section>
+
+                <aside class="lg:sticky lg:top-6 self-start">
+                    @if (NotificacionSeleccionada is null)
+                    {
+                        <div class="bg-white rounded-2xl shadow-lg border border-[#B5D6AC]/30 p-6 text-center text-[#6C8A6C]">
+                            <p class="font-medium">Pulsa en <strong>Leer mensaje</strong> para abrir una notificación.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <article class="bg-white rounded-2xl shadow-xl border border-[#B5D6AC]/30 overflow-hidden">
+                            <div class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] px-6 py-5 text-white">
+                                <p class="text-xs uppercase tracking-[0.2em] opacity-80">Detalle de notificación</p>
+                                <h2 class="mt-1 text-2xl font-bold leading-tight">@NotificacionSeleccionada.Asunto</h2>
+                            </div>
+
+                            <div class="p-6 space-y-5">
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Remitente</p>
+                                        <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.RemitenteUsername</p>
+                                    </div>
+                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Destinatario</p>
+                                        <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.DestinatarioUsername</p>
+                                    </div>
+                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Fecha</p>
+                                        <p class="mt-1 font-semibold text-[#1A281B]">@NotificacionSeleccionada.FechaCreacion.ToString("dd/MM/yyyy")</p>
+                                        <p class="text-sm text-[#6C8A6C]">@NotificacionSeleccionada.FechaCreacion.ToString("HH:mm")</p>
+                                    </div>
+                                    <div class="rounded-2xl bg-[#F7FAF4] p-4 border border-[#E0EAD9]">
+                                        <p class="text-xs uppercase tracking-wide text-[#6C8A6C]">Estado</p>
+                                        <span class="inline-flex mt-2 items-center rounded-full px-3 py-1 text-xs font-bold @(NotificacionSeleccionada.Leida ? "bg-[#E9EFE1] text-[#4C6B4F]" : "bg-amber-100 text-amber-700")">
+                                            @(NotificacionSeleccionada.Leida ? "Leída" : "No leída")
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p class="text-sm font-semibold text-[#1A281B] mb-3">Mensaje</p>
+                                    <div class="rounded-2xl border border-[#E0EAD9] bg-[#FCFDFC] p-5 text-[#4C6B4F] leading-relaxed whitespace-pre-wrap">
+                                        @NotificacionSeleccionada.Mensaje
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </aside>
             </div>
         }
     </main>
 </div>
 
 @code {
+    private const int TamanoPagina = 10;
+
     private bool cargando = true;
+    private bool guardando = false;
     private string vistaActiva = "recibidas";
     private string filtroRecibidas = "no-leidas";
+    private string? mensajeEstado;
+    private int paginaRecibidasNoLeidas = 1;
+    private int paginaRecibidasLeidas = 1;
+    private int paginaEnviadas = 1;
+    private int? notificacionSeleccionadaId;
     private List<NotificacionDTO> recibidas = new();
     private List<NotificacionDTO> enviadas = new();
 
-    private IEnumerable<NotificacionDTO> notificacionesFiltradas =>
+    private List<NotificacionDTO> NotificacionesActuales =>
         vistaActiva == "enviadas"
             ? enviadas
             : filtroRecibidas == "leidas"
-                ? recibidas.Where(n => n.Leida)
-                : recibidas.Where(n => !n.Leida);
+                ? recibidas.Where(n => n.Leida).ToList()
+                : recibidas.Where(n => !n.Leida).ToList();
+
+    private IEnumerable<NotificacionDTO> NotificacionesVisibles =>
+        NotificacionesActuales
+            .Skip((PaginaActual - 1) * TamanoPagina)
+            .Take(TamanoPagina);
+
+    private int PaginaActual
+    {
+        get => vistaActiva == "enviadas"
+            ? paginaEnviadas
+            : filtroRecibidas == "leidas"
+                ? paginaRecibidasLeidas
+                : paginaRecibidasNoLeidas;
+        set
+        {
+            if (vistaActiva == "enviadas")
+                paginaEnviadas = value;
+            else if (filtroRecibidas == "leidas")
+                paginaRecibidasLeidas = value;
+            else
+                paginaRecibidasNoLeidas = value;
+        }
+    }
+
+    private int TotalPaginas => Math.Max(1, (int)Math.Ceiling(NotificacionesActuales.Count / (double)TamanoPagina));
+
+    private NotificacionDTO? NotificacionSeleccionada =>
+        RecopilarTodas().FirstOrDefault(n => n.Id == notificacionSeleccionadaId);
 
     protected override async Task OnInitializedAsync()
+    {
+        await CargarNotificacionesAsync();
+    }
+
+    private async Task CargarNotificacionesAsync()
     {
         try
         {
@@ -115,4 +248,75 @@
             cargando = false;
         }
     }
+
+    private void CambiarVista(string vista)
+    {
+        if (vistaActiva == vista)
+            return;
+
+        vistaActiva = vista;
+        mensajeEstado = null;
+        notificacionSeleccionadaId = null;
+    }
+
+    private void CambiarFiltroRecibidas(string filtro)
+    {
+        if (filtroRecibidas == filtro)
+            return;
+
+        filtroRecibidas = filtro;
+        mensajeEstado = null;
+        notificacionSeleccionadaId = null;
+        PaginaActual = 1;
+    }
+
+    private void CambiarPagina(int delta)
+    {
+        PaginaActual = Math.Clamp(PaginaActual + delta, 1, TotalPaginas);
+    }
+
+    private async Task LeerMensajeAsync(NotificacionDTO notificacion)
+    {
+        notificacionSeleccionadaId = notificacion.Id;
+        mensajeEstado = null;
+
+        if (vistaActiva == "recibidas" && !notificacion.Leida)
+        {
+            if (guardando)
+                return;
+
+            guardando = true;
+            try
+            {
+                var response = await Http.PutAsync($"/api/notificaciones/{notificacion.Id}/leida", null);
+                if (response.IsSuccessStatusCode)
+                {
+                    notificacion.Leida = true;
+                    mensajeEstado = "La notificación se marcó como leída.";
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    NavigationManager.NavigateTo("/login", forceLoad: true);
+                    return;
+                }
+                else
+                {
+                    mensajeEstado = "No se pudo marcar la notificación como leída.";
+                }
+            }
+            catch
+            {
+                mensajeEstado = "No se pudo marcar la notificación como leída.";
+            }
+            finally
+            {
+                guardando = false;
+            }
+        }
+    }
+
+    private IEnumerable<NotificacionDTO> RecopilarTodas() =>
+        recibidas.Concat(enviadas)
+            .GroupBy(n => n.Id)
+            .Select(g => g.First());
 }

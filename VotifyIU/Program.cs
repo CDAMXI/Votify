@@ -82,16 +82,6 @@ else
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 
-// Render (y la mayoría de PaaS) terminan SSL en su edge y pasan HTTP al contenedor.
-// Sin esto, app.UseHttpsRedirection generaría un loop infinito 301→301.
-app.UseForwardedHeaders(new Microsoft.AspNetCore.HttpOverrides.ForwardedHeadersOptions
-{
-    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
-                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
-    KnownNetworks = { },
-    KnownProxies = { }
-});
-
 if (!app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
@@ -347,6 +337,57 @@ app.MapGet("/api/perfil/historial", (IVotifyService service, HttpContext http) =
             }).ToList()
         };
         return Results.Ok(dto);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+// ── Endpoints de notificaciones ─────────────────────────────────
+
+app.MapGet("/api/notificaciones/recibidas", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var notificaciones = service.GetNotificacionesRecibidas()
+            .Select(n => MapNotificacion(n))
+            .ToList();
+        return Results.Ok(notificaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapGet("/api/notificaciones/enviadas", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var notificaciones = service.GetNotificacionesEnviadas()
+            .Select(n => MapNotificacion(n))
+            .ToList();
+        return Results.Ok(notificaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPut("/api/notificaciones/{id}/leida", (int id, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.MarcarNotificacionComoLeida(id);
+        return Results.Ok();
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
@@ -907,13 +948,13 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
         var votacion = votacionRepo.GetById(idVotacion);
         if (votacion == null) return Results.NotFound("Votación no encontrada");
 
-        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
-        var votanteIds = votos.Select(v => v.VotanteId).Distinct().ToHashSet();
+        var votes = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
+        var voterIds = votes.Select(v => v.VotanteId).Distinct().ToHashSet();
         var evento = votacion.evento;
 
-        var rolesVotantes = juradoRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>()
-            .Concat(publicoRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>())
-            .Concat(competidorRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>())
+        var rolesVotantes = juradoRepo.GetWhere(r => voterIds.Contains(r.Id)).Cast<Rol>()
+            .Concat(publicoRepo.GetWhere(r => voterIds.Contains(r.Id)).Cast<Rol>())
+            .Concat(competidorRepo.GetWhere(r => voterIds.Contains(r.Id)).Cast<Rol>())
             .GroupBy(r => r.Id).Select(g => g.First()).ToList();
         var userIds = rolesVotantes.Select(r => r.UsuarioId).Distinct().ToHashSet();
         var usuarios = usuarioRepo.GetAll().ToList().Where(u => userIds.Contains(u.Id)).ToList();
@@ -946,7 +987,7 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
                     {
                         Nombre = usuariosEsperados.TryGetValue(rol.UsuarioId, out var nombre) ? nombre : $"Usuario #{rol.UsuarioId}",
                         Tipo = ObtenerEtiquetaRolMonitor(rol.TipoRol),
-                        HaVotado = votanteIds.Contains(rol.Id)
+                        HaVotado = voterIds.Contains(rol.Id)
                     });
             }
             else
@@ -965,23 +1006,24 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
                 var allUsers = usuarioRepo.GetAll().ToList().Where(u => allUserIds.Contains(u.Id)).ToList();
                 var nameMap = allRoles.ToDictionary(r => r.Id, r => allUsers.FirstOrDefault(u => u.Id == r.UsuarioId)?.Username ?? $"#{r.Id}");
                 foreach (var j in jurados)
-                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(j.Id, out var n) ? n : $"Jurado #{j.Id}", Tipo = "Jurado", HaVotado = votanteIds.Contains(j.Id) });
+                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(j.Id, out var n) ? n : $"Jurado #{j.Id}", Tipo = "Jurado", HaVotado = voterIds.Contains(j.Id) });
                 foreach (var p in publicos)
-                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(p.Id, out var n) ? n : $"Público #{p.Id}", Tipo = "Público", HaVotado = votanteIds.Contains(p.Id) });
+                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(p.Id, out var n) ? n : $"Público #{p.Id}", Tipo = "Público", HaVotado = voterIds.Contains(p.Id) });
             }
         }
         catch { /* Ignorado por seguridad de la relación */ }
 
         var proyectos = (evento?.proyectos ?? Enumerable.Empty<Proyecto>())
-            .Where(p => ProyectoPerteneceAVotacion(p, votacion)).ToList();
-        var votosPorProyecto = votos.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
+            .Where(p => ProyectoPerteneceAVotacion(p, votacion))
+            .ToList();
+        var votosPorProyecto = votes.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
         int totalVotantesEsperados = todosVotantes.Count;
 
         var proyectoStats = proyectos
             .Select(p => BuildProjectMonitor(p, votosPorProyecto.TryGetValue(p.Id, out var vp) ? vp : new List<Voto>(), votacion, totalVotantesEsperados))
             .OrderByDescending(p => p.Media).ToList();
 
-        var historial = votos.OrderByDescending(v => v.Fecha).Select(v => new VotoHistorialDTO
+        var historial = votes.OrderByDescending(v => v.Fecha).Select(v => new VotoHistorialDTO
         {
             Votante = usernamePorRolId.TryGetValue(v.VotanteId, out var name) ? name : $"Votante #{v.VotanteId}",
             Proyecto = v.proyecto?.Nombre ?? $"Proyecto #{v.ProyectoId}",
@@ -992,7 +1034,7 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
 
         return Results.Ok(new MonitorVotacionDTO
         {
-            VotosEmitidos = votos.Count,
+            VotosEmitidos = votes.Count,
             TotalVotantes = todosVotantes.Count,
             PromedioGeneral = proyectoStats.Any(p => p.NumVotos > 0) ? Math.Round(proyectoStats.Where(p => p.NumVotos > 0).Average(p => p.Media), 2) : 0,
             PesoJurado = votacion.PesoJurado,
@@ -1289,6 +1331,20 @@ static bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)
     var catProyecto = ObtenerCategoriaDeParticipantes(proyecto.ParticipantesAdicionales);
     if (string.IsNullOrWhiteSpace(catProyecto)) return true; // sin marcador → pertenece a todas
     return string.Equals(catProyecto, votacion.Titulo?.Trim(), StringComparison.OrdinalIgnoreCase);
+}
+
+static NotificacionDTO MapNotificacion(Notificacion notificacion)
+{
+    return new NotificacionDTO
+    {
+        Id = notificacion.Id,
+        Asunto = notificacion.Asunto,
+        Mensaje = notificacion.Mensaje,
+        FechaCreacion = notificacion.FechaCreacion,
+        Leida = notificacion.Leida,
+        RemitenteUsername = notificacion.remitente?.Username ?? string.Empty,
+        DestinatarioUsername = notificacion.destinatario?.Username ?? string.Empty
+    };
 }
 
 static ReclamacionDTO MapReclamacion(Reclamacion reclamacion, string solicitante)
