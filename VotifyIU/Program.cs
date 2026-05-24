@@ -74,7 +74,22 @@ else
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+
+// Render (y la mayoría de PaaS) terminan SSL en su edge y pasan HTTP al contenedor.
+// Sin esto, app.UseHttpsRedirection generaría un loop infinito 301→301.
+app.UseForwardedHeaders(new Microsoft.AspNetCore.HttpOverrides.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
+    KnownNetworks = { },
+    KnownProxies = { }
+});
+
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseSession();
 app.UseAntiforgery();
 
