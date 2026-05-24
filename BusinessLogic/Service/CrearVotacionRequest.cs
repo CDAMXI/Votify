@@ -15,6 +15,8 @@ namespace Votify.BusinessLogic.Service
         public bool PermiteCompetidoresVotar { get; set; }
         public int PesoJurado { get; set; } = 70;
         public int PesoPublico { get; set; } = 30;
+        public string? CodigoEncargado { get; set; }
+        public string? CodigoJurado { get; set; }
         public List<string> Categorias { get; set; } = new();
     }
 }

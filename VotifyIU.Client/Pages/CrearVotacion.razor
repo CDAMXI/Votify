@@ -25,13 +25,6 @@
             <!-- Card único -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
 
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="mx-6 mt-6 p-3 bg-red-100 text-red-700 rounded-xl text-sm border border-red-200">
-                        ⚠️ @errorMessage
-                    </div>
-                }
-
                 <!-- ── Sección: Información del Evento ── -->
                 <div class="p-6 space-y-4">
                     <p class="text-xs font-semibold text-[#6C8A6C] uppercase tracking-wider">Información del Evento</p>
@@ -285,6 +278,13 @@
                     </button>
                 </div>
 
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="mx-6 mb-6 p-3 bg-red-100 text-red-700 rounded-xl text-sm border border-red-200">
+                        ⚠️ @errorMessage
+                    </div>
+                }
+
             </div>
 
         </EditForm>
@@ -458,6 +458,11 @@
     {
         errorMessage = string.Empty;
 
+        if (string.IsNullOrWhiteSpace(votacionDto.CodigoEncargado) || string.IsNullOrWhiteSpace(votacionDto.CodigoJurado))
+        {
+            errorMessage = "Los códigos de encargado y de jurado son obligatorios";
+            return;
+        }
         if (votacionDto.PesoJurado + votacionDto.PesoPublico != 100)
         {
             errorMessage = $"Los pesos de jurado y público deben sumar 100% (actualmente {votacionDto.PesoJurado + votacionDto.PesoPublico}%).";

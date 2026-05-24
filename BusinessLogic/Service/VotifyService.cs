@@ -247,6 +247,8 @@ namespace Votify.BusinessLogic.Service
                 FechaIni = fechaInicio,
                 FechaFin = request.FechaFin,
                 PermiteCompetidoresVotar = request.PermiteCompetidoresVotar,
+                codigoEncargado = request.CodigoEncargado?.Trim() ?? string.Empty,
+                codigoJurado = request.CodigoJurado?.Trim() ?? string.Empty,
                 organizador = usuario!,
                 OrganizadorId = usuario!.Id
             };
@@ -390,7 +392,7 @@ namespace Votify.BusinessLogic.Service
                 _votoRepository.GetWhere(v => v.VotanteId == rolId && v.VotacionId == vid).Any());
         }
 
-        public void AsignarRolEnEvento(string tipoRol, int idEvento)
+        public void AsignarRolEnEvento(string tipoRol, int idEvento, string? codigoAcceso = null)
         {
             RequireUsuarioLogueado();
 
@@ -404,6 +406,22 @@ namespace Votify.BusinessLogic.Service
 
             if (BuscarRolEnEvento(idEvento) != null)
                 throw new ServiceException("Ya tienes un rol asignado en este evento");
+
+            if (tipoRol == "JURADO")
+            {
+                var codigoEsperado = evento.codigoJurado?.Trim() ?? string.Empty;
+                var codigoIngresado = codigoAcceso?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(codigoEsperado) || !string.Equals(codigoEsperado, codigoIngresado, StringComparison.Ordinal))
+                    throw new ServiceException("Código de jurado incorrecto");
+            }
+
+            if (tipoRol == "ENCARGADO")
+            {
+                var codigoEsperado = evento.codigoEncargado?.Trim() ?? string.Empty;
+                var codigoIngresado = codigoAcceso?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(codigoEsperado) || !string.Equals(codigoEsperado, codigoIngresado, StringComparison.Ordinal))
+                    throw new ServiceException("Código de encargado incorrecto");
+            }
 
             Rol nuevoRol = RolFactory.Create(tipoRol, DateTime.Now, 0);
             nuevoRol.usuario = usuario!;

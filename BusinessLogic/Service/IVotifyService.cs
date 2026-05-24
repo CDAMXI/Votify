@@ -59,7 +59,7 @@ namespace Votify.BusinessLogic.Service
 
         // Roles
         Rol GetRolEnEvento(int idEvento);
-        void AsignarRolEnEvento(string tipoRol, int idEvento);
+        void AsignarRolEnEvento(string tipoRol, int idEvento, string? codigoAcceso = null);
         string? GetTipoRolEnEvento(int idEvento); 
         string? GetTipoRolDeUsuario(int idUsuario, int idEvento); 
 

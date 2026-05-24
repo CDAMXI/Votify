@@ -101,6 +101,8 @@ namespace Votify.Persistence
             modelBuilder.Entity<Evento>().Property(e => e.FechaIni).HasColumnName("fecha_inicio");
             modelBuilder.Entity<Evento>().Property(e => e.FechaFin).HasColumnName("fecha_fin");
             modelBuilder.Entity<Evento>().Property(e => e.PermiteCompetidoresVotar).HasColumnName("permite_competidores_votar");
+            modelBuilder.Entity<Evento>().Property(e => e.codigoJurado).HasColumnName("codigo_jurado");
+            modelBuilder.Entity<Evento>().Property(e => e.codigoEncargado).HasColumnName("codigo_encargado");
 
             modelBuilder.Entity<Evento>()
                 .HasRequired(e => e.organizador)

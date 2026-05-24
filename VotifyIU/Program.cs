@@ -405,6 +405,8 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
             PesoJurado = req.PesoJurado,
             PesoPublico = req.PesoPublico,
+            CodigoEncargado = req.CodigoEncargado,
+            CodigoJurado = req.CodigoJurado,
             Categorias = req.Categorias?
                 .Where(c => !string.IsNullOrWhiteSpace(c.Nombre))
                 .Select(ConstruirTokenCategoria)
@@ -581,7 +583,7 @@ app.MapPost("/api/eventos/{idEvento}/rol", (int idEvento, AsignarRolEventoReques
     try
     {
         service.RestoreSession(username);
-        service.AsignarRolEnEvento(req.TipoRol, idEvento);
+        service.AsignarRolEnEvento(req.TipoRol, idEvento, req.CodigoAcceso);
         return Results.Ok(new RolEventoResponse(idEvento, req.TipoRol.Trim().ToUpperInvariant()));
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -1353,7 +1355,7 @@ record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
-record AsignarRolEventoRequest(string TipoRol);
+record AsignarRolEventoRequest(string TipoRol, string? CodigoAcceso);
 record RolEventoResponse(int IdEvento, string? Rol);
 record AiChatRequest(List<AiChatTurn> History, string Message);
 record AiChatTurn(string Role, string Content);
