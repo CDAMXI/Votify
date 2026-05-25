@@ -20,7 +20,13 @@ namespace Votify.BusinessLogic.Service
         public int VotosEmitidos { get; set; }
         public List<HistorialEventoItem> Eventos { get; set; } = new();
     }
-
+    public class VotoUsuarioDetalle
+    {
+        public int ProyectoId { get; set; }
+        public double Puntuacion { get; set; }
+        public string Comentario { get; set; } = string.Empty;
+        public Dictionary<string, double> PuntuacionesCriterios { get; set; } = new();
+    }
     public interface IVotifyService
     {
         // Autenticación
@@ -42,8 +48,10 @@ namespace Votify.BusinessLogic.Service
 
         // Votos
         void GuardarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario);
+        void ModificarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario);
         bool HasVotadoEnEvento(int idEvento);
-        List<int> GetMisVotos(int idVotacion); 
+        Voto? GetMiVotoEnProyecto(int idVotacion, int idProyecto);
+        List<int> GetMisVotos(int idVotacion);        
         void Commit();
 
         // Votaciones

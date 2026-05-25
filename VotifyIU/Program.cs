@@ -589,7 +589,37 @@ app.MapPost("/api/votos/guardar", (GuardarVotoRequest req, IVotifyService servic
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 }).DisableAntiforgery();
+// --- Endpoint obtener voto del usuario en proyecto específico ---
+app.MapGet("/api/votos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
 
+    try
+    {
+        service.RestoreSession(username);
+        var voto = service.GetMiVotoEnProyecto(idVotacion, idProyecto);
+        if (voto == null) return Results.NotFound("No has votado en este proyecto todavía.");
+        return Results.Ok(new { voto.Id, voto.Valor, voto.Comentario, voto.Fecha });
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+//--- Endpoint modificar voto existente ---
+app.MapPut("/api/votos/{idVotacion}/{idProyecto}", (int idVotacion, int idProyecto, GuardarVotoRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.ModificarVoto(idVotacion, idProyecto, req.Puntuacion, req.Comentario);
+        return Results.Ok("Voto actualizado correctamente.");
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ex.Message); }
+});
 // ── Endpoint de proyectos ───────────────────────────────────────
 
 app.MapPost("/api/proyectos/{idVotacion}", (int idVotacion, CrearProyectoRequest req, IVotifyService service, HttpContext http) =>
@@ -1321,3 +1351,4 @@ record GuardarVotoRequest(int VotacionId, int ProyectoId, double Puntuacion, str
 record CrearProyectoRequest(string Nombre, string? Descripcion, string? UsernameCompetidor);
 record ModificarProyectoRequest(string Nombre, string? Descripcion, List<string>? ParticipantesAdicionales);
 record UpdateProyectoFotoRequest(string Base64Foto);
+

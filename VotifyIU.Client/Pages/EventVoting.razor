@@ -201,7 +201,6 @@
                                 <input type="range"
                                 min="0" max="10" step="0.5"
                                 value="@GetScore(criterion.Id)"
-                                disabled="@votedProjects.Contains(project.Id)"
                                 @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
                                 class="w-full h-2 bg-[#E9EFE1] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4" />
                                 <div class="flex justify-between text-xs text-[#A6AAA9]">
@@ -231,7 +230,7 @@
                     </div>
                     <button @onclick="AbrirConfirmacionVoto"
                             class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                        Enviar voto
+                        @(votedProjects.Contains(mockProjects[currentProjectIndex].Id) ? "Modificar voto" : "Enviar voto")
                     </button>
 
                     <div class="mt-4 flex items-center gap-3">
@@ -1522,13 +1521,21 @@
         }
         try
         {
-            var resp = await Http.PostAsJsonAsync("/api/votos/guardar", new
+            
+            bool esModificacion = votedProjects.Contains(currentProject.Id); 
+            
+            var payload = new
             {
                 VotacionId = votacionId,
-                ProyectoId = currentProject.DbId,
+                ProyectoId = currentProject.DbId,   
                 Puntuacion = CalculateTotalScoreDouble(),
                 Comentario = string.IsNullOrWhiteSpace(comments) ? (string?)null : comments
-            });
+            };
+            HttpResponseMessage resp;
+            if (esModificacion)
+                resp = await Http.PutAsJsonAsync($"/api/votos/{votacionId}/{currentProject.DbId}", payload);
+            else
+                resp = await Http.PostAsJsonAsync("/api/votos/guardar", payload);
             if (!resp.IsSuccessStatusCode)
             {
                 var msg = await resp.Content.ReadAsStringAsync();
@@ -1598,10 +1605,28 @@
         NavigationManager.NavigateTo("/dashboard");
     }
 
-    private void AbrirProyectoParaVotar(string proyectoId)
+    private async Task AbrirProyectoParaVotar(string proyectoId)
     {
         comments = "";
+        commentLength = 0;
         errorVoto = null;
+        var proj = mockProjects.FirstOrDefault(p => p.Id == proyectoId);
+        if (proj != null && votedProjects.Contains(proyectoId) && int.TryParse(EventId, out int votId))
+        {
+            try
+            {
+                var voto = await Http.GetFromJsonAsync<VotoExistenteDTO>($"/api/votos/{votId}/{proj.DbId}");
+                if (voto != null)
+                {
+                    comments = voto.Comentario ?? "";
+                    commentLength = comments.Length;
+                    // Distribuir la puntuación total entre los criterios (todos con igual score)
+                    foreach (var c in mockCriteria)
+                        scores[c.Id] = voto.Valor;
+                }
+            }
+            catch { }
+        }
         NavigationManager.NavigateTo($"/event-voting/{EventId}?Rol={Rol}&ProyectoId={proyectoId}");
     }
 
@@ -1666,13 +1691,20 @@
         }
         try
         {
-            var resp = await Http.PostAsJsonAsync("/api/votos/guardar", new
-            {
-                VotacionId = votacionId,
-                ProyectoId = proj.DbId,
-                Puntuacion = CalculateTotalScoreDouble(),
-                Comentario = string.IsNullOrWhiteSpace(comments) ? (string?)null : comments
-            });
+            bool esModificacion = votedProjects.Contains(proj.Id); 
+HttpResponseMessage resp;
+var payload = new
+{
+    VotacionId = votacionId,
+    ProyectoId = proj.DbId,
+    Puntuacion = CalculateTotalScoreDouble(),
+    Comentario = string.IsNullOrWhiteSpace(comments) ? (string?)null : comments
+};
+
+if (esModificacion)
+    resp = await Http.PutAsJsonAsync($"/api/votos/{votacionId}/{proj.DbId}", payload);
+else
+    resp = await Http.PostAsJsonAsync("/api/votos/guardar", payload);
             if (!resp.IsSuccessStatusCode)
             {
                 var msg = await resp.Content.ReadAsStringAsync();
