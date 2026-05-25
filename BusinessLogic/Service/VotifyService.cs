@@ -55,7 +55,21 @@ namespace Votify.BusinessLogic.Service
 
         public void LogIn(string username, string password)
         {
-            Usuario user = _usuarioRepository.GetWhere(u => u.Username == username).FirstOrDefault();
+            var identificador = (username ?? string.Empty).Trim();
+            var emailNormalizado = identificador.ToLowerInvariant();
+
+            Usuario user = _usuarioRepository.GetWhere(u => u.Username == identificador).FirstOrDefault();
+            if (user == null)
+            {
+                var usuariosPorEmail = _usuarioRepository
+                    .GetWhere(u => u.Email.ToLower() == emailNormalizado)
+                    .ToList();
+
+                if (usuariosPorEmail.Count > 1)
+                    throw new ServiceException("El correo esta asociado a mas de una cuenta");
+
+                user = usuariosPorEmail.FirstOrDefault();
+            }
             if (user == null || password != user.Password)
                 throw new ServiceException("Usuario o contraseña no válidos");
 
@@ -82,8 +96,14 @@ namespace Votify.BusinessLogic.Service
 
         public void Registrar(string username, string email, string password)
         {
-            username = username.Trim();
-            email = email.Trim().ToLowerInvariant();
+            username = (username ?? string.Empty).Trim();
+            email = NormalizarEmail(email);
+
+            if (string.IsNullOrWhiteSpace(username))
+                throw new ServiceException("El nombre de usuario no puede estar vacio");
+
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ServiceException("El correo no puede estar vacio");
 
             bool usuarioExistente = _usuarioRepository.GetWhere(u => u.Username == username).Any();
             if (usuarioExistente)
@@ -92,6 +112,8 @@ namespace Votify.BusinessLogic.Service
             bool emailExistente = _usuarioRepository.GetWhere(u => u.Email.ToLower() == email).Any();
             if (emailExistente)
                 throw new ServiceException("El correo ya está registrado");
+
+            ValidarPasswordSegura(password);
 
             _usuarioRepository.Insert(new Usuario(username, email, password, 0));
             Commit();
@@ -108,7 +130,18 @@ namespace Votify.BusinessLogic.Service
         public void UpdateEmail(string nuevoEmail)
         {
             RequireUsuarioLogueado();
-            usuario!.Email = nuevoEmail;
+            var email = NormalizarEmail(nuevoEmail);
+
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ServiceException("El correo no puede estar vacio");
+
+            bool emailExistente = _usuarioRepository
+                .GetWhere(u => u.Id != usuario!.Id && u.Email.ToLower() == email)
+                .Any();
+            if (emailExistente)
+                throw new ServiceException("El correo ya esta registrado");
+
+            usuario!.Email = email;
             Commit();
         }
 
@@ -118,6 +151,7 @@ namespace Votify.BusinessLogic.Service
             if (usuario!.Password != passwordActual)
                 throw new ServiceException("La contraseña actual no es correcta");
 
+            ValidarPasswordSegura(nuevaPassword);
             usuario.Password = nuevaPassword;
             Commit();
         }
@@ -131,6 +165,7 @@ namespace Votify.BusinessLogic.Service
 
         public string GeneratePasswordResetToken(string email)
         {
+            email = NormalizarEmail(email);
             Usuario user = _usuarioRepository.GetWhere(u => u.Email == email).FirstOrDefault();
             if (user == null)
                 throw new ServiceException("No existe ninguna cuenta con ese correo");
@@ -150,6 +185,7 @@ namespace Votify.BusinessLogic.Service
             if (user.ResetTokenExpiry < DateTime.UtcNow)
                 throw new ServiceException("El enlace ha expirado");
 
+            ValidarPasswordSegura(nuevaPassword);
             user.Password = nuevaPassword;
             user.ResetToken = null;
             user.ResetTokenExpiry = null;
@@ -1241,6 +1277,23 @@ namespace Votify.BusinessLogic.Service
             reclamacion.FechaRespuesta = DateTime.Now;
             Commit();
             return reclamacion;
+        }
+
+        private static string NormalizarEmail(string email)
+            => (email ?? string.Empty).Trim().ToLowerInvariant();
+
+        private static void ValidarPasswordSegura(string password)
+        {
+            var valor = password ?? string.Empty;
+
+            if (valor.Length < 8)
+                throw new ServiceException("La contrasena debe tener al menos 8 caracteres");
+
+            if (!valor.Any(char.IsLetter) || !valor.Any(char.IsDigit))
+                throw new ServiceException("La contrasena debe mezclar letras y numeros");
+
+            if (!valor.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c)))
+                throw new ServiceException("La contrasena debe incluir un caracter especial");
         }
     }
 }

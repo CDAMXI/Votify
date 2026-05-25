@@ -112,7 +112,8 @@ app.MapPost("/api/auth/login", (LoginRequest req, IVotifyService service, HttpCo
     try
     {
         service.LogIn(req.Username, req.Password);
-        http.Session.SetString(SessionConfig.UsernameKey, req.Username);
+        var usuario = service.GetUsuarioActual();
+        http.Session.SetString(SessionConfig.UsernameKey, usuario.Username);
         return Results.Ok();
     }
     catch (ServiceException)
@@ -1327,6 +1328,12 @@ app.MapGet("/api/tests/ut4162", () =>
 app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
 {
     var (ok, msg) = Votify.Tests.ComentariosPopularesIATest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut-gestion-datos-registro", () =>
+{
+    var (ok, msg) = Votify.Tests.GestionDatosRegistroTest.RunAll();
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 

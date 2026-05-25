@@ -32,11 +32,11 @@
                 <div class="space-y-2">
                     <label for="username" class="text-[#4C6B4F] flex items-center gap-2">
                         <Icon Name="user" CssClass="w-4 h-4 text-[#6C8A6C]" />
-                        Usuario
+                        Usuario o correo electrónico
                     </label>
                     <InputText id="username"
                                @bind-Value="loginDto.Username"
-                               placeholder="Ingresa tu usuario"
+                               placeholder="usuario o correo@ejemplo.com"
                                disabled="@isLoading"
                                required
                                class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
@@ -47,13 +47,23 @@
                         <Icon Name="lock" CssClass="w-4 h-4 text-[#6C8A6C]" />
                         Contraseña
                     </label>
-                    <InputText type="password"
+                    <div class="relative">
+                        <input type="@PasswordInputType"
                                id="password"
-                               @bind-Value="loginDto.Password"
+                               @bind="loginDto.Password"
                                placeholder="Ingresa tu contraseña"
                                disabled="@isLoading"
                                required
-                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                               class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 pr-11 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        <button type="button"
+                                title="@PasswordToggleTitle"
+                                aria-label="@PasswordToggleTitle"
+                                @onclick="TogglePasswordVisibility"
+                                disabled="@isLoading"
+                                class="absolute inset-y-0 right-2 w-8 flex items-center justify-center text-[#6C8A6C] hover:text-[#4C6B4F] disabled:opacity-50">
+                            <Icon Name="@PasswordToggleIcon" CssClass="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div class="text-right">
@@ -86,6 +96,16 @@
     private UserLoginDTO loginDto = new UserLoginDTO();
     private string errorMessage = string.Empty;
     private bool isLoading = false;
+    private bool mostrarPassword = false;
+
+    private string PasswordInputType => mostrarPassword ? "text" : "password";
+    private string PasswordToggleIcon => mostrarPassword ? "eye-off" : "eye";
+    private string PasswordToggleTitle => mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña";
+
+    private void TogglePasswordVisibility()
+    {
+        mostrarPassword = !mostrarPassword;
+    }
 
     private async Task HandleSubmit()
     {

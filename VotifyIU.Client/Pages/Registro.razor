@@ -67,8 +67,31 @@
                         <Icon Name="lock" CssClass="w-4 h-4 text-[#6C8A6C]" />
                         Contraseña
                     </label>
-                    <InputText id="password" type="password" @bind-Value="registerDto.Password" placeholder="Crea una contraseña segura" required
-                               class="w-full flex h-10 px-3 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                    <div class="relative">
+                        <input id="password" type="@PasswordInputType" @bind="registerDto.Password" @bind:event="oninput" placeholder="Crea una contraseña segura" required
+                               class="w-full flex h-10 px-3 pr-11 py-2 text-sm bg-[#E9EFE1] border border-[#B5D6AC] rounded-md focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        <button type="button"
+                                title="@PasswordToggleTitle"
+                                aria-label="@PasswordToggleTitle"
+                                @onclick="TogglePasswordVisibility"
+                                class="absolute inset-y-0 right-2 w-8 flex items-center justify-center text-[#6C8A6C] hover:text-[#4C6B4F]">
+                            <Icon Name="@PasswordToggleIcon" CssClass="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div class="rounded-md border border-[#B5D6AC] bg-[#F5F8F2] px-3 py-2 text-sm space-y-1">
+                        <div class="@GetPasswordRuleClass(TieneLongitudMinima)">
+                            <Icon Name="check" CssClass="w-4 h-4" />
+                            <span>Minimo 8 caracteres</span>
+                        </div>
+                        <div class="@GetPasswordRuleClass(TieneLetrasYNumeros)">
+                            <Icon Name="check" CssClass="w-4 h-4" />
+                            <span>Letras y numeros</span>
+                        </div>
+                        <div class="@GetPasswordRuleClass(TieneCaracterEspecial)">
+                            <Icon Name="check" CssClass="w-4 h-4" />
+                            <span>Caracter especial</span>
+                        </div>
+                    </div>
                 </div>
 
                 @if (!string.IsNullOrEmpty(errorMessage))
@@ -101,6 +124,18 @@
     private string? profileImagePreview;
     private string errorMessage = string.Empty;
     private bool isLoading = false;
+    private bool mostrarPassword = false;
+
+    private string PasswordInputType => mostrarPassword ? "text" : "password";
+    private string PasswordToggleIcon => mostrarPassword ? "eye-off" : "eye";
+    private string PasswordToggleTitle => mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña";
+    private bool TieneLongitudMinima => registerDto.Password?.Length >= 8;
+    private bool TieneLetrasYNumeros => !string.IsNullOrEmpty(registerDto.Password)
+        && registerDto.Password.Any(char.IsLetter)
+        && registerDto.Password.Any(char.IsDigit);
+    private bool TieneCaracterEspecial => !string.IsNullOrEmpty(registerDto.Password)
+        && registerDto.Password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
+    private bool PasswordEsSegura => TieneLongitudMinima && TieneLetrasYNumeros && TieneCaracterEspecial;
 
     private async Task HandleImageChange(InputFileChangeEventArgs e)
     {
@@ -117,6 +152,12 @@
 
     private async Task HandleSubmit()
     {
+        if (!PasswordEsSegura)
+        {
+            errorMessage = "La contraseña no cumple todos los requisitos.";
+            return;
+        }
+
         isLoading = true;
         errorMessage = string.Empty;
 
@@ -149,6 +190,16 @@
             isLoading = false;
         }
     }
+
+    private void TogglePasswordVisibility()
+    {
+        mostrarPassword = !mostrarPassword;
+    }
+
+    private static string GetPasswordRuleClass(bool cumplido)
+        => cumplido
+            ? "flex items-center gap-2 text-[#4C6B4F] font-medium"
+            : "flex items-center gap-2 text-[#A6AAA9]";
 
     // Este DTO debería ir en tu proyecto Shared
     public class RegisterRequestDTO

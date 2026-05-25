@@ -258,8 +258,8 @@
                             Date = fechaEvento.ToString("dd/MM/yyyy"),
                             FechaOrden = fechaEvento,
                             Status = hayActiva ? "active" : hayPendiente ? "paused" : "finished",
-                            Participants = 0,
-                            Projects = 0,
+                            Participants = resumen?.ParticipantsCount ?? 0,
+                            Projects = resumen?.ProjectsCount ?? 0,
                             RolActual = primera.RolActual,
                             Categories = ObtenerCategoriasDelEvento(g)
                         };
