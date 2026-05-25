@@ -8,9 +8,13 @@
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 relative flex items-center">
-            <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-            <h1 class="absolute left-1/2 -translate-x-1/2 text-3xl font-bold text-[#1A281B]">Crear Nuevo Evento</h1>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-3 items-center">
+            <div></div>
+            <div class="flex items-center justify-center gap-4">
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+                <h1 class="text-3xl font-bold text-[#1A281B]">Crear Nuevo Evento</h1>
+            </div>
+            <div></div>
         </div>
     </header>
 
@@ -20,13 +24,6 @@
 
             <!-- Card único -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="mx-6 mt-6 p-3 bg-red-100 text-red-700 rounded-xl text-sm border border-red-200">
-                        ⚠️ @errorMessage
-                    </div>
-                }
 
                 <!-- ── Sección: Información del Evento ── -->
                 <div class="p-6 space-y-4">
@@ -57,9 +54,10 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label class="text-sm font-medium text-[#4C6B4F]">Fecha de inicio</label>
-                            <InputDate @bind-Value:get="votacionDto.FechaIni"
-                                       @bind-Value:set="OnFechaIniChanged"
-                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            <FlatpickrInput @bind-Value:get="votacionDto.FechaIni"
+                                            @bind-Value:set="OnFechaIniChanged"
+                                            MinDate="DateTime.Today"
+                                            CssClass="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] cursor-pointer" />
                             @if (!string.IsNullOrEmpty(errorFechaIni))
                             {
                                 <p class="text-xs text-[#A04040]">@errorFechaIni</p>
@@ -67,9 +65,10 @@
                         </div>
                         <div class="space-y-1">
                             <label class="text-sm font-medium text-[#4C6B4F]">Fecha de fin</label>
-                            <InputDate @bind-Value:get="votacionDto.FechaFin"
-                                       @bind-Value:set="OnFechaFinChanged"
-                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            <FlatpickrInput @bind-Value:get="votacionDto.FechaFin"
+                                            @bind-Value:set="OnFechaFinChanged"
+                                            MinDate="DateTime.Today"
+                                            CssClass="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] cursor-pointer" />
                             @if (!string.IsNullOrEmpty(errorFechaFin))
                             {
                                 <p class="text-xs text-[#A04040]">@errorFechaFin</p>
@@ -265,6 +264,27 @@
                                    class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm font-mono focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
                         </div>
                     </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Correos de encargados</label>
+                            <textarea value="@correosEncargadosTexto"
+                                      @oninput="e => correosEncargadosTexto = e.Value?.ToString() ?? string.Empty"
+                                      placeholder="Un correo por línea o separados por comas"
+                                      disabled="@isLoading"
+                                      rows="4"
+                                      class="w-full rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] resize-none"></textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-sm font-medium text-[#4C6B4F]">Correos de jurados</label>
+                            <textarea value="@correosJuradosTexto"
+                                      @oninput="e => correosJuradosTexto = e.Value?.ToString() ?? string.Empty"
+                                      placeholder="Un correo por línea o separados por comas"
+                                      disabled="@isLoading"
+                                      rows="4"
+                                      class="w-full rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 py-2 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] resize-none"></textarea>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ── Footer del card: botones ── -->
@@ -278,6 +298,13 @@
                         Crear Evento
                     </button>
                 </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="mx-6 mb-6 p-3 bg-red-100 text-red-700 rounded-xl text-sm border border-red-200">
+                        ⚠️ @errorMessage
+                    </div>
+                }
 
             </div>
 
@@ -301,6 +328,8 @@
     private int descripcionLength = 0;
     private string errorFechaIni = string.Empty;
     private string errorFechaFin = string.Empty;
+    private string correosEncargadosTexto = string.Empty;
+    private string correosJuradosTexto = string.Empty;
 
     private bool mostrarInputPersonalizada = false;
     private string nuevaCategoriaNombre = "";
@@ -448,7 +477,14 @@
     private async Task HandleSubmit()
     {
         errorMessage = string.Empty;
+        votacionDto.CorreosEncargados = ParseCorreos(correosEncargadosTexto);
+        votacionDto.CorreosJurados = ParseCorreos(correosJuradosTexto);
 
+        if (string.IsNullOrWhiteSpace(votacionDto.CodigoEncargado) || string.IsNullOrWhiteSpace(votacionDto.CodigoJurado))
+        {
+            errorMessage = "Los códigos de encargado y de jurado son obligatorios";
+            return;
+        }
         if (votacionDto.PesoJurado + votacionDto.PesoPublico != 100)
         {
             errorMessage = $"Los pesos de jurado y público deben sumar 100% (actualmente {votacionDto.PesoJurado + votacionDto.PesoPublico}%).";
@@ -474,4 +510,12 @@
             errorMessage = "Error de conexión con el servidor.";
         }
     }
+
+    private static List<string> ParseCorreos(string raw)
+        => (raw ?? string.Empty)
+            .Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(c => c.Trim())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 }

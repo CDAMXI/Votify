@@ -67,7 +67,7 @@ namespace Votify.BusinessLogic.Service
 
         // Roles
         Rol GetRolEnEvento(int idEvento);
-        void AsignarRolEnEvento(string tipoRol, int idEvento);
+        void AsignarRolEnEvento(string tipoRol, int idEvento, string? codigoAcceso = null);
         string? GetTipoRolEnEvento(int idEvento); 
         string? GetTipoRolDeUsuario(int idUsuario, int idEvento); 
 
@@ -75,10 +75,6 @@ namespace Votify.BusinessLogic.Service
         Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string? usernameCompetidor = null); 
         void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales); 
         void EliminarProyecto(int idProyecto); 
-        // Proyectos
-        //Proyecto CrearProyecto(int idVotacion, string nombre, string? descripcion, string usernameCompetidor);
-        //void ModificarProyecto(int idProyecto, string nombre, string? descripcion, List<string>? participantesAdicionales);
-        //void EliminarProyecto(int idProyecto);
 
         // Historial y reclamaciones
         HistorialEventosResultado GetHistorialDelUsuario();
@@ -86,5 +82,13 @@ namespace Votify.BusinessLogic.Service
         IEnumerable<Reclamacion> GetReclamacionesDelUsuario();
         IEnumerable<Reclamacion> GetReclamacionesComoOrganizador();
         Reclamacion ResponderReclamacion(int idReclamacion, string estado, string? respuesta);
+
+        // Notificaciones
+        IEnumerable<Notificacion> GetNotificacionesRecibidas();
+        IEnumerable<Notificacion> GetNotificacionesEnviadas();
+        int GetCantidadNotificacionesNoLeidas();
+        void MarcarNotificacionComoLeida(int idNotificacion);
+        void EnviarMensajeOrganizadorEnEvento(int idEvento, string asunto, string mensaje);
+        void InvitarUsuarioEnEventoPorEmail(int idEvento, string email, string tipoRol);
     }
 }

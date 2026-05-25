@@ -7,6 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject INavigationHistoryService Historial
 <style>
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -15,18 +16,20 @@
 </style>
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-                    <h1 class="text-xl font-bold text-[#1A281B]">HackUPC 2026</h1>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-3 items-center">
+            <div></div>
+            <div class="flex items-center justify-center gap-4">
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+                <div class="text-center">
+                    <h1 class="text-xl font-bold text-[#1A281B]">Evento: @NombreEventoActual</h1>
+                    <p class="text-sm font-medium text-[#6C8A6C]">Votación: @NombreVotacionActual</p>
                 </div>
-                <div class="flex items-center gap-2 text-[#4C6B4F]">
-                    @if (EstaEnVistaDetalle)
-                    {
-                        <span class="font-medium">Proyecto @(currentProjectIndex + 1) de @mockProjects.Count</span>
-                    }
-                </div>
+            </div>
+            <div class="flex justify-end items-center gap-2 text-[#4C6B4F]">
+                @if (EstaEnVistaDetalle)
+                {
+                    <span class="font-medium">Proyecto @(currentProjectIndex + 1) de @mockProjects.Count</span>
+                }
             </div>
         </div>
     </header>
@@ -43,9 +46,9 @@
                 <div class="text-5xl mb-4">📋</div>
                 <p class="text-xl font-bold text-[#1A281B] mb-2">Sin proyectos disponibles</p>
                 <p class="text-[#6C8A6C]">@avisoSinDatos</p>
-                <a href="/dashboard" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
+                <button type="button" @onclick="VolverAtras" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
                     Volver
-                </a>
+                </button>
             </div>
         }
 
@@ -57,9 +60,9 @@
                 <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
                     <p class="text-2xl font-bold text-[#1A281B] mb-2">Ya has votado en este evento</p>
                     <p class="text-[#6C8A6C]">Tu evaluación ya fue registrada. No puedes volver a votar.</p>
-                    <a href="/dashboard" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
+                    <button type="button" @onclick="VolverAtras" class="mt-6 inline-block bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold">
                         Volver
-                    </a>
+                    </button>
                 </div>
             }
             else if (!EstaEnVistaDetalle)
@@ -96,18 +99,16 @@
                             {
                                 bool yaVotado = votedProjects.Contains(proyectoLista.Id);
                                 <button @onclick="() => AbrirProyectoParaVotar(proyectoLista.Id)"
-                                        class="text-left bg-[#F8FAF7] border border-[#B5D6AC]/40 rounded-xl p-5 hover:shadow-md hover:border-[#6C8A6C] transition-all">
-                                    <div class="flex items-start justify-between mb-2">
-                                        <h3 class="text-lg font-bold text-[#1A281B] pr-2">@proyectoLista.Name</h3>
-                                        @if (yaVotado)
-                                        {
-                                            <span class="flex-shrink-0 text-xs font-bold text-white bg-[#70D939] px-2 py-1 rounded-full">★ Votado</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="flex-shrink-0 text-xs font-bold text-[#6C8A6C] bg-white border border-[#B5D6AC] px-2 py-1 rounded-full">Sin votar</span>
-                                        }
-                                    </div>
+                                        class="relative text-left bg-[#F8FAF7] border border-[#B5D6AC]/40 rounded-xl p-5 hover:shadow-md hover:border-[#6C8A6C] transition-all">
+                                    @if (yaVotado)
+                                    {
+                                        <span class="absolute top-3 right-3 text-xs font-bold text-white bg-[#6C8A6C] px-2 py-1 rounded-full">★ Votado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="absolute top-3 right-3 text-xs font-bold text-[#6C8A6C] bg-white border border-[#B5D6AC] px-2 py-1 rounded-full">Sin votar</span>
+                                    }
+                                    <h3 class="text-lg font-bold text-[#1A281B] mb-2 pr-24">@proyectoLista.Name</h3>
                                     <p class="text-sm text-[#6C8A6C] mb-2">Equipo: @proyectoLista.Team</p>
                                     <span class="inline-block px-2 py-1 bg-[#E9EFE1] text-[#4C6B4F] rounded-full text-xs">
                                         @proyectoLista.Category
@@ -157,20 +158,28 @@
                                 </div>
                             }
                         </div>
-                        <p class="text-[#4C6B4F] leading-relaxed">@project.Description</p>
+                        <p class="text-[#4C6B4F] leading-relaxed">@(string.IsNullOrWhiteSpace(project.Description) ? "El proyecto no tiene descripción." : project.Description)</p>
                     </div>
                     <div class="space-y-6 mb-6">
-                        <h3 class="text-xl font-bold text-[#1A281B]">Criterios de Evaluación</h3>
+                        <h3 class="text-xl font-bold text-[#1A281B] flex items-center gap-2">
+                            <Icon Name="star" CssClass="w-5 h-5 text-[#6C8A6C]" />
+                            Criterios de Evaluación
+                        </h3>
                         @foreach (var criterion in mockCriteria)
                         {
                             <div class="bg-[#EFEFEE] rounded-xl p-6">
                                 <div class="flex items-center justify-between mb-3">
-                                    <div class="flex-1">
-                                        <label class="text-[#1A281B] text-base font-bold">
-                                            @criterion.Name
-                                            <span class="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
-                                        </label>
-                                        <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
+                                    <div class="flex-1 flex items-start gap-3">
+                                        <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-[#6C8A6C]/15 flex items-center justify-center text-[#4C6B4F]">
+                                            <Icon Name="@IconoParaCriterio(criterion.Name)" CssClass="w-5 h-5" />
+                                        </div>
+                                        <div class="flex-1">
+                                            <label class="text-[#1A281B] text-base font-bold">
+                                                @criterion.Name
+                                                <span class="text-[#6C8A6C] ml-2 text-sm font-normal">(Peso: @criterion.Weight%)</span>
+                                            </label>
+                                            <p class="text-sm text-[#6C8A6C] mt-1">@criterion.Description</p>
+                                        </div>
                                     </div>
                                     <div class="ml-4 text-right">
                                         @if (editingCriteria.Contains(criterion.Id))
@@ -285,17 +294,29 @@
 
                 @if (mostrandoExitoVoto)
                 {
+                    var proyectoVotado = mockProjects[currentProjectIndex];
                     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full text-center p-8">
-                            <div class="w-16 h-16 rounded-full bg-[#E9EFE1] flex items-center justify-center mx-auto mb-4">
-                                <span class="text-4xl">✅</span>
+                            <div class="w-24 h-24 rounded-full bg-[#70D939] flex items-center justify-center mx-auto mb-6 shadow-lg">
+                                <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
                             </div>
-                            <h3 class="text-xl font-bold text-[#1A281B] mb-2">Voto registrado</h3>
-                            <p class="text-[#6C8A6C] mb-6">Tu evaluación se ha guardado correctamente.</p>
+                            <h3 class="text-3xl font-bold text-[#1A281B] mb-3">¡Voto Registrado!</h3>
+                            <p class="text-[#6C8A6C] mb-1">
+                                Tu voto para <span class="font-bold text-[#1A281B]">@proyectoVotado.Name</span> ha sido registrado exitosamente.
+                            </p>
+                            <p class="text-[#6C8A6C] mb-6">
+                                Puntuación total: <span class="font-bold">@CalculateTotalScore()/10</span>
+                            </p>
                             <button @onclick="CerrarExitoYContinuar"
-                                    class="w-full px-4 py-3 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold hover:opacity-90">
-                                Continuar
+                                    class="w-full px-4 py-4 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white rounded-xl font-bold hover:opacity-90 flex items-center justify-center gap-2">
+                                Continuar al Siguiente Proyecto
+                                <span class="text-xl leading-none">›</span>
                             </button>
+                            <p class="text-sm text-[#A6AAA9] mt-4">
+                                Progreso: @votedProjects.Count/@mockProjects.Count proyectos evaluados
+                            </p>
                         </div>
                     </div>
                 }
@@ -349,10 +370,10 @@
                                         class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
                                     @(creandoProyectoCompetidor ? "Guardando..." : "Presentar proyecto")
                                 </button>
-                                <a href="/dashboard"
-                                   class="px-6 py-3 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#F8FAF7] transition-colors text-center">
+                                <button type="button" @onclick="VolverAtras"
+                                        class="px-6 py-3 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#F8FAF7] transition-colors text-center">
                                     Volver
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -367,7 +388,7 @@
                         <p class="text-xl font-bold text-[#4C6B4F]">@myProj!.Name</p>
                         <p class="text-sm text-[#6C8A6C]">Equipo: @myProj.Team</p>
                         <span class="inline-block mt-2 px-3 py-1 bg-white text-[#4C6B4F] rounded-full text-xs font-bold">@myProj.Category</span>
-                        <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@myProj.Description</p>
+                        <p class="text-sm text-[#4C6B4F] mt-3 leading-relaxed">@(string.IsNullOrWhiteSpace(myProj.Description) ? "El proyecto no tiene descripción." : myProj.Description)</p>
 
                         <div class="mt-4">
                             <h4 class="text-sm font-bold text-[#1A281B] mb-2">Contenido del proyecto</h4>
@@ -474,8 +495,11 @@
             <!-- Eliminar evento -->
             <div class="flex justify-end mb-4">
                 <button @onclick="() => mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento"
-                        class="border border-red-400 text-red-500 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
-                    🗑 Eliminar evento
+                        class="inline-flex items-center gap-2 border border-red-400 text-red-600 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                    </svg>
+                    Eliminar evento
                 </button>
             </div>
             @if (mostrarConfirmEliminarEvento)
@@ -925,6 +949,29 @@
     private string busquedaParticipante = "";
     private string editParticipanteLeader = "";
     private string CategoriaActual => votacionActual?.Titulo ?? "esta categoría";
+    private string NombreEventoActual => !string.IsNullOrWhiteSpace(votacionActual?.NombreEvento)
+        ? votacionActual.NombreEvento
+        : "";
+    private string NombreVotacionActual => !string.IsNullOrWhiteSpace(votacionActual?.Titulo)
+        ? votacionActual.Titulo
+        : "";
+
+    private void VolverAtras()
+    {
+        var destino = Historial.Pop() ?? "/dashboard";
+        Historial.SuprimirProximoPush();
+        NavigationManager.NavigateTo(destino);
+    }
+
+    private static string IconoParaCriterio(string? nombre)
+    {
+        var n = (nombre ?? string.Empty).ToLowerInvariant();
+        if (n.Contains("innov") || n.Contains("crea") || n.Contains("origin")) return "lightbulb";
+        if (n.Contains("viab") || n.Contains("técnic") || n.Contains("tecnic") || n.Contains("factib") || n.Contains("implement")) return "cog";
+        if (n.Contains("impact") || n.Contains("social")) return "heart";
+        if (n.Contains("present") || n.Contains("expos") || n.Contains("comuni") || n.Contains("calidad")) return "microphone";
+        return "star";
+    }
 
     protected override async Task OnInitializedAsync()
     {

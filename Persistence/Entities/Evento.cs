@@ -16,7 +16,9 @@ namespace Votify.Entities
         public DateTime FechaFin { get; set; }
         public string Descripcion { get; set; }
         public bool PermiteCompetidoresVotar { get; set; }
-        
+        public String codigoJurado { get; set; }
+        public String codigoEncargado { get; set; }
+
 
 
         //Relaciones

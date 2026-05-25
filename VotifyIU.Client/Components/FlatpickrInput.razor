@@ -1,0 +1,78 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<input @ref="_inputRef" type="text" readonly
+       value="@MostrarValor()"
+       placeholder="dd/mm/aaaa"
+       disabled="@Disabled"
+       class="@CssClass" />
+
+@code {
+    [Parameter] public DateTime Value { get; set; }
+    [Parameter] public EventCallback<DateTime> ValueChanged { get; set; }
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public DateTime? MinDate { get; set; }
+
+    private ElementReference _inputRef;
+    private DotNetObjectReference<FlatpickrInput>? _dotNetRef;
+    private IJSObjectReference? _fpInstance;
+    private DateTime _ultimoValorAplicado;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            var initialIso = ValorInicialIso();
+            var minIso = MinDate?.ToString("yyyy-MM-dd");
+            _fpInstance = await JS.InvokeAsync<IJSObjectReference>(
+                "votifyFlatpickr.init", _inputRef, _dotNetRef, initialIso, minIso);
+            _ultimoValorAplicado = Value;
+        }
+        else if (_fpInstance is not null && Value != _ultimoValorAplicado)
+        {
+            // Sincroniza el picker cuando el bind externo cambia el valor (ej. OnFechaIniChanged
+            // copia FechaIni a FechaFin: necesitamos refrescar el segundo picker).
+            await JS.InvokeVoidAsync("votifyFlatpickr.setDate", _fpInstance, ValorInicialIso());
+            _ultimoValorAplicado = Value;
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnFechaSeleccionada(string? isoDate)
+    {
+        if (string.IsNullOrWhiteSpace(isoDate)) return;
+        // El JS envía "yyyy-MM-dd" en zona local — parseo exacto sin sorpresas de zona horaria.
+        if (!DateTime.TryParseExact(isoDate, "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var fecha))
+            return;
+
+        _ultimoValorAplicado = fecha;
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(fecha);
+        else
+            Value = fecha;
+    }
+
+    private string? ValorInicialIso() =>
+        Value == default ? null : Value.ToString("yyyy-MM-dd");
+
+    private string MostrarValor() =>
+        Value == default ? string.Empty : Value.ToString("dd/MM/yyyy");
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_fpInstance is not null)
+            {
+                await JS.InvokeVoidAsync("votifyFlatpickr.destroy", _fpInstance);
+                await _fpInstance.DisposeAsync();
+            }
+        }
+        catch { }
+        _dotNetRef?.Dispose();
+    }
+}

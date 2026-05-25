@@ -1,0 +1,49 @@
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (_visible)
+{
+    <button type="button" @onclick="AbrirManual"
+            class="fixed bottom-6 left-6 z-40 w-12 h-12 rounded-full bg-white border border-[#B5D6AC] shadow-lg hover:bg-[#E9EFE1] hover:border-[#6C8A6C] flex items-center justify-center text-[#6C8A6C] transition-colors"
+            title="Ayuda / Manual de usuario">
+        <Icon Name="question-mark" CssClass="w-6 h-6" />
+    </button>
+}
+
+@code {
+    // Rutas donde el botón "?" no aparece (la propia página de manual y los puntos de entrada sin sesión).
+    private static readonly HashSet<string> RutasOcultas =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "/",
+            "/login",
+            "/registro",
+            "/recuperar-password",
+            "/reset-password",
+            "/manual"
+        };
+
+    private bool _visible = true;
+
+    protected override void OnInitialized()
+    {
+        ActualizarVisibilidad(Nav.Uri);
+        Nav.LocationChanged += AlCambiarRuta;
+    }
+
+    private void AlCambiarRuta(object? sender, LocationChangedEventArgs e)
+    {
+        ActualizarVisibilidad(e.Location);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ActualizarVisibilidad(string url)
+    {
+        var path = new Uri(url, UriKind.Absolute).AbsolutePath;
+        _visible = !RutasOcultas.Contains(path);
+    }
+
+    private void AbrirManual() => Nav.NavigateTo("/manual");
+
+    public void Dispose() => Nav.LocationChanged -= AlCambiarRuta;
+}

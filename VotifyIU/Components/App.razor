@@ -1,7 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Components.Web
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-ES">
 
 	<head>
 		<meta charset="utf-8" />
@@ -16,6 +16,45 @@
 		<ImportMap />
 		<link rel="icon" type="image/png" href="imagenes/LogoVotifyPNG.png" />
 		<script src="https://cdn.tailwindcss.com"></script>
+		<!-- Flatpickr: date picker con locale español y formato DD/MM/AAAA -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" />
+		<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
+		<script>
+			window.votifyFlatpickr = (function () {
+				function parseIsoLocal(iso) {
+					if (!iso) return null;
+					const parts = iso.split('-');
+					if (parts.length !== 3) return null;
+					return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+				}
+				function toIsoLocal(d) {
+					if (!d) return null;
+					const y = d.getFullYear();
+					const m = String(d.getMonth() + 1).padStart(2, '0');
+					const day = String(d.getDate()).padStart(2, '0');
+					return `${y}-${m}-${day}`;
+				}
+				return {
+					init: function (element, dotNetRef, initialIso, minDateIso) {
+						return flatpickr(element, {
+							locale: 'es',
+							dateFormat: 'd/m/Y',
+							defaultDate: parseIsoLocal(initialIso),
+							minDate: parseIsoLocal(minDateIso),
+							onChange: function (selectedDates) {
+								const iso = toIsoLocal(selectedDates[0]);
+								dotNetRef.invokeMethodAsync('OnFechaSeleccionada', iso);
+							}
+						});
+					},
+					setDate: function (fp, isoDate) {
+						if (fp) fp.setDate(parseIsoLocal(isoDate), false);
+					},
+					destroy: function (fp) { if (fp) fp.destroy(); }
+				};
+			})();
+		</script>
 		<style>
 			#initial-loader {
 				position: fixed;

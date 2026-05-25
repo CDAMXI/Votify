@@ -7,20 +7,28 @@
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
-                </div>
-                <div class="flex items-center gap-4">
-                    <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
-                        Cerrar Sesión
-                    </a>
-                    <a href="/perfil" class="block w-12 h-12 rounded-full overflow-hidden border-2 border-[#6C8A6C] hover:border-[#4C6B4F] transition-colors flex-shrink-0">
-                        <img src="@(string.IsNullOrEmpty(fotoPerfil) ? "imagenes/NoImageProfilePicture.png" : fotoPerfil)"
-                             alt="Mi perfil" class="w-full h-full object-cover" />
-                    </a>
-                </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-3 items-center">
+            <div></div>
+            <div class="flex justify-center">
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+            </div>
+            <div class="flex justify-end items-center gap-4">
+                <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
+                    Cerrar Sesión
+                </a>
+                <a href="/notificaciones" class="relative flex items-center justify-center w-12 h-12 rounded-full border-2 border-[#6C8A6C] text-[#6C8A6C] hover:border-[#4C6B4F] hover:bg-[#E9EFE1] transition-colors flex-shrink-0">
+                    <Icon Name="bell" CssClass="w-6 h-6" />
+                    @if (notificacionesNoLeidas > 0)
+                    {
+                        <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            @(notificacionesNoLeidas > 99 ? "99+" : notificacionesNoLeidas.ToString())
+                        </span>
+                    }
+                </a>
+                <a href="/perfil" class="block w-12 h-12 rounded-full overflow-hidden border-2 border-[#6C8A6C] hover:border-[#4C6B4F] transition-colors flex-shrink-0">
+                    <img src="@(string.IsNullOrEmpty(fotoPerfil) ? "imagenes/NoImageProfilePicture.png" : fotoPerfil)"
+                         alt="Mi perfil" class="w-full h-full object-cover" />
+                </a>
             </div>
         </div>
     </header>
@@ -87,7 +95,8 @@
                 <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-[#B5D6AC]/30">
                     <div class="p-6 flex flex-col h-full">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-bold @GetStatusColor(ev.Status)">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 @GetStatusColor(ev.Status)">
+                                <Icon Name="@GetStatusIcon(ev.Status)" CssClass="w-3.5 h-3.5" />
                                 @GetStatusText(ev.Status)
                             </span>
                             @if (ev.Status == "active")
@@ -117,13 +126,16 @@
 
                         <div class="space-y-2 mb-6 text-sm text-[#4C6B4F]">
                             <div class="flex items-center gap-2">
-                                <span>📅 @ev.Date</span>
+                                <Icon Name="calendar" CssClass="w-4 h-4 text-[#6C8A6C]" />
+                                <span>@ev.Date</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span>👥 @ev.Participants participantes</span>
+                                <Icon Name="users" CssClass="w-4 h-4 text-[#6C8A6C]" />
+                                <span>@ev.Participants participantes</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span>🏆 @ev.Projects proyectos</span>
+                                <Icon Name="trophy" CssClass="w-4 h-4 text-[#6C8A6C]" />
+                                <span>@ev.Projects proyectos</span>
                             </div>
                         </div>
 
@@ -198,6 +210,7 @@
     private string? fotoPerfil;
     private bool cargando = true;
     private string filtroEventos = "disponibles";
+    private int notificacionesNoLeidas;
     private string filtroCategoria = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -212,12 +225,16 @@
             }
             var res = await perfilRes.Content.ReadFromJsonAsync<PerfilDTO>();
             fotoPerfil = res?.FotoPerfil;
+            notificacionesNoLeidas = res?.NotificacionesNoLeidas ?? 0;
         }
         catch { }
 
         try
         {
             var votaciones = await Http.GetFromJsonAsync<List<VotacionDTO>>("/api/votaciones");
+            var resumenes = await Http.GetFromJsonAsync<List<EventoResumenDashboardDTO>>("/api/dashboard/eventos-resumen") ?? new List<EventoResumenDashboardDTO>();
+            var resumenPorEvento = resumenes.ToDictionary(r => r.IdEvento);
+
             if (votaciones != null)
             {
                 mockEvents = votaciones
@@ -229,20 +246,21 @@
                         var ahora = DateTime.Now;
                         bool hayActiva = g.Any(v => v.Estado && v.FechaFin > ahora);
                         bool hayPendiente = g.Any(v => v.FechaFin > ahora);
+                        resumenPorEvento.TryGetValue(g.Key, out var resumen);
+
                         return new EventModel
                         {
                             Id = g.Key.ToString(),
                             Name = string.IsNullOrWhiteSpace(primera.NombreEvento)
-                                ? (string.IsNullOrWhiteSpace(primera.Titulo) ? $"Evento #{g.Key}" : primera.Titulo)
+                                ? $"Evento #{g.Key}"
                                 : primera.NombreEvento,
-                            Description = string.IsNullOrWhiteSpace(primera.Descripcion) ? "Sin descripción" : primera.Descripcion,
+                            Description = string.IsNullOrWhiteSpace(primera.Descripcion) ? "El evento no tiene descripcion" : primera.Descripcion,
                             Date = fechaEvento.ToString("dd/MM/yyyy"),
                             FechaOrden = fechaEvento,
                             Status = hayActiva ? "active" : hayPendiente ? "paused" : "finished",
                             Participants = 0,
                             Projects = 0,
-                            RolActual = primera.RolActual,
-                            Categories = ObtenerCategoriasDelEvento(g)
+                            RolActual = primera.RolActual
                         };
                     })
                     .OrderBy(e => e.FechaOrden)
@@ -259,6 +277,7 @@
     private class PerfilDTO
     {
         public string? FotoPerfil { get; set; }
+        public int NotificacionesNoLeidas { get; set; }
     }
 
     private void NavigateToEvent(string id)
@@ -278,6 +297,15 @@
         "paused" => "bg-[#90A896] text-white",
         "finished" => "bg-[#A6AAA9] text-white",
         _ => "bg-gray-300"
+    };
+
+    private string GetStatusIcon(string status) => status switch
+    {
+        "active" => "play",
+        "upcoming" => "calendar",
+        "paused" => "cog",
+        "finished" => "check-circle",
+        _ => "star"
     };
 
     private string GetStatusText(string status) => status switch
@@ -375,7 +403,7 @@
         public string Date { get; set; } = "";
         public DateTime FechaOrden { get; set; }
         public int Participants { get; set; }
-        public string Status { get; set; } = ""; 
+        public string Status { get; set; } = "";
         public int Projects { get; set; }
         public string? RolActual { get; set; }
         public List<string> Categories { get; set; } = new();

@@ -39,6 +39,13 @@ builder.Services.AddScoped<VotifyRepositories>();
 builder.Services.AddScoped<IVotifyService, VotifyService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IComentarioPopularClassifier>(sp =>
+{
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var apiKey = sp.GetRequiredService<IConfiguration>()["GeminiApiKey"] ?? string.Empty;
+    return new GeminiComentarioPopularClassifier(httpFactory.CreateClient(), apiKey);
+});
+builder.Services.AddScoped<ComentariosPopularesAgrupador>();
 
 var app = builder.Build();
 
@@ -74,7 +81,22 @@ else
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+
+// Render (y la mayoría de PaaS) terminan SSL en su edge y pasan HTTP al contenedor.
+// Sin esto, app.UseHttpsRedirection generaría un loop infinito 301→301.
+app.UseForwardedHeaders(new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
+    KnownNetworks = { },
+    KnownProxies = { }
+});
+
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseSession();
 app.UseAntiforgery();
 
@@ -258,7 +280,13 @@ app.MapGet("/api/perfil", (IVotifyService service, HttpContext http) =>
     {
         service.RestoreSession(username);
         var (user, email, foto) = service.GetPerfil();
-        return Results.Ok(new { Username = user, Email = email, FotoPerfil = foto });
+        return Results.Ok(new
+        {
+            Username = user,
+            Email = email,
+            FotoPerfil = foto,
+            NotificacionesNoLeidas = service.GetCantidadNotificacionesNoLeidas()
+        });
     }
     catch (ServiceException) { return Results.Unauthorized(); }
 });
@@ -319,6 +347,102 @@ app.MapGet("/api/perfil/historial", (IVotifyService service, HttpContext http) =
             }).ToList()
         };
         return Results.Ok(dto);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+// ── Endpoints de notificaciones ─────────────────────────────────
+
+app.MapPost("/api/eventos/{idEvento}/mensaje", (int idEvento, EnviarMensajeEventoRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.EnviarMensajeOrganizadorEnEvento(idEvento, req.Asunto, req.Mensaje);
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPost("/api/eventos/{idEvento}/invitar-jurado", (int idEvento, InvitarPorEmailRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.InvitarUsuarioEnEventoPorEmail(idEvento, req.Email, "JURADO");
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPost("/api/eventos/{idEvento}/invitar-encargado", (int idEvento, InvitarPorEmailRequest req, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.InvitarUsuarioEnEventoPorEmail(idEvento, req.Email, "ENCARGADO");
+        return Results.Ok();
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapGet("/api/notificaciones/recibidas", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var notificaciones = service.GetNotificacionesRecibidas()
+            .Select(n => MapNotificacion(n))
+            .ToList();
+        return Results.Ok(notificaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapGet("/api/notificaciones/enviadas", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        var notificaciones = service.GetNotificacionesEnviadas()
+            .Select(n => MapNotificacion(n))
+            .ToList();
+        return Results.Ok(notificaciones);
+    }
+    catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
+});
+
+app.MapPut("/api/notificaciones/{id}/leida", (int id, IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+        service.MarcarNotificacionComoLeida(id);
+        return Results.Ok();
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
@@ -405,6 +529,10 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
             PesoJurado = req.PesoJurado,
             PesoPublico = req.PesoPublico,
+            CodigoEncargado = req.CodigoEncargado,
+            CodigoJurado = req.CodigoJurado,
+            CorreosEncargados = req.CorreosEncargados,
+            CorreosJurados = req.CorreosJurados,
             Categorias = req.Categorias?
                 .Where(c => !string.IsNullOrWhiteSpace(c.Nombre))
                 .Select(ConstruirTokenCategoria)
@@ -443,6 +571,46 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
         return Results.Ok(votaciones);
     }
     catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+app.MapGet("/api/dashboard/eventos-resumen", (IVotifyService service, HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        service.RestoreSession(username);
+
+        var resumen = service.GetAllVotaciones()
+            .GroupBy(v => v.EventoId)
+            .Select(g =>
+            {
+                var evento = g.Select(v => v.evento).FirstOrDefault(e => e != null);
+                var proyectos = (evento?.proyectos ?? Enumerable.Empty<Proyecto>()).ToList();
+
+                var competidoresUnicos = proyectos
+                    .Select(p => p.competidor?.usuario?.Username)
+                    .Where(u => !string.IsNullOrWhiteSpace(u))
+                    .Select(u => u!.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+
+                return new EventoResumenDashboardDTO
+                {
+                    IdEvento = g.Key,
+                    ProjectsCount = proyectos.Count,
+                    ParticipantsCount = competidoresUnicos
+                };
+            })
+            .ToList();
+
+        return Results.Ok(resumen);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
+    }
 });
 
 app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService service, HttpContext http) =>
@@ -541,7 +709,7 @@ app.MapPost("/api/eventos/{idEvento}/rol", (int idEvento, AsignarRolEventoReques
     try
     {
         service.RestoreSession(username);
-        service.AsignarRolEnEvento(req.TipoRol, idEvento);
+        service.AsignarRolEnEvento(req.TipoRol, idEvento, req.CodigoAcceso);
         return Results.Ok(new RolEventoResponse(idEvento, req.TipoRol.Trim().ToUpperInvariant()));
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
@@ -574,7 +742,7 @@ app.MapPost("/api/votaciones/{id}/cerrar", (int id, IVotifyService service, Http
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
 });
 
-// ── Endpoint guardar voto ────────────────────────────────────────
+// ── Endpoint guardar voto ├───────────────────────────────────────
 
 app.MapPost("/api/votos/guardar", (GuardarVotoRequest req, IVotifyService service, HttpContext http) =>
 {
@@ -818,6 +986,41 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votac
     catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
 });
 
+// ── Endpoint de comentarios populares ───────────────────────────
+
+app.MapGet("/api/resultados/{idVotacion}/proyectos/{idProyecto}/comentarios-populares", async (
+    int idVotacion,
+    int idProyecto,
+    IDAL<Votacion> votacionRepo,
+    IDAL<Proyecto> proyectoRepo,
+    IDAL<Voto> votoRepo,
+    ComentariosPopularesAgrupador agrupador,
+    HttpContext http) =>
+{
+    string? username = ObtenerUsernameAutenticado(http);
+    if (username == null) return Results.Unauthorized();
+
+    try
+    {
+        var votacion = votacionRepo.GetById(idVotacion);
+        if (votacion == null) return Results.NotFound("VotaciÃ³n no encontrada");
+
+        var proyecto = proyectoRepo.GetById(idProyecto);
+        if (proyecto == null) return Results.NotFound("Proyecto no encontrado");
+
+        if (proyecto.EventoId != votacion.EventoId || !ProyectoPerteneceAVotacion(proyecto, votacion))
+            return Results.BadRequest("El proyecto no pertenece a esta votaciÃ³n");
+
+        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion && v.ProyectoId == idProyecto).ToList();
+        var resultado = await agrupador.AgruparAsync(votos, http.RequestAborted);
+        return Results.Ok(MapComentariosPopulares(resultado));
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
+    }
+});
+
 // ── Endpoint de monitoreo ───────────────────────────────────────
 
 app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacionRepo, IDAL<Voto> votoRepo, IDAL<Jurado> juradoRepo, IDAL<Publico> publicoRepo, IDAL<Competidor> competidorRepo, IDAL<Usuario> usuarioRepo, HttpContext http) =>
@@ -830,13 +1033,13 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
         var votacion = votacionRepo.GetById(idVotacion);
         if (votacion == null) return Results.NotFound("Votación no encontrada");
 
-        var votos = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
-        var votanteIds = votos.Select(v => v.VotanteId).Distinct().ToHashSet();
+        var votes = votoRepo.GetWhere(v => v.VotacionId == idVotacion).ToList();
+        var voterIds = votes.Select(v => v.VotanteId).Distinct().ToHashSet();
         var evento = votacion.evento;
 
-        var rolesVotantes = juradoRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>()
-            .Concat(publicoRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>())
-            .Concat(competidorRepo.GetWhere(r => votanteIds.Contains(r.Id)).Cast<Rol>())
+        var rolesVotantes = juradoRepo.GetWhere(r => voterIds.Contains(r.Id)).Cast<Rol>()
+            .Concat(publicoRepo.GetWhere(r => voterIds.Contains(r.Id)).Cast<Rol>())
+            .Concat(competidorRepo.GetWhere(r => voterIds.Contains(r.Id)).Cast<Rol>())
             .GroupBy(r => r.Id).Select(g => g.First()).ToList();
         var userIds = rolesVotantes.Select(r => r.UsuarioId).Distinct().ToHashSet();
         var usuarios = usuarioRepo.GetAll().ToList().Where(u => userIds.Contains(u.Id)).ToList();
@@ -869,7 +1072,7 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
                     {
                         Nombre = usuariosEsperados.TryGetValue(rol.UsuarioId, out var nombre) ? nombre : $"Usuario #{rol.UsuarioId}",
                         Tipo = ObtenerEtiquetaRolMonitor(rol.TipoRol),
-                        HaVotado = votanteIds.Contains(rol.Id)
+                        HaVotado = voterIds.Contains(rol.Id)
                     });
             }
             else
@@ -888,23 +1091,24 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
                 var allUsers = usuarioRepo.GetAll().ToList().Where(u => allUserIds.Contains(u.Id)).ToList();
                 var nameMap = allRoles.ToDictionary(r => r.Id, r => allUsers.FirstOrDefault(u => u.Id == r.UsuarioId)?.Username ?? $"#{r.Id}");
                 foreach (var j in jurados)
-                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(j.Id, out var n) ? n : $"Jurado #{j.Id}", Tipo = "Jurado", HaVotado = votanteIds.Contains(j.Id) });
+                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(j.Id, out var n) ? n : $"Jurado #{j.Id}", Tipo = "Jurado", HaVotado = voterIds.Contains(j.Id) });
                 foreach (var p in publicos)
-                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(p.Id, out var n) ? n : $"Público #{p.Id}", Tipo = "Público", HaVotado = votanteIds.Contains(p.Id) });
+                    todosVotantes.Add(new VotanteEstadoDTO { Nombre = nameMap.TryGetValue(p.Id, out var n) ? n : $"Público #{p.Id}", Tipo = "Público", HaVotado = voterIds.Contains(p.Id) });
             }
         }
         catch { /* Ignorado por seguridad de la relación */ }
 
         var proyectos = (evento?.proyectos ?? Enumerable.Empty<Proyecto>())
-            .Where(p => ProyectoPerteneceAVotacion(p, votacion)).ToList();
-        var votosPorProyecto = votos.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
+            .Where(p => ProyectoPerteneceAVotacion(p, votacion))
+            .ToList();
+        var votosPorProyecto = votes.GroupBy(v => v.ProyectoId).ToDictionary(g => g.Key, g => g.ToList());
         int totalVotantesEsperados = todosVotantes.Count;
 
         var proyectoStats = proyectos
             .Select(p => BuildProjectMonitor(p, votosPorProyecto.TryGetValue(p.Id, out var vp) ? vp : new List<Voto>(), votacion, totalVotantesEsperados))
             .OrderByDescending(p => p.Media).ToList();
 
-        var historial = votos.OrderByDescending(v => v.Fecha).Select(v => new VotoHistorialDTO
+        var historial = votes.OrderByDescending(v => v.Fecha).Select(v => new VotoHistorialDTO
         {
             Votante = usernamePorRolId.TryGetValue(v.VotanteId, out var name) ? name : $"Votante #{v.VotanteId}",
             Proyecto = v.proyecto?.Nombre ?? $"Proyecto #{v.ProyectoId}",
@@ -915,7 +1119,7 @@ app.MapGet("/api/monitor/{idVotacion}", (int idVotacion, IDAL<Votacion> votacion
 
         return Results.Ok(new MonitorVotacionDTO
         {
-            VotosEmitidos = votos.Count,
+            VotosEmitidos = votes.Count,
             TotalVotantes = todosVotantes.Count,
             PromedioGeneral = proyectoStats.Any(p => p.NumVotos > 0) ? Math.Round(proyectoStats.Where(p => p.NumVotos > 0).Average(p => p.Media), 2) : 0,
             PesoJurado = votacion.PesoJurado,
@@ -1072,6 +1276,12 @@ app.MapGet("/api/tests/ut3938", () =>
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 
+app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
+{
+    var (ok, msg) = Votify.Tests.ComentariosPopularesIATest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
 app.Run();
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -1208,6 +1418,20 @@ static bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)
     return string.Equals(catProyecto, votacion.Titulo?.Trim(), StringComparison.OrdinalIgnoreCase);
 }
 
+static NotificacionDTO MapNotificacion(Notificacion notificacion)
+{
+    return new NotificacionDTO
+    {
+        Id = notificacion.Id,
+        Asunto = notificacion.Asunto,
+        Mensaje = notificacion.Mensaje,
+        FechaCreacion = notificacion.FechaCreacion,
+        Leida = notificacion.Leida,
+        RemitenteUsername = notificacion.remitente?.Username ?? string.Empty,
+        DestinatarioUsername = notificacion.destinatario?.Username ?? string.Empty
+    };
+}
+
 static ReclamacionDTO MapReclamacion(Reclamacion reclamacion, string solicitante)
 {
     return new ReclamacionDTO
@@ -1221,6 +1445,23 @@ static ReclamacionDTO MapReclamacion(Reclamacion reclamacion, string solicitante
         Estado = reclamacion.Estado ?? Reclamacion.EstadoPendiente,
         RespuestaOrganizador = reclamacion.RespuestaOrganizador,
         FechaRespuesta = reclamacion.FechaRespuesta
+    };
+}
+
+static ComentariosPopularesDTO MapComentariosPopulares(ResultadoComentariosPopulares resultado)
+{
+    return new ComentariosPopularesDTO
+    {
+        Categorias = resultado.Categorias,
+        Comentarios = resultado.Comentarios.Select(c => new ComentarioPopularDTO
+        {
+            Id = c.Id,
+            Autor = c.Autor,
+            Texto = c.Texto,
+            Fecha = c.Fecha,
+            TipoRol = c.TipoRol,
+            Categoria = c.Categoria
+        }).ToList()
     };
 }
 
@@ -1343,7 +1584,7 @@ record ResetPasswordRequest(string Token, string NuevaPassword);
 record UpdateEmailRequest(string NuevoEmail);
 record UpdatePasswordRequest(string PasswordActual, string NuevaPassword);
 record UpdateFotoRequest(string Base64Foto);
-record AsignarRolEventoRequest(string TipoRol);
+record AsignarRolEventoRequest(string TipoRol, string? CodigoAcceso);
 record RolEventoResponse(int IdEvento, string? Rol);
 record AiChatRequest(List<AiChatTurn> History, string Message);
 record AiChatTurn(string Role, string Content);
@@ -1351,4 +1592,5 @@ record GuardarVotoRequest(int VotacionId, int ProyectoId, double Puntuacion, str
 record CrearProyectoRequest(string Nombre, string? Descripcion, string? UsernameCompetidor);
 record ModificarProyectoRequest(string Nombre, string? Descripcion, List<string>? ParticipantesAdicionales);
 record UpdateProyectoFotoRequest(string Base64Foto);
-
+record EnviarMensajeEventoRequest(string Asunto, string Mensaje);
+record InvitarPorEmailRequest(string Email);
