@@ -60,13 +60,13 @@
         <div class="mb-6">
             <div class="flex flex-wrap gap-2">
                 <button @onclick='() => CambiarFiltroCategoria("")'
-                        class='px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(string.IsNullOrEmpty(filtroCategoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
+                        class='min-w-[10rem] text-center px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(string.IsNullOrEmpty(filtroCategoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
                     Todas
                 </button>
                 @foreach (var categoria in categoriasFiltro)
                 {
                     <button @onclick="() => CambiarFiltroCategoria(categoria)"
-                            class='px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(CategoriaSeleccionada(categoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
+                            class='min-w-[10rem] text-center px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(CategoriaSeleccionada(categoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
                         @categoria
                     </button>
                 }
@@ -260,7 +260,8 @@
                             Status = hayActiva ? "active" : hayPendiente ? "paused" : "finished",
                             Participants = 0,
                             Projects = 0,
-                            RolActual = primera.RolActual
+                            RolActual = primera.RolActual,
+                            Categories = ObtenerCategoriasDelEvento(g)
                         };
                     })
                     .OrderBy(e => e.FechaOrden)
