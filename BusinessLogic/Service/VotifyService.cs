@@ -975,10 +975,48 @@ namespace Votify.BusinessLogic.Service
             if (!esOrganizador && !esEncargado)
                 throw new ServiceException("No tienes permisos para eliminar este evento");
 
-            Evento evento = _eventoRepository.GetById(votacion.EventoId);
+            int idEvento = votacion.EventoId;
+            Evento evento = _eventoRepository.GetById(idEvento);
             if (evento == null)
                 throw new ServiceException("El evento no existe");
 
+            // Borrado en cascada manual: EF rechaza eliminar el Evento mientras
+            // existan FKs apuntando a él. Borramos dependencias en orden inverso
+            // (hijos primero, padre al final).
+
+            // 1) Votos: referencian votación, proyecto y votante (rol).
+            var votacionesEvento = _votacionRepository.GetWhere(v => v.EventoId == idEvento).ToList();
+            var votacionIds = votacionesEvento.Select(v => v.Id).ToHashSet();
+            var proyectosEvento = _proyectoRepository.GetWhere(p => p.EventoId == idEvento).ToList();
+            var proyectoIds = proyectosEvento.Select(p => p.Id).ToHashSet();
+
+            var votos = _votoRepository.GetWhere(v =>
+                votacionIds.Contains(v.VotacionId) || proyectoIds.Contains(v.ProyectoId)).ToList();
+            foreach (var voto in votos) _votoRepository.Delete(voto);
+
+            // 2) Proyectos del evento.
+            foreach (var proyecto in proyectosEvento) _proyectoRepository.Delete(proyecto);
+
+            // 3) Votaciones del evento.
+            foreach (var v in votacionesEvento) _votacionRepository.Delete(v);
+
+            // 4) Roles asociados al evento (todas las subclases concretas).
+            foreach (var j in _juradoRepository.GetWhere(r => r.EventoId == idEvento).ToList())
+                _juradoRepository.Delete(j);
+            foreach (var p in _publicoRepository.GetWhere(r => r.EventoId == idEvento).ToList())
+                _publicoRepository.Delete(p);
+            foreach (var c in _competidorRepository.GetWhere(r => r.EventoId == idEvento).ToList())
+                _competidorRepository.Delete(c);
+            foreach (var e in _encargadoRepository.GetWhere(r => r.EventoId == idEvento).ToList())
+                _encargadoRepository.Delete(e);
+            foreach (var o in _organizadorRepository.GetWhere(r => r.EventoId == idEvento).ToList())
+                _organizadorRepository.Delete(o);
+
+            // 5) Reclamaciones del evento.
+            foreach (var r in _reclamacionRepository.GetWhere(r => r.EventoId == idEvento).ToList())
+                _reclamacionRepository.Delete(r);
+
+            // 6) Por fin, el evento.
             _eventoRepository.Delete(evento);
             Commit();
         }

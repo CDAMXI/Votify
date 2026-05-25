@@ -53,7 +53,7 @@
                     <div class="grid gap-4 md:grid-cols-3">
                         @foreach (var opcion in opcionesRol)
                         {
-                            <div class="rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6">
+                            <div class="rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] p-6 flex flex-col">
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="w-12 h-12 rounded-xl bg-[#6C8A6C]/15 flex items-center justify-center text-[#4C6B4F]">
                                         <Icon Name="@IconoParaRol(opcion.Tipo)" CssClass="w-6 h-6" />
@@ -66,27 +66,29 @@
                                 <p class="text-lg font-bold text-[#1A281B] mb-2">@opcion.Titulo</p>
                                 <p class="text-sm text-[#6C8A6C] mb-3">@opcion.Descripcion</p>
 
-                                @if (RolRequiereCodigo(opcion.Tipo))
-                                {
-                                    <input value="@GetCodigoRol(opcion.Tipo)"
-                                           @oninput="e => SetCodigoRol(opcion.Tipo, e.Value?.ToString() ?? string.Empty)"
-                                           placeholder="Código de acceso"
-                                           disabled="@asignando"
-                                           class="w-full h-10 rounded-md border bg-white border-[#B5D6AC] px-3 text-sm font-mono focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] mb-2" />
-                                    <button @onclick="() => SeleccionarRol(opcion.Tipo, GetCodigoRol(opcion.Tipo))"
-                                            disabled="@asignando"
-                                            class="w-full rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-2 font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
-                                        Entrar
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button @onclick="() => SeleccionarRol(opcion.Tipo)"
-                                            disabled="@asignando"
-                                            class="w-full rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-2 font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
-                                        Entrar
-                                    </button>
-                                }
+                                <div class="mt-auto">
+                                    @if (RolRequiereCodigo(opcion.Tipo))
+                                    {
+                                        <input value="@GetCodigoRol(opcion.Tipo)"
+                                               @oninput="e => SetCodigoRol(opcion.Tipo, e.Value?.ToString() ?? string.Empty)"
+                                               placeholder="Código de acceso"
+                                               disabled="@asignando"
+                                               class="w-full h-10 rounded-md border bg-white border-[#B5D6AC] px-3 text-sm font-mono focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C] mb-2" />
+                                        <button @onclick="() => SeleccionarRol(opcion.Tipo, GetCodigoRol(opcion.Tipo))"
+                                                disabled="@asignando"
+                                                class="w-full rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-2 font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
+                                            Entrar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button @onclick="() => SeleccionarRol(opcion.Tipo)"
+                                                disabled="@asignando"
+                                                class="w-full rounded-xl bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-2 font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
+                                            Entrar
+                                        </button>
+                                    }
+                                </div>
                             </div>
                         }
                     </div>
@@ -134,7 +136,35 @@
                                             class="bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] px-5 py-3 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
                                         Invitar encargado
                                     </button>
+                                    <button @onclick="() => mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento"
+                                            class="inline-flex items-center gap-2 border-2 border-red-400 text-red-600 px-5 py-3 rounded-xl font-bold hover:bg-red-50 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                                        </svg>
+                                        Eliminar evento
+                                    </button>
                                 </div>
+
+                                @if (mostrarConfirmEliminarEvento)
+                                {
+                                    <div class="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
+                                        <p class="text-red-700 font-medium mb-3 text-sm">¿Eliminar este evento? Se borrarán todos los proyectos y votos de forma permanente.</p>
+                                        <div class="flex gap-3">
+                                            <button @onclick="EliminarEventoAsync" disabled="@eliminandoEvento"
+                                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50">
+                                                @(eliminandoEvento ? "Eliminando..." : "Sí, eliminar")
+                                            </button>
+                                            <button @onclick="() => mostrarConfirmEliminarEvento = false"
+                                                    class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(errorEliminarEvento))
+                                        {
+                                            <p class="text-red-500 text-sm mt-2">⚠️ @errorEliminarEvento</p>
+                                        }
+                                    </div>
+                                }
                             </div>
 
                             @if (accionOrganizadorActiva == "mensaje")
@@ -276,6 +306,46 @@
 
     private static bool RolRequiereCodigo(string tipo) =>
         tipo == "ENCARGADO" || tipo == "JURADO";
+
+    // ── Eliminar evento (solo ORGANIZADOR) ─────────────────────────────────
+    private bool mostrarConfirmEliminarEvento = false;
+    private bool eliminandoEvento = false;
+    private string? errorEliminarEvento = null;
+
+    private async Task EliminarEventoAsync()
+    {
+        var primeraVotacion = votacionesEvento.FirstOrDefault();
+        if (primeraVotacion == null)
+        {
+            errorEliminarEvento = "No hay votaciones en este evento.";
+            return;
+        }
+
+        eliminandoEvento = true;
+        errorEliminarEvento = null;
+        try
+        {
+            var resp = await Http.DeleteAsync($"/api/votaciones/{primeraVotacion.Id}");
+            if (resp.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorEliminarEvento = await resp.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorEliminarEvento))
+                    errorEliminarEvento = "No se pudo eliminar el evento.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorEliminarEvento = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            eliminandoEvento = false;
+        }
+    }
 
     private string TextoAccion => string.Equals(Dest, "results", StringComparison.OrdinalIgnoreCase)
         ? "Ver resultados"

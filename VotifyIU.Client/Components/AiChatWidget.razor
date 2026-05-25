@@ -108,10 +108,21 @@
         InvokeAsync(StateHasChanged);
     }
 
+    // Rutas en las que el asistente no debe aparecer (puntos de entrada sin sesión).
+    private static readonly HashSet<string> RutasOcultas =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "/",
+            "/login",
+            "/registro",
+            "/recuperar-password",
+            "/reset-password"
+        };
+
     private void UpdateVisibility()
     {
-        var path = new Uri(Nav.Uri).AbsolutePath.ToLower();
-        isVisible = path == "/dashboard";
+        var path = new Uri(Nav.Uri).AbsolutePath;
+        isVisible = !RutasOcultas.Contains(path);
     }
 
     public void Dispose()

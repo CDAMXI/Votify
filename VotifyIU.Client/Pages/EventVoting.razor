@@ -493,36 +493,6 @@
                     </div>
                 }
             </div>
-            <!-- Eliminar evento -->
-            <div class="flex justify-end mb-4">
-                <button @onclick="() => mostrarConfirmEliminarEvento = !mostrarConfirmEliminarEvento"
-                        class="inline-flex items-center gap-2 border border-red-400 text-red-600 px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-50 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
-                    </svg>
-                    Eliminar evento
-                </button>
-            </div>
-            @if (mostrarConfirmEliminarEvento)
-            {
-                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-                    <p class="text-red-700 font-medium mb-3 text-sm">¿Eliminar este evento? Se borrarán todos los proyectos y votos de forma permanente.</p>
-                    <div class="flex gap-3">
-                        <button @onclick="EliminarEvento" disabled="@eliminandoEvento"
-                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50">
-                            @(eliminandoEvento ? "Eliminando..." : "Sí, eliminar")
-                        </button>
-                        <button @onclick="() => mostrarConfirmEliminarEvento = false"
-                                class="border border-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                            Cancelar
-                        </button>
-                    </div>
-                    @if (errorEliminarEvento != null)
-                    {
-                        <p class="text-red-500 text-sm mt-2">⚠️ @errorEliminarEvento</p>
-                    }
-                </div>
-            }
             <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <!-- Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
