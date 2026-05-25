@@ -1042,10 +1042,12 @@ namespace Votify.BusinessLogic.Service
 
         private bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)
         {
-            string prefijoCategoria = PrefijoCategoriaProyecto;
-            string categoriaProyecto = (prefijoCategoria + proyecto.Id).ToLowerInvariant();
+            string categoriaProyecto = ObtenerCategoriaDeParticipantes(proyecto.ParticipantesAdicionales);
+            if (string.IsNullOrWhiteSpace(categoriaProyecto))
+                return true;
 
-            return votacion.Descripcion?.Contains(categoriaProyecto) == true;
+            string categoriaVotacion = ObtenerCategoriaDeVotacion(votacion);
+            return string.Equals(categoriaProyecto, categoriaVotacion, StringComparison.OrdinalIgnoreCase);
         }
 
         private (string Nombre, string? CriteriosCodificados) DescomponerCategoria(string categoria)
@@ -1080,6 +1082,10 @@ namespace Votify.BusinessLogic.Service
 
         private string ObtenerCategoriaDeVotacion(Votacion votacion)
         {
+            string titulo = LimpiarNombreCategoria(votacion.Titulo);
+            if (!string.IsNullOrWhiteSpace(titulo))
+                return titulo;
+
             string? descripcion = votacion.Descripcion;
             if (string.IsNullOrWhiteSpace(descripcion))
                 return string.Empty;
@@ -1092,24 +1098,32 @@ namespace Votify.BusinessLogic.Service
             if (fin < 0) fin = descripcion.Length;
 
             string lineaCategoria = descripcion.Substring(inicio, fin - inicio);
-            return lineaCategoria.Substring(prefijo.Length).Trim();
+            return LimpiarNombreCategoria(lineaCategoria.Substring(prefijo.Length).Trim());
         }
 
         private string ObtenerCategoriaDeProyecto(Proyecto proyecto)
         {
-            string? descripcion = proyecto.evento?.Descripcion;
-            if (string.IsNullOrWhiteSpace(descripcion))
-                return string.Empty;
+            return ObtenerCategoriaDeParticipantes(proyecto.ParticipantesAdicionales);
+        }
 
-            string prefijo = PrefijoCategoriaProyecto;
-            int inicio = descripcion.IndexOf(prefijo, StringComparison.OrdinalIgnoreCase);
-            if (inicio < 0) return string.Empty;
+        private string ObtenerCategoriaDeParticipantes(string? participantesAdicionales)
+        {
+            if (string.IsNullOrWhiteSpace(participantesAdicionales)) return string.Empty;
 
-            int fin = descripcion.IndexOf('\n', inicio);
-            if (fin < 0) fin = descripcion.Length;
+            return participantesAdicionales
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .FirstOrDefault(p => p.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase))
+                ?[PrefijoCategoriaProyecto.Length..].Trim()
+                ?? string.Empty;
+        }
 
-            string lineaCategoria = descripcion.Substring(inicio, fin - inicio);
-            return lineaCategoria.Substring(prefijo.Length).Trim();
+        private string LimpiarNombreCategoria(string? nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre)) return string.Empty;
+
+            int idx = nombre.IndexOf(PrefijoCriteriosCategoria, StringComparison.Ordinal);
+            return (idx >= 0 ? nombre[..idx] : nombre).Trim();
         }
 
         private string ConstruirParticipantesAdicionales(string categoria, IEnumerable<string> usernames)
@@ -1121,9 +1135,10 @@ namespace Votify.BusinessLogic.Service
 
             valores.AddRange(usernames
                 .Select(u => u.Trim())
-                .Where(u => !string.IsNullOrWhiteSpace(u) && !u.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase)));
+                .Where(u => !string.IsNullOrWhiteSpace(u)
+                            && !u.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase)));
 
-            return string.Join(",", valores.Distinct(StringComparer.OrdinalIgnoreCase));
+            return string.Join(",", valores);
         }
 
         private bool UsuarioEsOrganizadorEnEvento(int idEvento)
