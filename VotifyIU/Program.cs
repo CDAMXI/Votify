@@ -1246,6 +1246,42 @@ app.MapGet("/api/tests/ut3938", () =>
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 
+app.MapGet("/api/tests/ut4008", () =>
+{
+    var (ok, msg) = Votify.Tests.SintesisComentariosIATest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut4009", () =>
+{
+    var (ok, msg) = Votify.Tests.FiltrarVotacionesPorCategoriaTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut3979", () =>
+{
+    var (ok, msg) = Votify.Tests.VisualizarProyectosVotacionesFinalizadasTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut4127", () =>
+{
+    var (ok, msg) = Votify.Tests.ConfirmarRegistroVotoTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut4124", () =>
+{
+    var (ok, msg) = Votify.Tests.CambiarEstiloCalendarioTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut4129", () =>
+{
+    var (ok, msg) = Votify.Tests.InformacionVisualGuiaTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
 app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
 {
     var (ok, msg) = Votify.Tests.ComentariosPopularesIATest.RunAll();
