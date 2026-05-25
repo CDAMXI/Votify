@@ -1015,10 +1015,22 @@ namespace Votify.BusinessLogic.Service
         private (string Nombre, string? CriteriosCodificados) DescomponerCategoria(string categoria)
         {
             if (!categoria.StartsWith(PrefijoCategoriaProyecto, StringComparison.OrdinalIgnoreCase))
+            {
+                // Extraer el nombre limpio del token si lo hay
+                const string marcador = "||__CRITERIOS__:";
+                int idx = categoria.IndexOf(marcador, StringComparison.Ordinal);
+                if (idx >= 0)
+                {
+                    string nombre = categoria.Substring(0, idx).Trim();
+                    string criterios = categoria.Substring(idx + marcador.Length).Trim();
+                    return (nombre, string.IsNullOrWhiteSpace(criterios) ? null : criterios);
+                }
+                
                 return (categoria, null);
+            }
 
-            string nombre = categoria.Substring(PrefijoCategoriaProyecto.Length);
-            return (nombre, string.Empty);
+            string nombre_proj = categoria.Substring(PrefijoCategoriaProyecto.Length);
+            return (nombre_proj, string.Empty);
         }
 
         private string ConstruirDescripcionVotacion(string descripcionBase, string? criteriosCodificados)

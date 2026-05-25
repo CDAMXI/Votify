@@ -968,7 +968,7 @@ app.MapGet("/api/resultados/{idVotacion}", (int idVotacion, IDAL<Votacion> votac
         if (evento == null) return Results.NotFound("Evento no encontrado");
 
         // Solo proyectos que pertenecen a ESTA categoría/votación
-        var proyectos = (evento.proyectos ?? Enumerable.Empty<Proyecto>())
+        var proyectos = (evento.proyectos?.ToList() ?? new List<Proyecto>())
             .Where(p => ProyectoPerteneceAVotacion(p, votacion))
             .ToList();
 
@@ -1425,20 +1425,34 @@ static List<CriterioDTO> ObtenerCriteriosDeDescripcion(string? descripcion)
     catch { return new(); }
 }
 
+/// Extrae el nombre limpio de una categoría (sin el token de criterios)
+static string ObtenerNombreCategoria(string? nombreConToken)
+{
+    if (string.IsNullOrWhiteSpace(nombreConToken)) return string.Empty;
+    
+    // Si contiene el separador de criterios, extraer solo la parte antes
+    int idx = nombreConToken.IndexOf("||__CRITERIOS__:", StringComparison.Ordinal);
+    return (idx >= 0 ? nombreConToken[..idx] : nombreConToken).Trim();
+}
+
 /// Construye la lista de categorías con criterios que va en el VotacionDTO
 static List<CategoriaBaremoDTO> ObtenerCategoriasDeVotacion(Votacion votacion)
 {
     var criterios = ObtenerCriteriosDeDescripcion(votacion.Descripcion);
     if (!criterios.Any()) return new();
+    
+    // El nombre limpio está en votacion.Titulo, pero asegurarse de limpiarlo del token
+    string nombreLimpio = ObtenerNombreCategoria(votacion.Titulo);
+    
     return new List<CategoriaBaremoDTO>
     {
-        new() { Nombre = votacion.Titulo?.Trim() ?? string.Empty, Criterios = criterios }
+        new() { Nombre = nombreLimpio, Criterios = criterios }
     };
 }
 
 // Prefijo que el servicio escribe en ParticipantesAdicionales para marcar la categoría del proyecto
 const string PrefijoCatProyecto = "__CAT__:";
-
+/// Extrae la categoría de participantes (sin el prefijo) de la cadena de participantes adicional
 static string ObtenerCategoriaDeParticipantes(string? participantesAdicionales)
 {
     if (string.IsNullOrWhiteSpace(participantesAdicionales)) return string.Empty;
@@ -1449,6 +1463,7 @@ static string ObtenerCategoriaDeParticipantes(string? participantesAdicionales)
         ?? string.Empty;
 }
 
+/// Extrae la lista de participantes (sin la categoría) de la cadena de participantes adicional
 static List<string> ObtenerParticipantesLimpios(string? participantesAdicionales)
 {
     if (string.IsNullOrWhiteSpace(participantesAdicionales)) return new();
