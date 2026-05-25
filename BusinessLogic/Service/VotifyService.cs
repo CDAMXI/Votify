@@ -14,6 +14,7 @@ namespace Votify.BusinessLogic.Service
         private const string PrefijoCategoriaProyecto = "__CAT__:";
         private const string PrefijoCriteriosCategoria = "||__CRITERIOS__:";
         private const string PrefijoCriteriosDescripcion = "\n__CRITERIOS__:";
+        private const string MarcadorDetalleVoto = "\n||VOTO_DETALLE||:";
 
         private Usuario? usuario;
         private Rol? rol;
@@ -158,7 +159,8 @@ namespace Votify.BusinessLogic.Service
         public void GuardarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario)
         {
             RequireUsuarioLogueado();
-            ValidarLongitudComentario(comentario);
+            string comentarioVisible = ObtenerComentarioVisible(comentario);
+            ValidarLongitudComentario(comentarioVisible);
 
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
             Proyecto proyecto = ObtenerProyectoOFallar(idProyecto);
@@ -184,22 +186,33 @@ namespace Votify.BusinessLogic.Service
             if (rolEvento is Competidor && !evento.PermiteCompetidoresVotar)
                 throw new ServiceException("Los competidores no pueden votar en este evento");
 
-            bool yaVoto = _votoRepository.GetWhere(v =>
+            Voto? votoExistente = _votoRepository.GetWhere(v =>
                 v.VotanteId == rolEvento.Id &&
                 v.VotacionId == votacion.Id &&
                 v.ProyectoId == proyecto.Id
-            ).Any();
+           ).FirstOrDefault();
+
+            if (votoExistente != null)
+            {
+                votoExistente.Valor = puntuacion;
+                votoExistente.Comentario = comentario ?? string.Empty;
+                votoExistente.Fecha = DateTime.Now;
+                Commit();
+                return;
+            }
+
+            bool yaVoto = false;
 
             if (yaVoto)
                 throw new ServiceException("Ya has votado en este proyecto para esta votación");
 
-            Voto voto = new Voto(puntuacion, comentario ?? string.Empty, DateTime.Now)
+            Voto voto = new Voto(puntuacion, comentarioVisible, DateTime.Now)
             {
                 votacion = votacion,
                 proyecto = proyecto,
                 votante = rolEvento
             };
-
+            voto.Comentario = comentario ?? string.Empty;
             _votoRepository.Insert(voto);
             Commit();
         }
@@ -216,6 +229,68 @@ namespace Votify.BusinessLogic.Service
 
             return _votoRepository.GetWhere(v => v.VotanteId == rol.Id && v.VotacionId == idVotacion)
                 .Select(v => v.ProyectoId).ToList();
+        }
+        public void ModificarVoto(int idVotacion, int idProyecto, double puntuacion, string? comentario)
+        {
+            RequireUsuarioLogueado();
+            ValidarLongitudComentario(comentario);
+
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            Proyecto proyecto = ObtenerProyectoOFallar(idProyecto);
+            Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
+
+            if (!ProyectoPerteneceAVotacion(proyecto, votacion))
+                throw new ServiceException("El proyecto no pertenece a esta categoría");
+
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
+
+            if (!votacion.Estado)
+                throw new ServiceException("La votación está pausada");
+
+            Rol? rolEvento = BuscarRolEnEvento(evento.IdEvento);
+            if (rolEvento == null)
+                throw new ServiceException("No tienes un rol asignado en este evento");
+
+            if (rolEvento is Organizador || rolEvento is EncargadoVotacion)
+                throw new ServiceException("El rol actual no puede votar");
+
+            if (rolEvento is Competidor && !evento.PermiteCompetidoresVotar)
+                throw new ServiceException("Los competidores no pueden votar en este evento");
+
+            Voto? votoExistente = _votoRepository.GetWhere(v =>
+                v.VotanteId == rolEvento.Id &&
+                v.VotacionId == votacion.Id &&
+                v.ProyectoId == proyecto.Id
+            ).FirstOrDefault();
+
+            if (votoExistente == null)
+                throw new ServiceException("No has votado en este proyecto todavía. Usa la opción de votar primero.");
+
+            if (puntuacion < 0 || puntuacion > 10)
+                throw new ServiceException("El valor debe estar entre 0 y 10");
+
+            votoExistente.Valor = puntuacion;
+            votoExistente.Comentario = comentario ?? string.Empty;
+            votoExistente.Fecha = DateTime.Now;
+
+            Commit();
+        }
+
+        public Voto? GetMiVotoEnProyecto(int idVotacion, int idProyecto)
+        {
+            RequireUsuarioLogueado();
+            Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.evento == null) return null;
+
+            Rol? rol = BuscarRolEnEvento(votacion.evento.IdEvento);
+            if (rol == null) return null;
+
+            return _votoRepository.GetWhere(v =>
+                v.VotanteId == rol.Id &&
+                v.VotacionId == idVotacion &&
+                v.ProyectoId == idProyecto
+            ).FirstOrDefault();
         }
 
         private Rol? BuscarRolEnEvento(int eventoId)
@@ -842,6 +917,51 @@ namespace Votify.BusinessLogic.Service
         {
             if (!string.IsNullOrEmpty(comentario) && comentario.Length > MaxLongitudComentario)
                 throw new ServiceException($"El comentario no puede tener más de {MaxLongitudComentario} caracteres");
+        }
+
+        public static string ObtenerComentarioVisible(string? comentario)
+        {
+            if (string.IsNullOrEmpty(comentario))
+                return string.Empty;
+
+            int idx = comentario.IndexOf(MarcadorDetalleVoto, StringComparison.Ordinal);
+            return idx < 0 ? comentario : comentario[..idx].TrimEnd();
+        }
+
+        public static Dictionary<string, double> ObtenerDetalleCriterios(string? comentario)
+        {
+            if (string.IsNullOrWhiteSpace(comentario))
+                return new Dictionary<string, double>();
+
+            int idx = comentario.IndexOf(MarcadorDetalleVoto, StringComparison.Ordinal);
+            if (idx < 0)
+                return new Dictionary<string, double>();
+
+            string encoded = comentario[(idx + MarcadorDetalleVoto.Length)..].Trim();
+            if (string.IsNullOrWhiteSpace(encoded))
+                return new Dictionary<string, double>();
+
+            try
+            {
+                string json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+                return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(json)
+                    ?? new Dictionary<string, double>();
+            }
+            catch
+            {
+                return new Dictionary<string, double>();
+            }
+        }
+
+        public static string ConstruirComentarioConDetalle(string? comentario, Dictionary<string, double>? puntuacionesCriterios)
+        {
+            string visible = comentario?.Trim() ?? string.Empty;
+            if (puntuacionesCriterios == null || !puntuacionesCriterios.Any())
+                return visible;
+
+            string json = System.Text.Json.JsonSerializer.Serialize(puntuacionesCriterios);
+            string encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
+            return $"{visible}{MarcadorDetalleVoto}{encoded}";
         }
 
         private void ValidarPesosResultados(int pesoJurado, int pesoPublico)
