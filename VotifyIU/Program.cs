@@ -1282,6 +1282,18 @@ app.MapGet("/api/tests/ut4129", () =>
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 
+app.MapGet("/api/tests/ut4164", () =>
+{
+    var (ok, msg) = Votify.Tests.VentanaAyudaManualTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut4162", () =>
+{
+    var (ok, msg) = Votify.Tests.OcultarTextoNoDeseadoTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
 app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
 {
     var (ok, msg) = Votify.Tests.ComentariosPopularesIATest.RunAll();
