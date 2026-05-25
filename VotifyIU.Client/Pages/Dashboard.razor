@@ -57,6 +57,22 @@
             </button>
         </div>
 
+        <div class="mb-6">
+            <div class="flex flex-wrap gap-2">
+                <button @onclick='() => CambiarFiltroCategoria("")'
+                        class='px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(string.IsNullOrEmpty(filtroCategoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
+                    Todas
+                </button>
+                @foreach (var categoria in categoriasFiltro)
+                {
+                    <button @onclick="() => CambiarFiltroCategoria(categoria)"
+                            class='px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(CategoriaSeleccionada(categoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
+                        @categoria
+                    </button>
+                }
+            </div>
+        </div>
+
         @if (cargando)
         {
             <div class="flex justify-center items-center py-24">
@@ -67,7 +83,7 @@
         {
             <div class="bg-white rounded-2xl shadow p-10 text-center text-[#6C8A6C]">
                 <p class="text-lg font-medium">@(filtroEventos == "finalizados" ? "No hay eventos finalizados." : "No hay eventos disponibles.")</p>
-                <p class="text-sm mt-1">@(filtroEventos == "finalizados" ? "Aquí verás los resultados cuando termine un evento." : "Crea uno con el botón de arriba.")</p>
+                <p class="text-sm mt-1">@(string.IsNullOrEmpty(filtroCategoria) ? (filtroEventos == "finalizados" ? "Aquí verás los resultados cuando termine un evento." : "Crea uno con el botón de arriba.") : $"No hay eventos en la categoría {filtroCategoria}.")</p>
             </div>
         }
         else
@@ -93,6 +109,15 @@
 
                         <h3 class="text-xl font-bold text-[#1A281B] mb-2">@ev.Name</h3>
                         <p class="text-[#6C8A6C] text-sm mb-4 line-clamp-2 h-10 overflow-hidden">@ev.Description</p>
+                            @if (ev.Categories.Any())
+                            {
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    @foreach (var categoria in ev.Categories)
+                                    {
+                                        <span class="px-2.5 py-1 rounded-full bg-[#E9EFE1] text-[#4C6B4F] text-xs font-semibold">@categoria</span>
+                                    }
+                                </div>
+                            }
                         <div class="mb-4">
                             <span class="inline-block w-fit px-3 py-1 rounded-full text-xs font-bold @(string.IsNullOrWhiteSpace(ev.RolActual) ? "bg-[#EFEFEE] text-[#6C8A6C]" : "bg-[#E9EFE1] text-[#4C6B4F]")">
                                 @(string.IsNullOrWhiteSpace(ev.RolActual) ? "Sin rol asignado" : $"Mi rol: {FormatearRol(ev.RolActual)}")
@@ -186,6 +211,7 @@
     private bool cargando = true;
     private string filtroEventos = "disponibles";
     private int notificacionesNoLeidas;
+    private string filtroCategoria = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -232,8 +258,8 @@
                             Date = fechaEvento.ToString("dd/MM/yyyy"),
                             FechaOrden = fechaEvento,
                             Status = hayActiva ? "active" : hayPendiente ? "paused" : "finished",
-                            Participants = resumen?.ParticipantsCount ?? 0,
-                            Projects = resumen?.ProjectsCount ?? 0,
+                            Participants = 0,
+                            Projects = 0,
                             RolActual = primera.RolActual
                         };
                     })
@@ -325,15 +351,48 @@
     };
 
     private IEnumerable<EventModel> eventosFiltrados =>
-        filtroEventos == "finalizados"
+        (filtroEventos == "finalizados"
             ? mockEvents.Where(e => e.Status == "finished")
-            : mockEvents.Where(e => e.Status != "finished");
+            : mockEvents.Where(e => e.Status != "finished"))
+            .Where(e => string.IsNullOrEmpty(filtroCategoria)
+            || e.Categories.Any(c => string.Equals(c, filtroCategoria, StringComparison.OrdinalIgnoreCase)));
+
+    private IEnumerable<string> categoriasFiltro =>
+        CategoriasPorDefecto.Todas
+            .Concat(mockEvents.SelectMany(e => e.Categories))
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c);
 
     private void CambiarFiltroEventos(string filtro)
     {
         filtroEventos = filtro;
     }
+    private void CambiarFiltroCategoria(string categoria)
+    {
+        filtroCategoria = categoria;
+    }
 
+    private bool CategoriaSeleccionada(string categoria)
+        => string.Equals(filtroCategoria, categoria, StringComparison.OrdinalIgnoreCase);
+
+    private static List<string> ObtenerCategoriasDelEvento(IGrouping<int, VotacionDTO> votacionesEvento)
+    {
+        return votacionesEvento
+            .SelectMany(v => v.Categorias.Select(c => c.Nombre).DefaultIfEmpty(ObtenerCategoriaFallback(v)))
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToList();
+    }
+
+    private static string ObtenerCategoriaFallback(VotacionDTO votacion)
+    {
+        string titulo = votacion.Titulo?.Trim() ?? string.Empty;
+        string nombreEvento = votacion.NombreEvento?.Trim() ?? string.Empty;
+        return string.Equals(titulo, nombreEvento, StringComparison.OrdinalIgnoreCase) ? string.Empty : titulo;
+    }
     private List<EventModel> mockEvents = new();
 
     public class EventModel
@@ -347,5 +406,6 @@
         public string Status { get; set; } = "";
         public int Projects { get; set; }
         public string? RolActual { get; set; }
+        public List<string> Categories { get; set; } = new();
     }
 }

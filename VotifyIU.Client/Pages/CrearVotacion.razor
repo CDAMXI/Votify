@@ -321,10 +321,7 @@
         PesoPublico = 30
     };
 
-    private static readonly List<string> categoriasPreset = new()
-    {
-        "Medio ambiente", "IA", "Educación", "Salud", "Fintech"
-    };
+    private static readonly List<string> categoriasPreset = CategoriasPorDefecto.Todas.ToList();
 
     private bool isLoading = false;
     private string errorMessage = string.Empty;
