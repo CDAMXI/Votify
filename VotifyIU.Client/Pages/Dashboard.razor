@@ -377,15 +377,25 @@
     private bool CategoriaSeleccionada(string categoria)
         => string.Equals(filtroCategoria, categoria, StringComparison.OrdinalIgnoreCase);
 
+    private const string MarcadorCriteriosEnCategoria = "||__CRITERIOS__:";
+
     private static List<string> ObtenerCategoriasDelEvento(IGrouping<int, VotacionDTO> votacionesEvento)
     {
         return votacionesEvento
             .SelectMany(v => v.Categorias.Select(c => c.Nombre).DefaultIfEmpty(ObtenerCategoriaFallback(v)))
             .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Select(c => c.Trim())
+            .Select(LimpiarNombreCategoria)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(c => c)
             .ToList();
+    }
+
+    private static string LimpiarNombreCategoria(string nombreCrudo)
+    {
+        if (string.IsNullOrWhiteSpace(nombreCrudo)) return string.Empty;
+        int idx = nombreCrudo.IndexOf(MarcadorCriteriosEnCategoria, StringComparison.Ordinal);
+        return (idx >= 0 ? nombreCrudo[..idx] : nombreCrudo).Trim();
     }
 
     private static string ObtenerCategoriaFallback(VotacionDTO votacion)
