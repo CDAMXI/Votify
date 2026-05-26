@@ -244,10 +244,20 @@
                                         <p class="text-lg font-bold text-[#1A281B]">@v.Titulo</p>
                                         <p class="text-xs mt-2 @GetEstadoVotacionClase(v)">@GetEstadoVotacionTexto(v)</p>
                                     </div>
-                                    <button @onclick="() => IrADestino(v.Id)"
-                                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
-                                        @TextoAccion
-                                    </button>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <button @onclick="() => IrADestino(v.Id)"
+                                                class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                                            @TextoAccion
+                                        </button>
+
+                                        @if (PuedeMostrarBotonVotarParticipante(v))
+                                        {
+                                            <button @onclick="() => IrAVotarComoParticipante(v.Id)"
+                                                    class="bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] px-6 py-3 rounded-xl font-bold hover:bg-[#E9EFE1] transition-colors">
+                                                Votar
+                                            </button>
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         }
@@ -579,6 +589,19 @@
             : "event-voting";
 
         NavigationManager.NavigateTo($"/{destino}/{idVotacion}?rol={Uri.EscapeDataString(rolActual ?? string.Empty)}");
+    }
+
+    private bool PuedeMostrarBotonVotarParticipante(VotacionDTO votacion)
+    {
+        if (!string.Equals(rolActual, "COMPETIDOR", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return votacion.Estado && votacion.FechaFin > DateTime.Now;
+    }
+
+    private void IrAVotarComoParticipante(int idVotacion)
+    {
+        NavigationManager.NavigateTo($"/event-voting/{idVotacion}?rol=COMPETIDOR&modo=votar");
     }
 
     private sealed class RolEventoInfo

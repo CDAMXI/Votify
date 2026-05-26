@@ -40,7 +40,7 @@
                 <div class="w-10 h-10 border-4 border-[#6C8A6C] border-t-transparent rounded-full animate-spin"></div>
             </div>
         }
-        else if (avisoSinDatos != null && (Rol == "JURADO" || Rol == "PUBLICO"))
+        else if (avisoSinDatos != null && (Rol == "JURADO" || Rol == "PUBLICO" || CompetidorEnModoVotacion))
         {
             <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
                 <div class="text-5xl mb-4">📋</div>
@@ -53,7 +53,7 @@
         }
 
     
-        else if (Rol == "JURADO" || Rol == "PUBLICO")
+        else if (Rol == "JURADO" || Rol == "PUBLICO" || CompetidorEnModoVotacion)
         {
             @if (Rol == "JURADO" && yaVotadoEnEvento)
             {
@@ -833,9 +833,14 @@
     [Parameter]
     [SupplyParameterFromQuery]
     public string? ProyectoId { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Modo { get; set; }
 
     private bool EstaEnVistaDetalle => !string.IsNullOrWhiteSpace(ProyectoId)
         && mockProjects.Any(p => p.Id == ProyectoId);
+    private bool CompetidorEnModoVotacion => string.Equals(Rol, "COMPETIDOR", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(Modo, "votar", StringComparison.OrdinalIgnoreCase);
 
     private bool mostrandoConfirmacionVoto = false;
     private bool mostrandoExitoVoto = false;
@@ -982,7 +987,7 @@
                 if (Rol == "ORGANIZADOR")
                     proyectosOrganizador = filtrados;
             }
-            else if (Rol == "JURADO" || Rol == "PUBLICO")
+            else if (Rol == "JURADO" || Rol == "PUBLICO" || CompetidorEnModoVotacion)
             {
                 avisoSinDatos = "Esta votación no tiene proyectos registrados en la base de datos. El organizador debe añadirlos antes de que se pueda votar.";
             }
@@ -990,6 +995,16 @@
             if (Rol == "COMPETIDOR" && !string.IsNullOrWhiteSpace(currentUsername))
             {
                 miProyectoCompetidor = mockProjects.FirstOrDefault(p => string.Equals(p.Team, currentUsername, StringComparison.OrdinalIgnoreCase));
+
+                if (CompetidorEnModoVotacion && miProyectoCompetidor != null)
+                {
+                    mockProjects = mockProjects.Where(p => p.Id != miProyectoCompetidor.Id).ToList();
+                }
+
+                if (CompetidorEnModoVotacion && mockProjects.Count == 0)
+                {
+                    avisoSinDatos = "No hay proyectos disponibles para votar en este evento.";
+                }
             }
 
             var votados = await Http.GetFromJsonAsync<List<int>>($"/api/votos/misVotos/{EventId}");
@@ -1644,14 +1659,30 @@
             }
             catch { }
         }
-        NavigationManager.NavigateTo($"/event-voting/{EventId}?Rol={Rol}&ProyectoId={proyectoId}");
+        NavigationManager.NavigateTo(BuildVotingUrl(proyectoId));
     }
 
     private void VolverAListaJurado()
     {
         comments = "";
         errorVoto = null;
-        NavigationManager.NavigateTo($"/event-voting/{EventId}?Rol={Rol}");
+        NavigationManager.NavigateTo(BuildVotingUrl());
+    }
+
+    private string BuildVotingUrl(string? proyectoId = null)
+    {
+        var query = new List<string>
+        {
+            $"Rol={Uri.EscapeDataString(Rol ?? string.Empty)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(Modo))
+            query.Add($"Modo={Uri.EscapeDataString(Modo)}");
+
+        if (!string.IsNullOrWhiteSpace(proyectoId))
+            query.Add($"ProyectoId={Uri.EscapeDataString(proyectoId)}");
+
+        return $"/event-voting/{EventId}?{string.Join("&", query)}";
     }
 
     private void SincronizarIndiceConProyectoId()
