@@ -7,17 +7,16 @@
 
 <div class="min-h-screen bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC]">
     <header class="bg-white shadow-sm border-b border-[#B5D6AC]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-3 items-center">
-            <div></div>
-            <div class="flex justify-center">
-                <img src="imagenes/logo-votify.png" alt="Votify" class="h-16 object-contain" />
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center gap-2 sm:gap-4">
+            <div class="flex-shrink-0">
+                <img src="imagenes/logo-votify.png" alt="Votify" class="h-10 sm:h-16 object-contain" />
             </div>
             <div class="flex justify-end items-center gap-4">
                 <a href="/" class="border border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] px-4 py-2 rounded-lg transition-colors text-sm font-medium">
                     Cerrar Sesión
                 </a>
-                <a href="/notificaciones" class="relative flex items-center justify-center w-12 h-12 rounded-full border-2 border-[#6C8A6C] text-[#6C8A6C] hover:border-[#4C6B4F] hover:bg-[#E9EFE1] transition-colors flex-shrink-0">
-                    <Icon Name="bell" CssClass="w-6 h-6" />
+                <a href="/notificaciones" class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#6C8A6C] text-[#6C8A6C] hover:border-[#4C6B4F] hover:bg-[#E9EFE1] transition-colors flex-shrink-0">
+                    <Icon Name="bell" CssClass="w-5 h-5 sm:w-6 sm:h-6" />
                     @if (notificacionesNoLeidas > 0)
                     {
                         <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -25,7 +24,7 @@
                         </span>
                     }
                 </a>
-                <a href="/perfil" class="block w-12 h-12 rounded-full overflow-hidden border-2 border-[#6C8A6C] hover:border-[#4C6B4F] transition-colors flex-shrink-0">
+                <a href="/perfil" class="block w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-[#6C8A6C] hover:border-[#4C6B4F] transition-colors flex-shrink-0">
                     <img src="@(string.IsNullOrEmpty(fotoPerfil) ? "imagenes/NoImageProfilePicture.png" : fotoPerfil)"
                          alt="Mi perfil" class="w-full h-full object-cover" />
                 </a>
@@ -33,26 +32,26 @@
         </div>
     </header>
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
-            <h2 class="text-3xl font-bold text-[#1A281B] mb-4">Bienvenido a Votify</h2>
-            <p class="text-[#4C6B4F] leading-relaxed">
+        <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 mb-6 sm:mb-8">
+            <h2 class="text-2xl sm:text-3xl font-bold text-[#1A281B] mb-2 sm:mb-4">Bienvenido a Votify</h2>
+            <p class="text-[#4C6B4F] leading-relaxed text-sm sm:text-base">
                 <strong class="text-[#6C8A6C]">Votify</strong> es un sistema multiplataforma para gestionar votaciones y evaluaciones en eventos competitivos como hackathons, ferias de innovación y concursos.
             </p>
         </div>
 
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-            <div class="flex items-center gap-2 bg-white/70 p-1 rounded-xl border border-[#B5D6AC] w-fit">
+            <div class="flex w-full sm:w-fit items-center gap-1 sm:gap-2 bg-white/70 p-1 rounded-xl border border-[#B5D6AC]">
                 <button @onclick='() => CambiarFiltroEventos("disponibles")'
-                        class='px-4 py-2 rounded-lg text-sm font-medium transition-all @(filtroEventos == "disponibles" ? "bg-[#6C8A6C] text-white shadow" : "text-[#4C6B4F] hover:bg-[#E9EFE1]")'>
-                    Eventos Disponibles
+                        class='flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all @(filtroEventos == "disponibles" ? "bg-[#6C8A6C] text-white shadow" : "text-[#4C6B4F] hover:bg-[#E9EFE1]")'>
+                    Disponibles
                 </button>
                 <button @onclick='() => CambiarFiltroEventos("finalizados")'
-                        class='px-4 py-2 rounded-lg text-sm font-medium transition-all @(filtroEventos == "finalizados" ? "bg-[#6C8A6C] text-white shadow" : "text-[#4C6B4F] hover:bg-[#E9EFE1]")'>
-                    Eventos Finalizados
+                        class='flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all @(filtroEventos == "finalizados" ? "bg-[#6C8A6C] text-white shadow" : "text-[#4C6B4F] hover:bg-[#E9EFE1]")'>
+                    Finalizados
                 </button>
             </div>
             <button @onclick="IrACrearVotacion"
-                    class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white px-5 py-2 rounded-xl font-medium shadow-md transition-all w-fit">
+                    class="w-full sm:w-fit bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] hover:from-[#4C6B4F] hover:to-[#345F35] text-white px-5 py-2.5 sm:py-2 rounded-xl font-medium shadow-md transition-all">
                 + Crear Evento
             </button>
         </div>
@@ -60,13 +59,13 @@
         <div class="mb-6">
             <div class="flex flex-wrap gap-2">
                 <button @onclick='() => CambiarFiltroCategoria("")'
-                        class='min-w-[10rem] text-center px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(string.IsNullOrEmpty(filtroCategoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
+                        class='px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-all border-2 whitespace-nowrap @(string.IsNullOrEmpty(filtroCategoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
                     Todas
                 </button>
                 @foreach (var categoria in categoriasFiltro)
                 {
                     <button @onclick="() => CambiarFiltroCategoria(categoria)"
-                            class='min-w-[10rem] text-center px-4 py-2 rounded-full text-sm font-medium transition-all border-2 @(CategoriaSeleccionada(categoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
+                            class='px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-all border-2 whitespace-nowrap @(CategoriaSeleccionada(categoria) ? "bg-[#6C8A6C] border-[#6C8A6C] text-white shadow" : "bg-white/80 border-[#B5D6AC] text-[#4C6B4F] hover:border-[#6C8A6C]")'>
                         @categoria
                     </button>
                 }
@@ -144,13 +143,13 @@
                         {
                             if(ev.RolActual == "ORGANIZADOR" || ev.RolActual == "ENCARGADO")
                             {
-                                    <div class="flex gap-2">
+                                        <div class="flex flex-col sm:flex-row gap-2">
                                         <button @onclick="() => NavigateToEvent(ev.Id)"
-                                                class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                                    class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md text-sm sm:text-base">
                                             @(ev.Status == "paused" ? "▶ Reanudar" : "Gestionar")
                                         </button>
                                         <button @onclick="() => NavigateToResults(ev.Id)"
-                                                class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
+                                                    class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all text-sm sm:text-base">
                                             Resultados
                                         </button>
                                     </div>
@@ -158,7 +157,7 @@
                             else
                             {
                                 <button @onclick="() => NavigateToEvent(ev.Id)"
-                                        class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                                class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md text-sm sm:text-base">
                                     @GetPrimaryActionText(ev.RolActual)
                                 </button>
                             }
@@ -167,33 +166,34 @@
                             {
                                 if (ev.RolActual == "ORGANIZADOR" || ev.RolActual == "ENCARGADO")
                                 {
-                                    <div class="flex gap-2">
+                                        <div class="flex flex-col sm:flex-row gap-2">
                                         <button @onclick="() => NavigateToEvent(ev.Id)"
-                                                class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md">
+                                                    class="flex-1 bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-3 rounded-xl font-bold transition-all shadow-md text-sm sm:text-base">
                                             ▶ Reanudar / Gestionar
                                         </button>
                                         <button @onclick="() => NavigateToResults(ev.Id)"
-                                                class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all">
+                                                    class="flex-1 bg-white border-2 border-[#6C8A6C] text-[#6C8A6C] hover:bg-[#E9EFE1] py-3 rounded-xl font-bold transition-all text-sm sm:text-base">
                                             Resultados
                                         </button>
                                     </div>
                                 }
                                 else
                                 {
-                                    <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed">
+                                        <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed text-sm sm:text-base">
                                         Votación pausada
                                     </button>
                                 }
                             }
                         else if (ev.Status == "upcoming")
                         {
-                            <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed">
+                                    <button disabled class="w-full bg-[#EFEFEE] text-[#A6AAA9] py-3 rounded-xl font-bold cursor-not-allowed text-sm sm:text-base">
                                 Próximamente
                             </button>
                         }
                         else if (ev.Status == "finished")
                         {
-                            <button @onclick="() => NavigateToResults(ev.Id)" class="w-full bg-[#90A896] hover:bg-[#6C8A6C] text-white py-3 rounded-xl font-bold transition-all">
+                                    <button @onclick="() => NavigateToResults(ev.Id)" 
+                                        class="w-full bg-[#90A896] hover:bg-[#6C8A6C] text-white py-3 rounded-xl font-bold transition-all text-sm sm:text-base">
                                 Ver Resultados
                             </button>
                         }
