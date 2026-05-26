@@ -358,9 +358,12 @@
             .Where(e => string.IsNullOrEmpty(filtroCategoria)
             || e.Categories.Any(c => string.Equals(c, filtroCategoria, StringComparison.OrdinalIgnoreCase)));
 
+    private IEnumerable<EventModel> eventosPorPestana => filtroEventos == "finalizados"
+        ? mockEvents.Where(e => e.Status == "finished")
+        : mockEvents.Where(e => e.Status != "finished");
+
     private IEnumerable<string> categoriasFiltro =>
-        CategoriasPorDefecto.Todas
-            .Concat(mockEvents.SelectMany(e => e.Categories))
+        eventosPorPestana.SelectMany(e => e.Categories)
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(c => c);
@@ -368,6 +371,7 @@
     private void CambiarFiltroEventos(string filtro)
     {
         filtroEventos = filtro;
+        filtroCategoria = string.Empty;
     }
     private void CambiarFiltroCategoria(string categoria)
     {

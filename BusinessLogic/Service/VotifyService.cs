@@ -403,12 +403,15 @@ namespace Votify.BusinessLogic.Service
             foreach (var categoria in categoriasNormalizadas)
             {
                 bool esUnica = categoriasNormalizadas.Count == 1;
-                string tituloVotacion = esUnica ? nombre : categoria.Nombre;
-                string descripcionVisible = esUnica
-                    ? descripcionNormalizada
-                    : string.IsNullOrWhiteSpace(descripcionNormalizada)
-                        ? $"Categoría: {categoria.Nombre}"
-                        : $"{descripcionNormalizada} · Categoría: {categoria.Nombre}";
+                string tituloVotacion = categoria.Nombre;
+                string descripcionVisible = string.IsNullOrWhiteSpace(descripcionNormalizada)
+                    ? $"Categoría: {categoria.Nombre}"
+                    : $"{descripcionNormalizada} · Categoría: {categoria.Nombre}";
+
+                if (esUnica && string.Equals(categoria.Nombre, nombre, StringComparison.OrdinalIgnoreCase))
+                {
+                    descripcionVisible = descripcionNormalizada;
+                }
 
                 Votacion votacion = new Votacion(fechaInicio, request.FechaFin, request.Activa, encargado)
                 {

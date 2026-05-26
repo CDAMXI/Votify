@@ -1446,11 +1446,15 @@ static string ObtenerNombreCategoria(string? nombreConToken)
 static List<CategoriaBaremoDTO> ObtenerCategoriasDeVotacion(Votacion votacion)
 {
     var criterios = ObtenerCriteriosDeDescripcion(votacion.Descripcion);
-    if (!criterios.Any()) return new();
-    
+
+
     // El nombre limpio está en votacion.Titulo, pero asegurarse de limpiarlo del token
     string nombreLimpio = ObtenerNombreCategoria(votacion.Titulo);
-    
+    if (!criterios.Any() && string.Equals(nombreLimpio, votacion.evento?.Nombre?.Trim(), StringComparison.OrdinalIgnoreCase))
+    {
+        return new();
+    }
+
     return new List<CategoriaBaremoDTO>
     {
         new() { Nombre = nombreLimpio, Criterios = criterios }
