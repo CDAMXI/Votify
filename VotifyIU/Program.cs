@@ -36,7 +36,8 @@ builder.Services.AddScoped<VotifyDBContext>(sp =>
 // Registro del Patrón Repositorio Genérico
 builder.Services.AddScoped(typeof(IDAL<>), typeof(EntityFrameworkDAL<>));
 builder.Services.AddScoped<VotifyRepositories>();
-builder.Services.AddScoped<IVotifyService, VotifyService>();
+builder.Services.AddScoped<VotifyService>();
+builder.Services.AddScoped<IVotifyService, VotifyServiceProxy>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IComentarioPopularClassifier>(sp =>
@@ -1334,6 +1335,12 @@ app.MapGet("/api/tests/ut-comentarios-populares-ia", () =>
 app.MapGet("/api/tests/ut-gestion-datos-registro", () =>
 {
     var (ok, msg) = Votify.Tests.GestionDatosRegistroTest.RunAll();
+    return ok ? Results.Ok(msg) : Results.BadRequest(msg);
+});
+
+app.MapGet("/api/tests/ut-patron-proxy", () =>
+{
+    var (ok, msg) = Votify.Tests.PatronProxyTest.RunAll();
     return ok ? Results.Ok(msg) : Results.BadRequest(msg);
 });
 

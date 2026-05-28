@@ -1038,9 +1038,24 @@ namespace Votify.BusinessLogic.Service
 
         private bool UsuarioPuedeGestionarVotacion(Votacion votacion)
         {
-            if (votacion.Encargado == null) return false;
+            if (usuario == null) return false;
             int uid = usuario!.Id;
-            return votacion.Encargado.UsuarioId == uid;
+
+            bool esEncargado = (votacion.Encargado != null && votacion.Encargado.UsuarioId == uid)
+                || _encargadoRepository.GetWhere(r =>
+                    r.UsuarioId == uid &&
+                    (r.Id == votacion.EncargadoId || r.EventoId == votacion.EventoId)).Any();
+
+            bool esOrganizador = _organizadorRepository.GetWhere(r =>
+                r.UsuarioId == uid && r.EventoId == votacion.EventoId).Any();
+
+            if (!esOrganizador)
+            {
+                Evento? evento = _eventoRepository.GetById(votacion.EventoId);
+                esOrganizador = evento != null && evento.OrganizadorId == uid;
+            }
+
+            return esEncargado || esOrganizador;
         }
 
         private bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)
