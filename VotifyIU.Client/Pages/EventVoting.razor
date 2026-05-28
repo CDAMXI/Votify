@@ -1,4 +1,4 @@
-﻿@page "/event-voting/{EventId}"
+@page "/event-voting/{EventId}"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @using System.Linq
@@ -182,7 +182,7 @@
                                         </div>
                                     </div>
                                     <div class="ml-4 text-right">
-                                        @if (editingCriteria.Contains(criterion.Id))
+                                        @if (editingCriteria.Contains(criterion.Id) && !votacionCerrada && !votacionPausada)
                                         {
                                             <input type="number"
                                             min="0" max="10" step="0.01"
@@ -191,7 +191,7 @@
                                             @onblur="() => ToggleEditMode(criterion.Id)"
                                             class="text-3xl font-bold text-[#6C8A6C] w-20 bg-[#E9EFE1] border-b-2 border-[#B5D6AC] outline-none text-right" />
                                         }
-                                        else if (votedProjects.Contains(project.Id))
+                                        else if (votedProjects.Contains(project.Id) || votacionCerrada || votacionPausada)
                                         {
                                             <span class="text-3xl font-bold text-[#6C8A6C]">
                                                 @GetScore(criterion.Id)
@@ -211,7 +211,8 @@
                                 min="0" max="10" step="0.5"
                                 value="@GetScore(criterion.Id)"
                                 @oninput="(e) => HandleScoreChange(criterion.Id, e.Value?.ToString())"
-                                class="w-full h-2 bg-[#E9EFE1] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4" />
+                                disabled="@(votacionCerrada || votacionPausada)"
+                                class="w-full h-2 bg-[#E9EFE1] rounded-lg appearance-none cursor-pointer accent-[#6C8A6C] my-4 disabled:opacity-50 disabled:cursor-not-allowed" />
                                 <div class="flex justify-between text-xs text-[#A6AAA9]">
                                     <span>0 - Muy bajo</span>
                                     <span>5 - Promedio</span>
@@ -232,15 +233,31 @@
                             <textarea value="@comments"
                                       @oninput="(e) => { comments = e.Value?.ToString() ?? string.Empty; commentLength = comments.Length; }"
                                       maxlength="500"
-                                      placeholder="Comparte tus observaciones sobre el proyecto..."
-                                      class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] outline-none transition-all"></textarea>
+                                      disabled="@(votacionCerrada || votacionPausada)"
+                                      placeholder="@(votacionCerrada ? "La votación está cerrada." : votacionPausada ? "La votación está pausada." : "Comparte tus observaciones sobre el proyecto...")"
+                                      class="w-full min-h-[120px] p-4 rounded-xl bg-[#E9EFE1] border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"></textarea>
                             <span class="absolute bottom-2 right-3 text-xs text-[#A6AAA9]">@commentLength/500</span>
                         </div>
                     </div>
-                    <button @onclick="AbrirConfirmacionVoto"
-                            class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
-                        @(votedProjects.Contains(mockProjects[currentProjectIndex].Id) ? "Modificar voto" : "Enviar voto")
-                    </button>
+                    @if (votacionCerrada)
+                    {
+                        <div class="w-full bg-red-50 border border-red-200 text-red-700 py-4 px-6 rounded-xl font-bold text-center shadow-sm">
+                            La votación está cerrada definitivamente
+                        </div>
+                    }
+                    else if (votacionPausada)
+                    {
+                        <div class="w-full bg-[#F3F5F3] border border-[#B5D6AC] text-[#4C6B4F] py-4 px-6 rounded-xl font-bold text-center shadow-sm">
+                            La votación está pausada
+                        </div>
+                    }
+                    else
+                    {
+                        <button @onclick="AbrirConfirmacionVoto"
+                                class="w-full bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
+                            @(votedProjects.Contains(mockProjects[currentProjectIndex].Id) ? "Modificar voto" : "Enviar voto")
+                        </button>
+                    }
 
                     <div class="mt-4 flex items-center gap-3">
                         <button @onclick="VolverAListaJurado"
@@ -328,55 +345,69 @@
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#E9EFE1] to-[#B5D6AC] flex items-center justify-center mx-auto mb-4 text-4xl">🚀</div>
                 @if (miProyectoCompetidor == null)
                 {
-                    <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Presenta tu proyecto</h2>
-                    <p class="text-[#6C8A6C] mb-6">Envía tu proyecto para la categoría <span class="font-bold">@CategoriaActual</span>. La imagen es opcional y podrás subirla después.</p>
-                    <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left max-w-2xl mx-auto">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Nombre del proyecto *</label>
-                                <input @bind="nuevoProyectoCompetidorNombre"
-                                       class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B]" />
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción *</label>
-                                <textarea @bind="nuevoProyectoCompetidorDescripcion"
-                                          class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] min-h-[120px]"></textarea>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Imagen del proyecto (opcional)</label>
-                                <div class="flex items-center gap-3">
-                                    <label class="px-4 py-2 bg-white border border-[#B5D6AC] rounded-lg text-sm font-semibold text-[#4C6B4F] cursor-pointer hover:bg-[#F8FAF7] transition-colors">
-                                        @(procesandoNuevaImagen ? "Procesando..." : "Seleccionar imagen")
-                                        <InputFile OnChange="OnNuevoProyectoImageChange" accept="image/*" style="display:none" />
-                                    </label>
+                    @if (votacionCerrada)
+                    {
+                        <h2 class="text-2xl font-bold text-[#1A281B] mb-2">El plazo de presentación ha finalizado</h2>
+                        <p class="text-[#6C8A6C] mb-6">La votación está cerrada y ya no se pueden presentar más proyectos.</p>
+                        <div class="flex justify-center pt-2">
+                            <button type="button" @onclick="VolverAtras"
+                                    class="px-6 py-3 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#F8FAF7] transition-colors">
+                                Volver
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <h2 class="text-2xl font-bold text-[#1A281B] mb-2">Presenta tu proyecto</h2>
+                        <p class="text-[#6C8A6C] mb-6">Envía tu proyecto para la categoría <span class="font-bold">@CategoriaActual</span>. La imagen es opcional y podrás subirla después.</p>
+                        <div class="bg-[#E9EFE1] rounded-xl p-6 mb-6 text-left max-w-2xl mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Nombre del proyecto *</label>
+                                    <input @bind="nuevoProyectoCompetidorNombre"
+                                           class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B]" />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Descripción *</label>
+                                    <textarea @bind="nuevoProyectoCompetidorDescripcion"
+                                              class="w-full px-4 py-2 rounded-lg bg-white border border-[#B5D6AC] focus:outline-none focus:border-[#6C8A6C] text-[#1A281B] min-h-[120px]"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-[#4C6B4F] block mb-1">Imagen del proyecto (opcional)</label>
+                                    <div class="flex items-center gap-3">
+                                        <label class="px-4 py-2 bg-white border border-[#B5D6AC] rounded-lg text-sm font-semibold text-[#4C6B4F] cursor-pointer hover:bg-[#F8FAF7] transition-colors">
+                                            @(procesandoNuevaImagen ? "Procesando..." : "Seleccionar imagen")
+                                            <InputFile OnChange="OnNuevoProyectoImageChange" accept="image/*" style="display:none" />
+                                        </label>
+                                        @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
+                                        {
+                                            <span class="text-xs text-[#6C8A6C]">Imagen lista para subir</span>
+                                        }
+                                    </div>
                                     @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
                                     {
-                                        <span class="text-xs text-[#6C8A6C]">Imagen lista para subir</span>
+                                        <div class="mt-2 p-2 bg-white border border-[#B5D6AC] rounded-lg">
+                                            <img src="@nuevaImagenProyectoPreview" alt="Vista previa" class="max-h-28 mx-auto" />
+                                        </div>
                                     }
                                 </div>
-                                @if (!string.IsNullOrWhiteSpace(nuevaImagenProyectoPreview))
+                                @if (!string.IsNullOrWhiteSpace(errorProyectoCompetidor))
                                 {
-                                    <div class="mt-2 p-2 bg-white border border-[#B5D6AC] rounded-lg">
-                                        <img src="@nuevaImagenProyectoPreview" alt="Vista previa" class="max-h-28 mx-auto" />
-                                    </div>
+                                    <p class="text-red-500 text-sm font-medium">⚠️ @errorProyectoCompetidor</p>
                                 }
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(errorProyectoCompetidor))
-                            {
-                                <p class="text-red-500 text-sm font-medium">⚠️ @errorProyectoCompetidor</p>
-                            }
-                            <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                                <button @onclick="CrearProyectoCompetidorAsync" disabled="@creandoProyectoCompetidor"
-                                        class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
-                                    @(creandoProyectoCompetidor ? "Guardando..." : "Presentar proyecto")
-                                </button>
-                                <button type="button" @onclick="VolverAtras"
-                                        class="px-6 py-3 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#F8FAF7] transition-colors text-center">
-                                    Volver
-                                </button>
+                                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                                    <button @onclick="CrearProyectoCompetidorAsync" disabled="@creandoProyectoCompetidor"
+                                            class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+                                        @(creandoProyectoCompetidor ? "Guardando..." : "Presentar proyecto")
+                                    </button>
+                                    <button type="button" @onclick="VolverAtras"
+                                            class="px-6 py-3 border-2 border-[#6C8A6C] text-[#6C8A6C] rounded-xl font-bold hover:bg-[#F8FAF7] transition-colors text-center">
+                                        Volver
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
                 }
                 else
                 {
@@ -410,15 +441,21 @@
                             }
 
                             <div class="mt-3 flex gap-2 items-center">
-                                <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#70D939] text-white rounded-xl font-bold cursor-pointer">
-                                    Subir Contenido
-                                    <InputFile OnChange="OnInputFileChange" accept="image/*" style="display:none" />
-                                </label>
+                                @if (!votacionCerrada)
+                                {
+                                    <label class="px-4 py-2 bg-gradient-to-r from-[#6C8A6C] to-[#70D939] text-white rounded-xl font-bold cursor-pointer">
+                                        Subir Contenido
+                                        <InputFile OnChange="OnInputFileChange" accept="image/*" style="display:none" />
+                                    </label>
+                                }
                                 <div class="flex-1"></div>
                                 <button @onclick="() => MostrarImagenModal()" disabled="@(!hasProjectImage)"
                                         class="px-4 py-2 bg-[#6C8A6C] text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed">Visualizar Contenido</button>
-                                <button @onclick="() => confirmEliminarImagen = true" disabled="@(!hasProjectImage)"
-                                        class="px-4 py-2 bg-red-500 text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed">Eliminar Contenido</button>
+                                @if (!votacionCerrada)
+                                {
+                                    <button @onclick="() => confirmEliminarImagen = true" disabled="@(!hasProjectImage)"
+                                            class="px-4 py-2 bg-red-500 text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed">Eliminar Contenido</button>
+                                }
                             </div>
                         </div>
 
@@ -515,10 +552,13 @@
                 <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-xl font-bold text-[#1A281B]">Proyectos registrados</h2>
-                        <button @onclick="() => { mostrarFormProyecto = !mostrarFormProyecto; editandoProyectoId = null; confirmEliminarProyectoId = null; }"
-                                class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity text-sm">
-                            + Añadir proyecto
-                        </button>
+                        @if (!votacionCerrada)
+                        {
+                            <button @onclick="() => { mostrarFormProyecto = !mostrarFormProyecto; editandoProyectoId = null; confirmEliminarProyectoId = null; }"
+                                    class="bg-gradient-to-r from-[#6C8A6C] to-[#4C6B4F] text-white px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity text-sm">
+                                + Añadir proyecto
+                            </button>
+                        }
                     </div>
 
                     @if (mostrarFormProyecto)
@@ -680,16 +720,19 @@
                                                 <p class="text-xs text-[#A6AAA9] mt-1">@proj.Descripcion</p>
                                             }
                                         </div>
-                                        <div class="flex items-center gap-2 ml-4 flex-shrink-0">
-                                            <button @onclick="() => StartEditProyecto(proj)"
-                                                    class="border border-[#6C8A6C] text-[#6C8A6C] px-3 py-1.5 rounded-lg text-sm hover:bg-[#E9EFE1] transition-colors">
-                                                ✏️
-                                            </button>
-                                            <button @onclick="() => { confirmEliminarProyectoId = proj.Id; editandoProyectoId = null; }"
-                                                    class="border border-red-300 text-red-500 px-3 py-1.5 rounded-lg text-sm hover:bg-red-50 transition-colors">
-                                                🗑
-                                            </button>
-                                        </div>
+                                        @if (!votacionCerrada)
+                                        {
+                                            <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+                                                <button @onclick="() => StartEditProyecto(proj)"
+                                                        class="border border-[#6C8A6C] text-[#6C8A6C] px-3 py-1.5 rounded-lg text-sm hover:bg-[#E9EFE1] transition-colors">
+                                                    ✏️
+                                                </button>
+                                                <button @onclick="() => { confirmEliminarProyectoId = proj.Id; editandoProyectoId = null; }"
+                                                        class="border border-red-300 text-red-500 px-3 py-1.5 rounded-lg text-sm hover:bg-red-50 transition-colors">
+                                                    🗑
+                                                </button>
+                                            </div>
+                                        }
                                     </div>
                                 }
                             }
@@ -959,6 +1002,11 @@
         try
         {
             votacionActual = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{EventId}");
+            if (votacionActual != null)
+            {
+                votacionCerrada = votacionActual.FechaFin <= DateTime.Now;
+                votacionPausada = !votacionActual.Estado && !votacionCerrada;
+            }
             AplicarCriteriosDeVotacion();
             var perfil = await Http.GetFromJsonAsync<PerfilPaginaDTO>("/api/perfil");
             currentUsername = perfil?.Username;
@@ -1037,23 +1085,6 @@
         {
             await TryLoadMyProjectImage();
             cargando = false;
-        }
-        // estado de la votación para encargado/organizador
-        if (Rol == "ENCARGADO" || Rol == "ORGANIZADOR")
-        {
-            try
-            {
-                if (int.TryParse(EventId, out int votId))
-                {
-                    var votacion = await Http.GetFromJsonAsync<VotacionDTO>($"/api/votaciones/{votId}");
-                    if (votacion != null)
-                    {
-                        votacionCerrada = !votacion.Estado && votacion.FechaFin <= DateTime.Now;
-                        votacionPausada = !votacion.Estado && !votacionCerrada;
-                    }
-                }
-            }
-            catch { }
         }
     }
 

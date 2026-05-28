@@ -363,7 +363,7 @@
 
     private static string GetEstadoVotacionTexto(VotacionDTO votacion)
     {
-        if (!votacion.Estado && votacion.FechaFin <= DateTime.Now)
+        if (votacion.FechaFin <= DateTime.Now)
             return "Cerrada definitivamente";
 
         if (!votacion.Estado)
@@ -374,7 +374,7 @@
 
     private static string GetEstadoVotacionClase(VotacionDTO votacion)
     {
-        if (!votacion.Estado && votacion.FechaFin <= DateTime.Now)
+        if (votacion.FechaFin <= DateTime.Now)
             return "text-red-600 font-semibold";
 
         if (!votacion.Estado)

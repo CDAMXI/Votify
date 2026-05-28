@@ -560,6 +560,8 @@ namespace Votify.BusinessLogic.Service
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
             if (!UsuarioPuedeGestionarVotacion(votacion))
                 throw new ServiceException("No tienes permisos para modificar esta votación");
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
             if (nuevaFechaFin <= DateTime.Now)
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
             votacion.FechaFin = nuevaFechaFin;
@@ -573,6 +575,8 @@ namespace Votify.BusinessLogic.Service
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
             if (!UsuarioPuedeGestionarVotacion(votacion))
                 throw new ServiceException("No tienes permisos para cerrar esta votación");
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
 
             DateTime fechaCierre = votacion.FechaIni <= DateTime.Now
                 ? votacion.FechaIni
@@ -588,6 +592,8 @@ namespace Votify.BusinessLogic.Service
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
             Evento evento = ObtenerEventoDeVotacionOFallar(votacion);
 
             if (string.IsNullOrWhiteSpace(nombre))
@@ -669,6 +675,13 @@ namespace Votify.BusinessLogic.Service
             Proyecto proyecto = _proyectoRepository.GetById(idProyecto);
             if (proyecto == null) throw new ServiceException("Proyecto no encontrado");
 
+            var votacionAsociada = _votacionRepository.GetWhere(v => v.EventoId == proyecto.EventoId)
+                .ToList()
+                .FirstOrDefault(v => ProyectoPerteneceAVotacion(proyecto, v));
+
+            if (votacionAsociada != null && votacionAsociada.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
+
             Evento evento = proyecto.evento;
             if (evento == null || !UsuarioEsOrganizadorEnEvento(evento.IdEvento))
                 throw new ServiceException("No eres el organizador de este evento");
@@ -694,6 +707,13 @@ namespace Votify.BusinessLogic.Service
             Proyecto proyecto = _proyectoRepository.GetById(idProyecto);
             if (proyecto == null) throw new ServiceException("Proyecto no encontrado");
 
+            var votacionAsociada = _votacionRepository.GetWhere(v => v.EventoId == proyecto.EventoId)
+                .ToList()
+                .FirstOrDefault(v => ProyectoPerteneceAVotacion(proyecto, v));
+
+            if (votacionAsociada != null && votacionAsociada.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
+
             Evento evento = proyecto.evento;
             if (evento == null || !UsuarioEsOrganizadorEnEvento(evento.IdEvento))
                 throw new ServiceException("No eres el organizador de este evento");
@@ -713,8 +733,8 @@ namespace Votify.BusinessLogic.Service
             if (!UsuarioPuedeGestionarVotacion(votacion))
                 throw new ServiceException("No tienes permisos para gestionar esta votación");
 
-            if (votacion.FechaFin <= DateTime.Now && !votacion.Estado)
-                throw new ServiceException("La votación está finalizada y no puede reanudarse");
+            if (votacion.FechaFin <= DateTime.Now)
+                throw new ServiceException("La votación está cerrada");
 
             votacion.Estado = !votacion.Estado;
             Commit();
