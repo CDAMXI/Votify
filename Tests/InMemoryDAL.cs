@@ -6,17 +6,12 @@ using Votify.Persistence;
 
 namespace Votify.Tests
 {
-    /// <summary>
-    /// Repositorio en memoria que implementa IDAL&lt;T&gt; para pruebas unitarias.
-    /// Sustituye a EntityFrameworkDAL sin necesitar base de datos.
-    /// </summary>
     public class InMemoryDAL<T> : IDAL<T> where T : class
     {
         private readonly List<T> _store = new();
+
         private readonly Func<T, IComparable>? _keySelector;
 
-        /// <param name="keySelector">Función que extrae la clave primaria de la entidad.
-        /// Si es null, GetById siempre devuelve null.</param>
         public InMemoryDAL(Func<T, IComparable>? keySelector = null)
         {
             _keySelector = keySelector;
@@ -41,12 +36,16 @@ namespace Votify.Tests
         public IEnumerable<T> GetWhere(Expression<Func<T, bool>> predicate)
             => _store.Where(predicate.Compile()).ToList();
 
-        // Operaciones de transacción — no-op en memoria
-        public void Commit() { }
-        public void Rollback() { }
+        public void Commit() { /* no-op: cambios son inmediatos en memoria */ }
+
+        public void Rollback() { /* no-op */ }
+
         public void RemoveAllData() => _store.Clear();
-        public void BeginTransaction() { }
-        public void CommitTransaction() { }
-        public void RollbackTransaction() { }
+
+        public void BeginTransaction() { /* no-op */ }
+
+        public void CommitTransaction() { /* no-op */ }
+
+        public void RollbackTransaction() { /* no-op */ }
     }
 }

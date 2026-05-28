@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Votify.Entities;
 using Votify.Persistence;
 
@@ -23,33 +22,45 @@ namespace Votify.BusinessLogic.Service
             IDAL<Reclamacion> reclamaciones,
             IDAL<Notificacion>? notificaciones = null)
         {
-            Usuarios = usuarios;
-            Votos = votos;
-            Votaciones = votaciones;
-            Eventos = eventos;
-            Roles = roles;
-            Proyectos = proyectos;
-            Jurados = jurados;
-            Publicos = publicos;
-            Competidores = competidores;
-            Organizadores = organizadores;
-            Encargados = encargados;
-            Reclamaciones = reclamaciones;
-            Notificaciones = notificaciones;
+            Usuarios = usuarios ?? throw new ArgumentNullException(nameof(usuarios));
+            Votos = votos ?? throw new ArgumentNullException(nameof(votos));
+            Votaciones = votaciones ?? throw new ArgumentNullException(nameof(votaciones));
+            Eventos = eventos ?? throw new ArgumentNullException(nameof(eventos));
+            Roles = roles ?? throw new ArgumentNullException(nameof(roles));
+            Proyectos = proyectos ?? throw new ArgumentNullException(nameof(proyectos));
+            Jurados = jurados ?? throw new ArgumentNullException(nameof(jurados));
+            Publicos = publicos ?? throw new ArgumentNullException(nameof(publicos));
+            Competidores = competidores ?? throw new ArgumentNullException(nameof(competidores));
+            Organizadores = organizadores ?? throw new ArgumentNullException(nameof(organizadores));
+            Encargados = encargados ?? throw new ArgumentNullException(nameof(encargados));
+            Reclamaciones = reclamaciones ?? throw new ArgumentNullException(nameof(reclamaciones));
+            Notificaciones = notificaciones; // opcional — puede ser null
         }
 
         public IDAL<Usuario> Usuarios { get; }
+
         public IDAL<Voto> Votos { get; }
+
         public IDAL<Votacion> Votaciones { get; }
+
         public IDAL<Evento> Eventos { get; }
+
         public IDAL<Rol> Roles { get; }
+
         public IDAL<Proyecto> Proyectos { get; }
+
         public IDAL<Jurado> Jurados { get; }
+
         public IDAL<Publico> Publicos { get; }
+
         public IDAL<Competidor> Competidores { get; }
+
         public IDAL<Organizador> Organizadores { get; }
+
         public IDAL<EncargadoVotacion> Encargados { get; }
+
         public IDAL<Reclamacion> Reclamaciones { get; }
+
         public IDAL<Notificacion>? Notificaciones { get; }
     }
 }
