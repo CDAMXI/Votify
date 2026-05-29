@@ -1,4 +1,4 @@
-﻿@page "/dashboard"
+@page "/dashboard"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Votify.shared
 @layout EmptyLayout
@@ -244,7 +244,7 @@
                         var primera = g.OrderBy(v => v.FechaFin).First();
                         var fechaEvento = g.Max(v => v.FechaFin);
                         var ahora = DateTime.Now;
-                        bool hayActiva = g.Any(v => v.Estado && v.FechaFin > ahora);
+                        bool hayActiva = g.Any(v => v.NombreEstado == "Activa" && v.FechaFin > ahora);
                         bool hayPendiente = g.Any(v => v.FechaFin > ahora);
                         resumenPorEvento.TryGetValue(g.Key, out var resumen);
 

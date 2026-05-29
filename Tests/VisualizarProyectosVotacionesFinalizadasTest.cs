@@ -124,7 +124,7 @@ namespace Votify.Tests
                 Descripcion = string.Empty,
                 FechaIni = fechaIni,
                 FechaFin = fechaFin,
-                Estado = fechaFin > DateTime.Now,
+                NombreEstado = fechaFin > DateTime.Now ? "Activa" : "Cerrada",
                 EventoId = id
             };
 

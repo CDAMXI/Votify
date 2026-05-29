@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -13,7 +13,7 @@ namespace Votify.shared
         public string Descripcion { get; set; } = string.Empty;
         public DateTime FechaIni {  get; set; }
         public DateTime FechaFin { get; set; }
-        public bool Estado { get; set; }
+        public string NombreEstado { get; set; }
         public string? RolActual { get; set; }
 
         // Campos de configuración del evento

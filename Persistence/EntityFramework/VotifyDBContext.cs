@@ -164,7 +164,7 @@ namespace Votify.Persistence
             modelBuilder.Entity<Votacion>().Property(v => v.Descripcion).HasColumnName("descripcion");
             modelBuilder.Entity<Votacion>().Property(v => v.FechaIni).HasColumnName("fecha_inicio");
             modelBuilder.Entity<Votacion>().Property(v => v.FechaFin).HasColumnName("fecha_fin");
-            modelBuilder.Entity<Votacion>().Property(v => v.Estado).HasColumnName("estado");
+            modelBuilder.Entity<Votacion>().Property(v => v.NombreEstado).HasColumnName("estado").HasMaxLength(20);
             modelBuilder.Entity<Votacion>().Property(v => v.PesoJurado).HasColumnName("peso_jurado");
             modelBuilder.Entity<Votacion>().Property(v => v.PesoPublico).HasColumnName("peso_publico");
 

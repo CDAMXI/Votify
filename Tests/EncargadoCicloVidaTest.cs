@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Votify.BusinessLogic.Service;
 using Votify.Entities;
@@ -83,7 +83,7 @@ namespace Votify.Tests
             {
                 Id = IdVotacion,
                 EventoId = IdEvento,
-                Estado = true,
+                NombreEstado = "Activa",
                 FechaIni = DateTime.Now.AddDays(-1),
                 FechaFin = DateTime.Now.AddDays(30),
                 Titulo = "Votacion de prueba",
@@ -104,9 +104,9 @@ namespace Votify.Tests
         {
             var ctx = CrearContextoConSesion(UsernameEncargado, PasswordEncargado);
 
-            ctx.Service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), estado: false);
+            ctx.Service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), estado: "Pausada");
 
-            return ctx.VotacionRepo.GetById(IdVotacion).Estado == false
+            return ctx.VotacionRepo.GetById(IdVotacion).NombreEstado == "Pausada"
                 ? (true, "El encargado puede modificar la votación (estado actualizado correctamente)")
                 : (false, "El estado de la votación no cambió tras la modificación");
         }
@@ -117,8 +117,8 @@ namespace Votify.Tests
 
             ctx.Service.CerrarVotacion(IdVotacion);
 
-            return ctx.VotacionRepo.GetById(IdVotacion).Estado == false
-                ? (true, "El encargado puede cerrar la votación (Estado=false)")
+            return ctx.VotacionRepo.GetById(IdVotacion).NombreEstado == "Cerrada"
+                ? (true, "El encargado puede cerrar la votación (NombreEstado='Cerrada')")
                 : (false, "La votación sigue activa tras llamar a CerrarVotacion");
         }
 
@@ -127,7 +127,7 @@ namespace Votify.Tests
             var ctx = CrearContextoConSesion(UsernameOtro, PasswordOtro);
 
             return EsperarFallaDePermisos(
-                () => ctx.Service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), estado: false));
+                () => ctx.Service.ModificarVotacion(IdVotacion, DateTime.Now.AddDays(60), estado: "Pausada"));
         }
 
         public static (bool Success, string Message) UsuarioSinRolNoPuedeCerrarVotacion()

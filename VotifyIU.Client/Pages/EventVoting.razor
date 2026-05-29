@@ -1005,7 +1005,7 @@
             if (votacionActual != null)
             {
                 votacionCerrada = votacionActual.FechaFin <= DateTime.Now;
-                votacionPausada = !votacionActual.Estado && !votacionCerrada;
+                votacionPausada = votacionActual.NombreEstado == "Pausada";
             }
             AplicarCriteriosDeVotacion();
             var perfil = await Http.GetFromJsonAsync<PerfilPaginaDTO>("/api/perfil");

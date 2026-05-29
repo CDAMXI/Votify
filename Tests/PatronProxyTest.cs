@@ -52,7 +52,7 @@ namespace Votify.Tests
             }
             catch (ServiceException)
             {
-                bool sinCambios = ctx.Votaciones.GetById(IdVotacion).Estado;
+                bool sinCambios = ctx.Votaciones.GetById(IdVotacion).NombreEstado == "Activa";
                 return sinCambios
                     ? (true, "El proxy bloqueo la operacion sin sesion y no delego al servicio real")
                     : (false, "La votacion cambio aunque el proxy debia bloquear la operacion");
@@ -70,7 +70,7 @@ namespace Votify.Tests
             }
             catch (ServiceException ex) when (ex.Message.Contains("permisos"))
             {
-                bool sinCambios = ctx.Votaciones.GetById(IdVotacion).Estado;
+                bool sinCambios = ctx.Votaciones.GetById(IdVotacion).NombreEstado == "Activa";
                 return sinCambios
                     ? (true, "El proxy denego cierre a usuario sin rol gestor")
                     : (false, "La votacion cambio aunque el proxy denego el acceso");
@@ -83,7 +83,7 @@ namespace Votify.Tests
 
             ctx.Proxy.CerrarVotacion(IdVotacion);
 
-            return ctx.Votaciones.GetById(IdVotacion).Estado == false
+            return ctx.Votaciones.GetById(IdVotacion).NombreEstado == "Pausada"
                 ? (true, "El proxy permitio cerrar votacion a un encargado")
                 : (false, "El encargado fue autorizado pero la votacion no se cerro");
         }
@@ -93,10 +93,10 @@ namespace Votify.Tests
             var ctx = CrearContexto("organizador", "pass123");
             var nuevaFecha = DateTime.Now.AddDays(45);
 
-            ctx.Proxy.ModificarVotacion(IdVotacion, nuevaFecha, estado: false);
+            ctx.Proxy.ModificarVotacion(IdVotacion, nuevaFecha, estado: "Pausada");
             var votacion = ctx.Votaciones.GetById(IdVotacion);
 
-            bool ok = votacion.Estado == false && votacion.FechaFin == nuevaFecha;
+            bool ok = votacion.NombreEstado == "Pausada" && votacion.FechaFin == nuevaFecha;
             return ok
                 ? (true, "El proxy permitio modificar votacion al organizador")
                 : (false, "La modificacion autorizada no se aplico correctamente");
@@ -252,7 +252,7 @@ namespace Votify.Tests
                 Id = IdVotacion,
                 EventoId = IdEvento,
                 EncargadoId = IdRolEncargado,
-                Estado = true,
+                NombreEstado = "Activa",
                 FechaIni = DateTime.Now.AddDays(-1),
                 FechaFin = DateTime.Now.AddDays(20),
                 Titulo = "Votacion Proxy",

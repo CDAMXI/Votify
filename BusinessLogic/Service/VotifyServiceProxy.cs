@@ -59,7 +59,7 @@ namespace Votify.BusinessLogic.Service
             _realService.EliminarEvento(idVotacion);
         }
 
-        public void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado)
+        public void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, string estado)
         {
             VerificarPuedeGestionarVotacion(idVotacion, "modificar esta votacion");
             _realService.ModificarVotacion(idVotacion, nuevaFechaFin, estado);

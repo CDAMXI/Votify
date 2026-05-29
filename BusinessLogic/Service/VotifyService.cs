@@ -208,7 +208,7 @@ namespace Votify.BusinessLogic.Service
             if (votacion.FechaFin <= DateTime.Now)
                 throw new ServiceException("La votación está cerrada");
 
-            if (!votacion.Estado)
+            if (!votacion.PuedeVotar())
                 throw new ServiceException("La votación está pausada");
 
             int eventoId = evento.IdEvento;
@@ -281,7 +281,7 @@ namespace Votify.BusinessLogic.Service
             if (votacion.FechaFin <= DateTime.Now)
                 throw new ServiceException("La votación está cerrada");
 
-            if (!votacion.Estado)
+            if (!votacion.PuedeVotar())
                 throw new ServiceException("La votación está pausada");
 
             Rol? rolEvento = BuscarRolEnEvento(evento.IdEvento);
@@ -413,7 +413,7 @@ namespace Votify.BusinessLogic.Service
                     descripcionVisible = descripcionNormalizada;
                 }
 
-                Votacion votacion = new Votacion(fechaInicio, request.FechaFin, request.Activa, encargado)
+                Votacion votacion = new Votacion(fechaInicio, request.FechaFin, request.NombreEstado, encargado)
                 {
                     Titulo = tituloVotacion,
                     Descripcion = ConstruirDescripcionVotacion(descripcionVisible, categoria.CriteriosCodificados),
@@ -554,7 +554,7 @@ namespace Votify.BusinessLogic.Service
             rol = nuevoRol;
         }
 
-        public void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado)
+        public void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, string estado)
         {
             RequireUsuarioLogueado();
             Votacion votacion = ObtenerVotacionOFallar(idVotacion);
@@ -565,7 +565,9 @@ namespace Votify.BusinessLogic.Service
             if (nuevaFechaFin <= DateTime.Now)
                 throw new ServiceException("La fecha de fin debe ser posterior a la fecha actual");
             votacion.FechaFin = nuevaFechaFin;
-            votacion.Estado = estado;
+            if (estado?.Trim().ToUpperInvariant() == "ACTIVA" && votacion.NombreEstado != "Activa") votacion.Reanudar();
+            else if (estado?.Trim().ToUpperInvariant() == "PAUSADA" && votacion.NombreEstado != "Pausada") votacion.Pausar();
+            else if (estado?.Trim().ToUpperInvariant() == "CERRADA" && votacion.NombreEstado != "Cerrada") votacion.Cerrar();
             Commit();
         }
 
@@ -582,7 +584,7 @@ namespace Votify.BusinessLogic.Service
                 ? votacion.FechaIni
                 : DateTime.Now;
 
-            votacion.Estado = false;
+            votacion.Cerrar();
             votacion.FechaFin = fechaCierre;
             Commit();
         }
@@ -736,7 +738,8 @@ namespace Votify.BusinessLogic.Service
             if (votacion.FechaFin <= DateTime.Now)
                 throw new ServiceException("La votación está cerrada");
 
-            votacion.Estado = !votacion.Estado;
+            if (votacion.NombreEstado == "Activa") votacion.Pausar();
+            else if (votacion.NombreEstado == "Pausada") votacion.Reanudar();
             Commit();
         }
 
