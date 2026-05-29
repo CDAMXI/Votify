@@ -225,19 +225,30 @@
                         </button>
                     </div>
 
-                    <!-- Peso jurado / público -->
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Estrategia y Pesos -->
+                    <div class="space-y-4">
                         <div class="space-y-1">
-                            <label class="text-sm font-medium text-[#4C6B4F]">Peso voto jurado (%)</label>
-                            <input type="number" @bind="votacionDto.PesoJurado"
-                                   min="0" max="100" disabled="@isLoading"
-                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            <label class="text-sm font-medium text-[#4C6B4F]">Estrategia de Evaluación</label>
+                            <select @bind="votacionDto.EstrategiaCalculo" disabled="@isLoading"
+                                    class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]">
+                                <option value="ESTANDAR">Ponderación Estándar (Porcentaje Clásico)</option>
+                                <option value="UMBRAL">Umbral Mínimo (El jurado debe aprobar para que el público cuente)</option>
+                                <option value="ESCALADA">Escalada por Participación (El público gana peso si hay más votos)</option>
+                            </select>
                         </div>
-                        <div class="space-y-1">
-                            <label class="text-sm font-medium text-[#4C6B4F]">Peso voto público (%)</label>
-                            <input type="number" @bind="votacionDto.PesoPublico"
-                                   min="0" max="100" disabled="@isLoading"
-                                   class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-sm font-medium text-[#4C6B4F]">Peso voto jurado (%)</label>
+                                <input type="number" @bind="votacionDto.PesoJurado"
+                                       min="0" max="100" disabled="@isLoading"
+                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-sm font-medium text-[#4C6B4F]">Peso voto público (%)</label>
+                                <input type="number" @bind="votacionDto.PesoPublico"
+                                       min="0" max="100" disabled="@isLoading"
+                                       class="w-full h-10 rounded-md border bg-[#E9EFE1] border-[#B5D6AC] px-3 text-sm focus:outline-none focus:border-[#6C8A6C] focus:ring-1 focus:ring-[#6C8A6C]" />
+                            </div>
                         </div>
                     </div>
                     @if (votacionDto.PesoJurado + votacionDto.PesoPublico != 100)

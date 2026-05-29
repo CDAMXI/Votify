@@ -27,6 +27,7 @@ namespace Votify.Entities
         public int EncargadoId { get; set; }
         public int PesoJurado { get; set; } = 70;
         public int PesoPublico { get; set; } = 30;
+        public string EstrategiaCalculo { get; set; } = "ESTANDAR";
 
         //Relaciones
         public virtual ICollection<Competidor> competidores { get; set; }

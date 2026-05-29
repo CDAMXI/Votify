@@ -7,6 +7,7 @@ namespace Votify.shared
         public double PromedioGeneral { get; set; }
         public int PesoJurado { get; set; }
         public int PesoPublico { get; set; }
+        public string EstrategiaCalculo { get; set; } = "ESTANDAR";
         public List<ProyectoMonitorDTO> Proyectos { get; set; } = new();
         public List<VotanteEstadoDTO> Votantes { get; set; } = new();
         public List<VotoHistorialDTO> Historial { get; set; } = new();

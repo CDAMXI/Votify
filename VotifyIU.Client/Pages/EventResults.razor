@@ -448,6 +448,31 @@
                 }
 
                 <div class="space-y-5">
+                    <div class="flex items-center justify-between gap-4 text-lg md:text-xl border-b border-[#D8E3D1] pb-4">
+                        <span class="font-bold text-[#1A281B]">Estrategia de Evaluación</span>
+                        <div class="flex items-center gap-2">
+                            <select @bind="configuracionResultados.EstrategiaCalculo"
+                                    class="w-48 rounded-2xl border border-[#B5D6AC] bg-[#F8FAF7] px-4 py-3 text-right text-[#6C8A6C] font-bold focus:outline-none focus:border-[#6C8A6C]">
+                                <option value="ESTANDAR">Ponderación Estándar</option>
+                                <option value="UMBRAL">Umbral Mínimo</option>
+                                <option value="ESCALADA">Escalada por Participación</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @if(configuracionResultados.EstrategiaCalculo == "UMBRAL")
+                    {
+                        <div class="rounded-2xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+                            <strong>Umbral Mínimo:</strong> Si la nota del jurado no alcanza el aprobado (5.0), el voto popular no se tendrá en cuenta.
+                        </div>
+                    }
+                    else if(configuracionResultados.EstrategiaCalculo == "ESCALADA")
+                    {
+                        <div class="rounded-2xl bg-purple-50 border border-purple-200 px-4 py-3 text-sm text-purple-700">
+                            <strong>Escalada:</strong> El peso del público arranca en 0% (menos de 5 votos) y alcanza su porcentaje máximo a los 20 votos.
+                        </div>
+                    }
+
                     <div class="flex items-center justify-between gap-4 text-lg md:text-2xl">
                         <span class="font-bold text-[#1A281B]">Peso de voto experto</span>
                         <div class="flex items-center gap-2">
