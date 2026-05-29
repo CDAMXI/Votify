@@ -421,7 +421,8 @@ namespace Votify.BusinessLogic.Service
                     EventoId = evento.IdEvento,
                     EncargadoId = encargado.Id,
                     PesoJurado = request.PesoJurado,
-                    PesoPublico = request.PesoPublico
+                    PesoPublico = request.PesoPublico,
+                    EstrategiaCalculo = request.EstrategiaCalculo
                 };
 
                 _votacionRepository.Insert(votacion);

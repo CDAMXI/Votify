@@ -167,6 +167,7 @@ namespace Votify.Persistence
             modelBuilder.Entity<Votacion>().Property(v => v.NombreEstado).HasColumnName("estado").HasMaxLength(20);
             modelBuilder.Entity<Votacion>().Property(v => v.PesoJurado).HasColumnName("peso_jurado");
             modelBuilder.Entity<Votacion>().Property(v => v.PesoPublico).HasColumnName("peso_publico");
+            modelBuilder.Entity<Votacion>().Property(v => v.EstrategiaCalculo).HasColumnName("estrategia_calculo").HasMaxLength(50);
 
             modelBuilder.Entity<Votacion>().Property(v => v.EventoId).HasColumnName("id_evento");
             modelBuilder.Entity<Votacion>().Property(v => v.EncargadoId).HasColumnName("id_encargado");
@@ -370,6 +371,8 @@ namespace Votify.Persistence
                 "ALTER TABLE public.votacion ADD COLUMN IF NOT EXISTS peso_jurado integer NOT NULL DEFAULT 70;");
             Database.ExecuteSqlCommand(
                 "ALTER TABLE public.votacion ADD COLUMN IF NOT EXISTS peso_publico integer NOT NULL DEFAULT 30;");
+            Database.ExecuteSqlCommand(
+                "ALTER TABLE public.votacion ADD COLUMN IF NOT EXISTS estrategia_calculo character varying(50) NOT NULL DEFAULT 'ESTANDAR';");
             Database.ExecuteSqlCommand(
                 "ALTER TABLE public.proyecto ADD COLUMN IF NOT EXISTS foto_proyecto text;");
             Database.ExecuteSqlCommand(@"

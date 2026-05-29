@@ -4,6 +4,7 @@ using Votify.shared;
 using VotifyIU.Services;
 using VotifyIU.Components;
 using Votify.BusinessLogic.Service;
+using Votify.BusinessLogic.Strategies;
 using Votify.Persistence;
 using Npgsql;
 
@@ -531,6 +532,7 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
             PesoJurado = req.PesoJurado,
             PesoPublico = req.PesoPublico,
+            EstrategiaCalculo = req.EstrategiaCalculo,
             CodigoEncargado = req.CodigoEncargado,
             CodigoJurado = req.CodigoJurado,
             CorreosEncargados = req.CorreosEncargados,
@@ -609,10 +611,7 @@ app.MapGet("/api/dashboard/eventos-resumen", (IVotifyService service, HttpContex
 
         return Results.Ok(resumen);
     }
-    catch (Exception ex)
-    {
-        return Results.Problem(ObtenerMensajeErrorDetallado(ex));
-    }
+    catch (Exception ex) { return Results.Problem(ObtenerMensajeErrorDetallado(ex)); }
 });
 
 app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService service, HttpContext http) =>
@@ -927,7 +926,7 @@ app.MapGet("/api/votaciones/{id}/configuracion-resultados", (
         if (votacion == null) return Results.NotFound("Votación no encontrada");
         if (usuarioActual == null || !UsuarioPuedeGestionarResultados(votacion, usuarioActual, organizadorRepo, encargadoRepo))
             return Results.Text("No tienes permisos para gestionar esta votación.", statusCode: StatusCodes.Status403Forbidden);
-        return Results.Ok(new ConfiguracionResultadosDTO { PesoJurado = votacion.PesoJurado, PesoPublico = votacion.PesoPublico });
+        return Results.Ok(new ConfiguracionResultadosDTO { PesoJurado = votacion.PesoJurado, PesoPublico = votacion.PesoPublico, EstrategiaCalculo = votacion.EstrategiaCalculo });
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
@@ -951,8 +950,12 @@ app.MapPut("/api/votaciones/{id}/configuracion-resultados", (
         if (errorPesos != null) return Results.BadRequest(errorPesos);
         votacion.PesoJurado = req.PesoJurado;
         votacion.PesoPublico = req.PesoPublico;
+        if (!string.IsNullOrWhiteSpace(req.EstrategiaCalculo))
+            votacion.EstrategiaCalculo = req.EstrategiaCalculo;
+
         votacionRepo.Commit();
-        return Results.Ok(new ConfiguracionResultadosDTO { PesoJurado = votacion.PesoJurado, PesoPublico = votacion.PesoPublico });
+
+        return Results.Ok(new ConfiguracionResultadosDTO { PesoJurado = votacion.PesoJurado, PesoPublico = votacion.PesoPublico, EstrategiaCalculo = votacion.EstrategiaCalculo });
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
@@ -1553,7 +1556,9 @@ static ProyectoResultadoDTO BuildProjectResult(Proyecto proyecto, List<Voto> vot
     double mediaBruta = ResultadosVotacionCalculator.CalcularMedia(votosProyecto);
     double? mediaJurado = votosJurado.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosJurado) : null;
     double? mediaPopular = votosPopular.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPopular) : null;
-    double mediaAjustada = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(mediaJurado, mediaPopular, votacion.PesoJurado, votacion.PesoPublico);
+    
+    var estrategia = EstrategiaCalculoFactory.CrearEstrategia(votacion.EstrategiaCalculo);
+    double mediaAjustada = estrategia.CalcularPuntuacionFinal(votosJurado, votosPopular, votacion.PesoJurado, votacion.PesoPublico);
 
     var comentarios = votosProyecto
         .Where(v => !string.IsNullOrWhiteSpace(v.Comentario))
@@ -1591,11 +1596,14 @@ static ProyectoMonitorDTO BuildProjectMonitor(Proyecto proyecto, List<Voto> voto
     double mediaBruta = ResultadosVotacionCalculator.CalcularMedia(votosProyecto);
     double? mediaJurado = votosJurado.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosJurado) : null;
     double? mediaPopular = votosPopular.Any() ? ResultadosVotacionCalculator.CalcularMedia(votosPopular) : null;
+    
+    var estrategia = EstrategiaCalculoFactory.CrearEstrategia(votacion.EstrategiaCalculo);
+
     return new ProyectoMonitorDTO
     {
         Id = proyecto.Id,
         Nombre = proyecto.Nombre ?? $"Proyecto #{proyecto.Id}",
-        Media = ResultadosVotacionCalculator.CalcularPuntuacionAjustada(mediaJurado, mediaPopular, votacion.PesoJurado, votacion.PesoPublico),
+        Media = estrategia.CalcularPuntuacionFinal(votosJurado, votosPopular, votacion.PesoJurado, votacion.PesoPublico),
         MediaBruta = mediaBruta,
         MediaJurado = mediaJurado ?? 0,
         MediaPopular = mediaPopular ?? 0,
