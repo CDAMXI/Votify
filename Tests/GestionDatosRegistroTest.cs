@@ -56,7 +56,7 @@ namespace Votify.Tests
         {
             var ctx = CrearContexto();
 
-            ctx.Service.Registrar(new RegistroUsuarioRequest("", "", ""));
+            ctx.Service.Registrar(new RegistroUsuarioRequest("ana", "ANA@MAIL.COM", "Abcdef1!"));
             var usuario = ctx.Usuarios.GetAll().SingleOrDefault();
 
             bool ok = usuario != null
@@ -71,11 +71,11 @@ namespace Votify.Tests
         public static (bool Success, string Message) RechazaEmailDuplicado()
         {
             var ctx = CrearContexto();
-            ctx.Service.Registrar(new RegistroUsuarioRequest("", "", ""));
+            ctx.Service.Registrar(new RegistroUsuarioRequest("ana", "ana@mail.com", "Abcdef1!"));
 
             try
             {
-                ctx.Service.Registrar(new RegistroUsuarioRequest("", "", ""));
+                ctx.Service.Registrar(new RegistroUsuarioRequest("ana2", "ANA@MAIL.COM", "Xyzabc1!"));
                 return (false, "Se permitio registrar dos cuentas con el mismo correo");
             }
             catch (ServiceException)

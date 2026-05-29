@@ -83,7 +83,7 @@ namespace Votify.Tests
 
             ctx.Proxy.CerrarVotacion(IdVotacion);
 
-            return ctx.Votaciones.GetById(IdVotacion).NombreEstado == "Pausada"
+            return ctx.Votaciones.GetById(IdVotacion).NombreEstado == "Cerrada"
                 ? (true, "El proxy permitio cerrar votacion a un encargado")
                 : (false, "El encargado fue autorizado pero la votacion no se cerro");
         }
