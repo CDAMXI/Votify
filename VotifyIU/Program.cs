@@ -134,7 +134,7 @@ app.MapPost("/api/auth/register", (RegisterRequest req, IVotifyService service) 
 {
     try
     {
-        service.Registrar(req.Username, req.Email, req.Password);
+        service.Registrar(new RegistroUsuarioRequest(req.Username, req.Email, req.Password));
         return Results.Ok();
     }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }

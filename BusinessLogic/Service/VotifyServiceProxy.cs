@@ -25,7 +25,7 @@ namespace Votify.BusinessLogic.Service
         public void LogIn(string username, string password) => _realService.LogIn(username, password);
         public void LogOut() => _realService.LogOut();
         public void RestoreSession(string username) => _realService.RestoreSession(username);
-        public void Registrar(string username, string email, string password) => _realService.Registrar(username, email, password);
+        public void Registrar(RegistroUsuarioRequest request) => _realService.Registrar(request);
 
         public Usuario GetUsuarioActual() => _realService.GetUsuarioActual();
         public (string Username, string Email, string? FotoPerfil) GetPerfil() => _realService.GetPerfil();

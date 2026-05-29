@@ -56,7 +56,7 @@ namespace Votify.Tests
         {
             var ctx = CrearContexto();
 
-            ctx.Service.Registrar("ana", "ANA@MAIL.COM", "Abcdef1!");
+            ctx.Service.Registrar(new RegistroUsuarioRequest("", "", ""));
             var usuario = ctx.Usuarios.GetAll().SingleOrDefault();
 
             bool ok = usuario != null
@@ -71,11 +71,11 @@ namespace Votify.Tests
         public static (bool Success, string Message) RechazaEmailDuplicado()
         {
             var ctx = CrearContexto();
-            ctx.Service.Registrar("ana", "ana@mail.com", "Abcdef1!");
+            ctx.Service.Registrar(new RegistroUsuarioRequest("", "", ""));
 
             try
             {
-                ctx.Service.Registrar("ana2", "ANA@MAIL.COM", "Xyzabc1!");
+                ctx.Service.Registrar(new RegistroUsuarioRequest("", "", ""));
                 return (false, "Se permitio registrar dos cuentas con el mismo correo");
             }
             catch (ServiceException)
@@ -162,7 +162,7 @@ namespace Votify.Tests
         private static Contexto CrearContextoConUsuarioRegistrado()
         {
             var ctx = CrearContexto();
-            ctx.Service.Registrar("ana", "ana@mail.com", "Abcdef1!");
+            ctx.Service.Registrar(new RegistroUsuarioRequest("ana", "ana@mail.com", "Abcdef1!"));
             return ctx;
         }
 
@@ -172,7 +172,7 @@ namespace Votify.Tests
 
             try
             {
-                ctx.Service.Registrar("ana", "ana@mail.com", password);
+                ctx.Service.Registrar(new RegistroUsuarioRequest("ana", "ana@mail.com", password));
                 return (false, $"Se acepto una contrasena insegura: {password}");
             }
             catch (ServiceException)

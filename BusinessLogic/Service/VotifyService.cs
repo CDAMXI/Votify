@@ -94,10 +94,10 @@ namespace Votify.BusinessLogic.Service
             CargarRolDeUsuario(user);
         }
 
-        public void Registrar(string username, string email, string password)
+        public void Registrar(RegistroUsuarioRequest request)
         {
-            username = (username ?? string.Empty).Trim();
-            email = NormalizarEmail(email);
+            string username = (request.Username ?? string.Empty).Trim();
+            string email = (request.Email ?? string.Empty).Trim().ToLowerInvariant();
 
             if (string.IsNullOrWhiteSpace(username))
                 throw new ServiceException("El nombre de usuario no puede estar vacio");
@@ -113,9 +113,9 @@ namespace Votify.BusinessLogic.Service
             if (emailExistente)
                 throw new ServiceException("El correo ya está registrado");
 
-            ValidarPasswordSegura(password);
+            ValidarPasswordSegura(request.Password);
 
-            _usuarioRepository.Insert(new Usuario(username, email, password, 0));
+            _usuarioRepository.Insert(new Usuario(username, email, request.Password, 0));
             Commit();
         }
 
@@ -829,13 +829,10 @@ namespace Votify.BusinessLogic.Service
             if (!destinatarioIds.Any())
                 return;
 
-            foreach (var destinatarioId in destinatarioIds)
-            {
-                var destinatario = _usuarioRepository.GetById(destinatarioId);
-                if (destinatario == null)
-                    continue;
-
-                _notificacionRepository.Insert(new Notificacion
+            var notificaciones = destinatarioIds
+                .Select(id => _usuarioRepository.GetById(id))
+                .Where(destinatario => destinatario != null)
+                .Select(destinatario => new Notificacion
                 {
                     RemitenteId = usuario!.Id,
                     DestinatarioId = destinatario.Id,
@@ -846,6 +843,10 @@ namespace Votify.BusinessLogic.Service
                     remitente = usuario,
                     destinatario = destinatario
                 });
+
+            foreach (var notificacion in notificaciones)
+            {
+                _notificacionRepository.Insert(notificacion);
             }
 
             Commit();
@@ -861,7 +862,7 @@ namespace Votify.BusinessLogic.Service
             if (evento == null)
                 throw new ServiceException("El evento no existe");
 
-            if (!UsuarioEsOrganizadorEnEvento(idEvento))
+            if (!UsuarioEsOrganizadorEnEvento(usuario!.Id, idEvento))
                 throw new ServiceException("Solo el organizador puede invitar usuarios desde aquí");
 
             email = (email ?? string.Empty).Trim();
@@ -976,10 +977,10 @@ namespace Votify.BusinessLogic.Service
                 throw new ServiceException(MensajeNoUsuarioLogueado);
         }
 
-        private void ValidarLongitudComentario(string? comentario)
+        private void ValidarLongitudComentario(string comentarioVisible)
         {
-            if (!string.IsNullOrEmpty(comentario) && comentario.Length > MaxLongitudComentario)
-                throw new ServiceException($"El comentario no puede tener más de {MaxLongitudComentario} caracteres");
+            if (comentarioVisible.Length > MaxLongitudComentario)
+                throw new ServiceException($"El comentario no puede exceder los {MaxLongitudComentario} caracteres");
         }
 
         public static string ObtenerComentarioVisible(string? comentario)
@@ -1065,21 +1066,30 @@ namespace Votify.BusinessLogic.Service
             if (usuario == null) return false;
             int uid = usuario!.Id;
 
-            bool esEncargado = (votacion.Encargado != null && votacion.Encargado.UsuarioId == uid)
-                || _encargadoRepository.GetWhere(r =>
-                    r.UsuarioId == uid &&
-                    (r.Id == votacion.EncargadoId || r.EventoId == votacion.EventoId)).Any();
+            if (UsuarioEsEncargadoEnVotacion(uid, votacion)) 
+                return true;
 
+            return UsuarioEsOrganizadorEnEvento(uid, votacion.EventoId);
+        }
+
+        private bool UsuarioEsEncargadoEnVotacion(int uid, Votacion votacion)
+        {
+            return (votacion.Encargado != null && votacion.Encargado.UsuarioId == uid)
+                || _encargadoRepository.GetWhere(r =>
+                    r.UsuarioId == uid && r.EventoId == votacion.EventoId).Any();
+        }
+
+        private bool UsuarioEsOrganizadorEnEvento(int uid, int eventoId)
+        {
             bool esOrganizador = _organizadorRepository.GetWhere(r =>
-                r.UsuarioId == uid && r.EventoId == votacion.EventoId).Any();
+                r.UsuarioId == uid && r.EventoId == eventoId).Any();
 
             if (!esOrganizador)
             {
-                Evento? evento = _eventoRepository.GetById(votacion.EventoId);
+                Evento? evento = _eventoRepository.GetById(eventoId);
                 esOrganizador = evento != null && evento.OrganizadorId == uid;
             }
-
-            return esEncargado || esOrganizador;
+            return esOrganizador;
         }
 
         private bool ProyectoPerteneceAVotacion(Proyecto proyecto, Votacion votacion)

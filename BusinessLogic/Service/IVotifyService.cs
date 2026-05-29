@@ -33,7 +33,7 @@ namespace Votify.BusinessLogic.Service
         void LogIn(string username, string password);
         void LogOut();
         void RestoreSession(string username);
-        void Registrar(string username, string email, string password);
+        void Registrar(RegistroUsuarioRequest request);
 
         // Perfil
         Usuario GetUsuarioActual();
