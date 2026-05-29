@@ -18,7 +18,7 @@ namespace Votify.Tests
     ///   · El voto queda enlazado al proyecto, votación y votante correctos.
     ///   · El sistema rechaza un segundo voto del mismo votante sobre el mismo proyecto.
     ///   · El sistema rechaza un voto sobre una votación con FechaFin pasada.
-    ///   · El sistema rechaza un voto sobre una votación con Estado=false (pausada).
+    ///   · El sistema rechaza un voto sobre una votación con NombreEstado='Pausada'.
     ///   · El sistema rechaza un voto sin puntuación válida (fuera de 0..10).
     /// </summary>
     public static class ConfirmarRegistroVotoTest
@@ -47,7 +47,7 @@ namespace Votify.Tests
             if (votacion.FechaFin <= DateTime.Now)
                 return "La votación está cerrada";
 
-            if (!votacion.Estado)
+            if (votacion.NombreEstado == "Pausada")
                 return "La votación está pausada";
 
             bool yaVoto = votoRepo
@@ -86,7 +86,7 @@ namespace Votify.Tests
 
         /// <summary>
         /// Modifica un voto existente. Solo se permite si la votación sigue activa
-        /// (FechaFin futura y Estado=true). Es la operación que respalda PA 3330/3335.
+        /// (FechaFin futura y NombreEstado='Activa'). Es la operación que respalda PA 3330/3335.
         /// </summary>
         private static Voto? ModificarVoto(
             Votacion votacion,
@@ -100,7 +100,7 @@ namespace Votify.Tests
             error = null;
 
             if (votacion.FechaFin <= DateTime.Now) { error = "La votación está cerrada"; return null; }
-            if (!votacion.Estado)                  { error = "La votación está pausada"; return null; }
+            if (votacion.NombreEstado == "Pausada")                  { error = "La votación está pausada"; return null; }
             if (nuevaPuntuacion < 0 || nuevaPuntuacion > 10) { error = "El valor debe estar entre 0 y 10"; return null; }
 
             var voto = votoRepo.GetWhere(v =>
@@ -124,7 +124,7 @@ namespace Votify.Tests
                 Id = IdVotacion,
                 Titulo = "Categoría Test",
                 Descripcion = string.Empty,
-                Estado = true,
+                NombreEstado = "Activa",
                 FechaIni = DateTime.Now.AddDays(-1),
                 FechaFin = DateTime.Now.AddDays(7),
                 EventoId = 1
@@ -193,13 +193,13 @@ namespace Votify.Tests
         public static (bool Success, string Message) NoSePuedeVotarEnVotacionPausada()
         {
             var votacion = CrearVotacionActiva();
-            votacion.Estado = false;  // pausada
+            votacion.NombreEstado = "Pausada";
             var repo = VotoRepoVacio();
 
             RegistrarVoto(votacion, IdVotante, IdProyecto, 5, null, repo, out string? error);
 
             return error != null && error.Contains("pausada") && repo.GetAll().Count() == 0
-                ? (true, "Una votación con Estado=false rechaza nuevos votos")
+                ? (true, "Una votación con NombreEstado='Pausada' rechaza nuevos votos")
                 : (false, $"error='{error}', votos en repo={repo.GetAll().Count()} (esperaba 0)");
         }
 
@@ -242,11 +242,11 @@ namespace Votify.Tests
             RegistrarVoto(votacion, IdVotante, IdProyecto, 5.0, "Voto inicial", repo, out _);
 
             // La votación se pausa y luego se intenta modificar
-            votacion.Estado = false;
+            votacion.NombreEstado = "Pausada";
             ModificarVoto(votacion, IdVotante, IdProyecto, 9.0, "Intento tras pausa", repo, out string? errorPausa);
 
             // La votación se cierra (FechaFin pasada) y se intenta modificar
-            votacion.Estado = true;
+            votacion.NombreEstado = "Activa";
             votacion.FechaFin = DateTime.Now.AddDays(-1);
             ModificarVoto(votacion, IdVotante, IdProyecto, 9.0, "Intento tras cierre", repo, out string? errorCierre);
 

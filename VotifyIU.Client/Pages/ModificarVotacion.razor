@@ -1,4 +1,4 @@
-﻿@page "/votacion/{VotacionId:int}"
+@page "/votacion/{VotacionId:int}"
 @using Votify.shared
 @layout EmptyLayout
 @inject NavigationManager NavigationManager
@@ -52,8 +52,8 @@
                     <!-- Estado actual -->
                     <div class="flex items-center justify-between p-3 bg-[#E9EFE1] rounded-xl">
                         <span class="text-sm text-[#4C6B4F] font-medium">Estado actual</span>
-                        <span class="text-sm font-semibold @(votacionDto.Estado ? "text-[#4C6B4F]" : "text-[#90A896]")">
-                            @(votacionDto.Estado ? "Activa" : "Pausada")
+                        <span class="text-sm font-semibold @(votacionDto.NombreEstado == "Activa" ? "text-[#4C6B4F]" : "text-[#90A896]")">
+                            @(votacionDto.NombreEstado)
                         </span>
                     </div>
 
@@ -80,14 +80,14 @@
                 <!-- Pausar / Reanudar -->
                 <button @onclick="HandleTogglePausa" disabled="@isSaving"
                         class="w-full py-3 rounded-xl font-medium transition-all duration-300 border-2 disabled:opacity-60
-                                   @(votacionDto.Estado
+                                   @(votacionDto.NombreEstado == "Activa"
                                                            ? "border-[#90A896] text-[#6C8A6C] hover:bg-[#E9EFE1]"
                                                            : "border-[#4C6B4F] text-[#4C6B4F] hover:bg-[#E9EFE1]")">
                     @if (isSaving)
                     {
                         <span>Procesando...</span>
                     }
-                    else if (votacionDto.Estado)
+                    else if (votacionDto.NombreEstado == "Activa")
                     {
                         <span>⏸ Pausar votación</span>
                     }
@@ -133,7 +133,7 @@
     [Parameter]
     public int VotacionId { get; set; }
 
-    private VotacionDTO votacionDto = new() { FechaFin = DateTime.Today, Estado = true };
+    private VotacionDTO votacionDto = new() { FechaFin = DateTime.Today, NombreEstado = "Activa" };
     private bool isLoadingData = true;
     private bool isSaving = false;
     private bool confirmarCierre = false;
@@ -149,8 +149,8 @@
             if (votacion != null)
             {
                 votacionDto = votacion;
-                // Si está cerrada (Estado=false y FechaFin en el pasado), bloquear edición
-                votacionCerrada = !votacionDto.Estado && votacionDto.FechaFin <= DateTime.Now;
+                // Si está cerrada (NombreEstado="Cerrada" y FechaFin en el pasado), bloquear edición
+                votacionCerrada = votacionDto.FechaFin <= DateTime.Now;
             }
             else
             {
@@ -181,15 +181,15 @@
 
     private async Task HandleTogglePausa()
     {
-        votacionDto.Estado = !votacionDto.Estado;
+        votacionDto.NombreEstado = votacionDto.NombreEstado == "Activa" ? "Pausada" : "Activa";
         await EjecutarAccion(async () =>
         {
             var response = await Http.PutAsJsonAsync($"/api/votaciones/{VotacionId}", votacionDto);
             if (response.IsSuccessStatusCode)
-                successMessage = votacionDto.Estado ? "Votación reanudada." : "Votación pausada.";
+                successMessage = votacionDto.NombreEstado == "Activa" ? "Votación reanudada." : "Votación pausada.";
             else
             {
-                votacionDto.Estado = !votacionDto.Estado; // revertir
+                votacionDto.NombreEstado = votacionDto.NombreEstado == "Activa" ? "Pausada" : "Activa"; // revertir
                 errorMessage = await response.Content.ReadAsStringAsync();
             }
         });

@@ -527,7 +527,7 @@ app.MapPost("/api/votaciones", (VotacionDTO req, IVotifyService service, HttpCon
             Titulo = req.Titulo,
             Descripcion = req.Descripcion,
             FechaFin = req.FechaFin,
-            Activa = true,
+            NombreEstado = "Activa",
             PermiteCompetidoresVotar = req.PermiteCompetidoresVotar,
             PesoJurado = req.PesoJurado,
             PesoPublico = req.PesoPublico,
@@ -564,7 +564,7 @@ app.MapGet("/api/votaciones", (IVotifyService service, HttpContext http) =>
             Descripcion = ObtenerDescripcionVisible(v.Descripcion),
             FechaIni = v.FechaIni,
             FechaFin = v.FechaFin,
-            Estado = v.Estado,
+            NombreEstado = v.NombreEstado,
             PesoJurado = v.PesoJurado,
             PesoPublico = v.PesoPublico,
             Categorias = ObtenerCategoriasDeVotacion(v),
@@ -636,7 +636,7 @@ app.MapGet("/api/eventos/{idEvento}/votaciones", (int idEvento, IVotifyService s
                 Descripcion = ObtenerDescripcionVisible(v.Descripcion),
                 FechaIni = v.FechaIni,
                 FechaFin = v.FechaFin,
-                Estado = v.Estado,
+                NombreEstado = v.NombreEstado,
                 PesoJurado = v.PesoJurado,
                 PesoPublico = v.PesoPublico,
                 Categorias = ObtenerCategoriasDeVotacion(v),
@@ -668,7 +668,7 @@ app.MapGet("/api/votaciones/{id}", (int id, IVotifyService service, HttpContext 
             Descripcion = ObtenerDescripcionVisible(votacion.Descripcion),
             FechaIni = votacion.FechaIni,
             FechaFin = votacion.FechaFin,
-            Estado = votacion.Estado,
+            NombreEstado = votacion.NombreEstado,
             PesoJurado = votacion.PesoJurado,
             PesoPublico = votacion.PesoPublico,
             Categorias = ObtenerCategoriasDeVotacion(votacion),
@@ -730,7 +730,7 @@ app.MapPut("/api/votaciones/{id}", (int id, VotacionDTO req, IVotifyService serv
 {
     string? username = ObtenerUsernameAutenticado(http);
     if (username == null) return Results.Unauthorized();
-    try { service.RestoreSession(username); service.ModificarVotacion(id, req.FechaFin, req.Estado); return Results.Ok(); }
+    try { service.RestoreSession(username); service.ModificarVotacion(id, req.FechaFin, req.NombreEstado); return Results.Ok(); }
     catch (ServiceException ex) { return Results.BadRequest(ex.Message); }
     catch (Exception ex) { return Results.Problem(ex.Message); }
 });

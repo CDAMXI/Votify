@@ -22,7 +22,8 @@ namespace Votify.Tests
         private static Votacion CrearVotacionPorDefecto()
         {
             var encargado = new EncargadoVotacion(DateTime.Now, 0);
-            return new Votacion(DateTime.Now, DateTime.Now.AddDays(7), true, encargado);
+            var votacion = new Votacion(DateTime.Now, DateTime.Now.AddDays(7), "Activa", null!);
+            return votacion;
         }
 
         // ── Pruebas ────────────────────────────────────────────────────────

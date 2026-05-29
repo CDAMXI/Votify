@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.ComponentModel.DataAnnotations.Schema;
+using Votify.Entities.EstadosVotacion;
 
 namespace Votify.Entities
 {
@@ -13,7 +15,14 @@ namespace Votify.Entities
         public string Descripcion { get; set; }
         public DateTime FechaIni { get; set; }
         public DateTime FechaFin { get; set; }
-        public bool Estado { get; set; }
+        public string NombreEstado { get; set; } = "Activa";
+        
+        [NotMapped]
+        public EstadoVotacion EstadoActual 
+        { 
+            get => EstadoFactory.Crear(NombreEstado);
+            set => NombreEstado = value.ObtenerNombre();
+        }
         public int EventoId { get; set; }
         public int EncargadoId { get; set; }
         public int PesoJurado { get; set; } = 70;

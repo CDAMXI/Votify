@@ -63,7 +63,7 @@ namespace Votify.Tests
                 Id = id,
                 Titulo = titulo,
                 Descripcion = string.Empty,
-                Estado = true,
+                NombreEstado = "Activa",
                 FechaIni = DateTime.Now,
                 FechaFin = DateTime.Now.AddDays(30),
                 categoria = new Categoria(nombreCategoria, string.Empty)

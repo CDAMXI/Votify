@@ -61,7 +61,7 @@ namespace Votify.BusinessLogic.Service
         IEnumerable<Votacion> GetAllVotaciones(); 
         IEnumerable<Votacion> GetVotacionesByEvento(int idEvento);
         void EliminarEvento(int idVotacion);
-        void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, bool estado);
+        void ModificarVotacion(int idVotacion, DateTime nuevaFechaFin, string estado);
         void CerrarVotacion(int idVotacion);
         void TogglePausarVotacion(int idVotacion);
 

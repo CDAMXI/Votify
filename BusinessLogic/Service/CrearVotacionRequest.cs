@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System;
@@ -11,7 +11,7 @@ namespace Votify.BusinessLogic.Service
         public string Titulo { get; set; } = string.Empty;
         public string? Descripcion { get; set; }
         public DateTime FechaFin { get; set; }
-        public bool Activa { get; set; }
+        public string NombreEstado { get; set; } = "Activa";
         public bool PermiteCompetidoresVotar { get; set; }
         public int PesoJurado { get; set; } = 70;
         public int PesoPublico { get; set; } = 30;

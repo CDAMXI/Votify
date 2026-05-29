@@ -363,10 +363,10 @@
 
     private static string GetEstadoVotacionTexto(VotacionDTO votacion)
     {
-        if (!votacion.Estado && votacion.FechaFin <= DateTime.Now)
+        if (votacion.FechaFin <= DateTime.Now)
             return "Cerrada definitivamente";
 
-        if (!votacion.Estado)
+        if (votacion.NombreEstado == "Pausada")
             return "Pausada";
 
         return $"Finaliza: {votacion.FechaFin:dd/MM/yyyy}";
@@ -374,10 +374,10 @@
 
     private static string GetEstadoVotacionClase(VotacionDTO votacion)
     {
-        if (!votacion.Estado && votacion.FechaFin <= DateTime.Now)
+        if (votacion.FechaFin <= DateTime.Now)
             return "text-red-600 font-semibold";
 
-        if (!votacion.Estado)
+        if (votacion.NombreEstado == "Pausada")
             return "text-[#90A896] font-semibold";
 
         return "text-[#6C8A6C]";
@@ -596,7 +596,7 @@
         if (!string.Equals(rolActual, "COMPETIDOR", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        return votacion.Estado && votacion.FechaFin > DateTime.Now;
+        return votacion.NombreEstado == "Activa" && votacion.FechaFin > DateTime.Now;
     }
 
     private void IrAVotarComoParticipante(int idVotacion)
